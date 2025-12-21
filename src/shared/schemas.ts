@@ -1,0 +1,172 @@
+import { z } from "zod";
+
+/**
+ * Zod validation schemas for OpenCode Athena
+ */
+
+// ============================================================================
+// Configuration Schemas
+// ============================================================================
+
+/**
+ * Schema for subscription configuration
+ */
+export const SubscriptionSchema = z.object({
+  claude: z.object({
+    enabled: z.boolean(),
+    tier: z.enum(["max5x", "max20x", "pro", "none"]),
+  }),
+  openai: z.object({
+    enabled: z.boolean(),
+  }),
+  google: z.object({
+    enabled: z.boolean(),
+    authMethod: z.enum(["antigravity", "personal", "api", "none"]),
+  }),
+});
+
+/**
+ * Schema for BMAD configuration
+ */
+export const BmadConfigSchema = z.object({
+  defaultTrack: z.enum(["quick-flow", "bmad-method", "enterprise"]),
+  autoStatusUpdate: z.boolean(),
+  parallelStoryLimit: z.number().int().min(0).max(10),
+});
+
+/**
+ * Schema for feature flags
+ */
+export const FeaturesSchema = z.object({
+  bmadBridge: z.boolean(),
+  autoStatus: z.boolean(),
+  parallelExecution: z.boolean(),
+  notifications: z.boolean(),
+  contextMonitor: z.boolean(),
+  commentChecker: z.boolean(),
+  lspTools: z.boolean(),
+});
+
+/**
+ * Schema for MCP configuration
+ */
+export const McpsSchema = z.object({
+  context7: z.boolean(),
+  exa: z.boolean(),
+  grepApp: z.boolean(),
+});
+
+/**
+ * Complete Athena configuration schema
+ */
+export const AthenaConfigSchema = z.object({
+  $schema: z.string().optional(),
+  version: z.string(),
+  subscriptions: SubscriptionSchema,
+  bmad: BmadConfigSchema,
+  features: FeaturesSchema,
+  mcps: McpsSchema,
+});
+
+// ============================================================================
+// Tool Argument Schemas
+// ============================================================================
+
+/**
+ * Schema for athena_get_story arguments
+ */
+export const GetStoryArgsSchema = z.object({
+  storyId: z
+    .string()
+    .optional()
+    .describe(
+      "Specific story ID (e.g., '2.3'). If omitted, loads the next pending story from sprint-status.yaml."
+    ),
+});
+
+/**
+ * Schema for athena_update_status arguments
+ */
+export const UpdateStatusArgsSchema = z.object({
+  storyId: z.string().describe("The story ID (e.g., '2.3')"),
+  status: z
+    .enum(["in_progress", "completed", "blocked", "needs_review"])
+    .describe("The new status for the story"),
+  notes: z
+    .string()
+    .optional()
+    .describe("Notes about the status change (required for 'blocked' status)"),
+  completionSummary: z
+    .string()
+    .optional()
+    .describe("Summary of what was implemented (required for 'completed' status)"),
+});
+
+/**
+ * Schema for athena_get_context arguments
+ */
+export const GetContextArgsSchema = z.object({
+  includeArchitecture: z.boolean().optional().default(true),
+  includePrd: z.boolean().optional().default(false),
+  includeSprintStatus: z.boolean().optional().default(true),
+});
+
+/**
+ * Schema for athena_parallel arguments
+ */
+export const ParallelArgsSchema = z.object({
+  storyIds: z.array(z.string()).describe("Array of story IDs to implement in parallel"),
+  maxConcurrent: z.number().int().min(1).max(5).optional().default(3),
+});
+
+/**
+ * Schema for athena_config arguments
+ */
+export const ConfigArgsSchema = z.object({
+  action: z.enum(["get", "set", "reset"]).describe("Configuration action to perform"),
+  key: z
+    .string()
+    .optional()
+    .describe("Configuration key (dot notation, e.g., 'bmad.autoStatusUpdate')"),
+  value: z.unknown().optional().describe("Value to set (for 'set' action)"),
+});
+
+// ============================================================================
+// Sprint Status Schema
+// ============================================================================
+
+/**
+ * Schema for sprint-status.yaml content
+ */
+export const SprintStatusSchema = z.object({
+  sprint_number: z.number().int().optional(),
+  current_epic: z.string().optional(),
+  current_story: z.string().nullable().optional(),
+  completed_stories: z.array(z.string()).default([]),
+  pending_stories: z.array(z.string()).default([]),
+  in_progress_stories: z.array(z.string()).default([]),
+  blocked_stories: z.array(z.string()).default([]),
+  stories_needing_review: z.array(z.string()).optional(),
+  story_updates: z
+    .record(
+      z.object({
+        status: z.enum(["pending", "in_progress", "completed", "blocked", "needs_review"]),
+        updated_at: z.string(),
+        notes: z.string().optional(),
+        completion_summary: z.string().optional(),
+      })
+    )
+    .optional(),
+  last_modified: z.string().optional(),
+});
+
+// ============================================================================
+// Type Exports (inferred from schemas)
+// ============================================================================
+
+export type SubscriptionConfig = z.infer<typeof SubscriptionSchema>;
+export type BmadConfig = z.infer<typeof BmadConfigSchema>;
+export type FeaturesConfig = z.infer<typeof FeaturesSchema>;
+export type McpsConfig = z.infer<typeof McpsSchema>;
+export type AthenaConfigValidated = z.infer<typeof AthenaConfigSchema>;
+export type SprintStatusValidated = z.infer<typeof SprintStatusSchema>;
