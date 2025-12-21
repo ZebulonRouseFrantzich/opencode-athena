@@ -1,0 +1,34 @@
+{
+  "$schema": "../schemas/athena.schema.json",
+  "version": "1.0.0",
+  "description": "Minimal configuration - essential features only",
+  "subscriptions": {
+    "claude": { "enabled": true, "tier": "pro" },
+    "openai": { "enabled": false },
+    "google": { "enabled": false, "authMethod": "none" }
+  },
+  "models": {
+    "sisyphus": "anthropic/claude-sonnet-4-20250514",
+    "oracle": "anthropic/claude-sonnet-4-20250514",
+    "librarian": "anthropic/claude-sonnet-4-20250514"
+  },
+  "bmad": {
+    "defaultTrack": "quick-flow",
+    "autoStatusUpdate": true,
+    "parallelStoryLimit": 1
+  },
+  "features": {
+    "bmadBridge": true,
+    "autoStatus": true,
+    "parallelExecution": false,
+    "notifications": false,
+    "contextMonitor": false,
+    "commentChecker": false,
+    "lspTools": true
+  },
+  "mcps": {
+    "context7": true,
+    "exa": false,
+    "grepApp": false
+  }
+}

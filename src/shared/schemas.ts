@@ -57,12 +57,25 @@ export const McpsSchema = z.object({
 });
 
 /**
+ * Schema for agent model assignments
+ */
+export const ModelsSchema = z.object({
+  sisyphus: z.string().describe("Model for main orchestrator agent"),
+  oracle: z.string().describe("Model for debugging/reasoning agent"),
+  librarian: z.string().describe("Model for research/documentation agent"),
+  frontend: z.string().optional().describe("Model for UI/UX agent"),
+  documentWriter: z.string().optional().describe("Model for documentation generation agent"),
+  multimodalLooker: z.string().optional().describe("Model for image analysis agent"),
+});
+
+/**
  * Complete Athena configuration schema
  */
 export const AthenaConfigSchema = z.object({
   $schema: z.string().optional(),
   version: z.string(),
   subscriptions: SubscriptionSchema,
+  models: ModelsSchema,
   bmad: BmadConfigSchema,
   features: FeaturesSchema,
   mcps: McpsSchema,
@@ -168,5 +181,6 @@ export type SubscriptionConfig = z.infer<typeof SubscriptionSchema>;
 export type BmadConfig = z.infer<typeof BmadConfigSchema>;
 export type FeaturesConfig = z.infer<typeof FeaturesSchema>;
 export type McpsConfig = z.infer<typeof McpsSchema>;
+export type ModelsConfig = z.infer<typeof ModelsSchema>;
 export type AthenaConfigValidated = z.infer<typeof AthenaConfigSchema>;
 export type SprintStatusValidated = z.infer<typeof SprintStatusSchema>;

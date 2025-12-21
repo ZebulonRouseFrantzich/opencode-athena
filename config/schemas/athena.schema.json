@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OpenCode Athena Configuration",
+  "description": "Configuration schema for OpenCode Athena - Strategic wisdom meets practical execution",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "version": {
+      "type": "string",
+      "description": "OpenCode Athena version"
+    },
+    "subscriptions": {
+      "type": "object",
+      "description": "LLM subscription configuration",
+      "properties": {
+        "claude": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "tier": {
+              "type": "string",
+              "enum": ["none", "pro", "max5x", "max20x"]
+            }
+          },
+          "required": ["enabled", "tier"]
+        },
+        "openai": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" }
+          },
+          "required": ["enabled"]
+        },
+        "google": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "authMethod": {
+              "type": "string",
+              "enum": ["none", "antigravity", "personal", "api"]
+            }
+          },
+          "required": ["enabled", "authMethod"]
+        }
+      },
+      "required": ["claude", "openai", "google"]
+    },
+    "models": {
+      "type": "object",
+      "description": "Agent model assignments",
+      "properties": {
+        "sisyphus": {
+          "type": "string",
+          "description": "Model for main orchestrator agent"
+        },
+        "oracle": {
+          "type": "string",
+          "description": "Model for debugging/reasoning agent"
+        },
+        "librarian": {
+          "type": "string",
+          "description": "Model for research/documentation agent"
+        },
+        "frontend": {
+          "type": "string",
+          "description": "Model for UI/UX agent"
+        },
+        "documentWriter": {
+          "type": "string",
+          "description": "Model for documentation generation agent"
+        },
+        "multimodalLooker": {
+          "type": "string",
+          "description": "Model for image analysis agent"
+        }
+      },
+      "required": ["sisyphus", "oracle", "librarian"]
+    },
+    "bmad": {
+      "type": "object",
+      "description": "BMAD METHOD integration settings",
+      "properties": {
+        "defaultTrack": {
+          "type": "string",
+          "enum": ["quick-flow", "bmad-method", "enterprise"],
+          "default": "bmad-method"
+        },
+        "autoStatusUpdate": {
+          "type": "boolean",
+          "default": true
+        },
+        "parallelStoryLimit": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "maximum": 10
+        }
+      },
+      "required": ["defaultTrack", "autoStatusUpdate", "parallelStoryLimit"]
+    },
+    "features": {
+      "type": "object",
+      "description": "Feature toggles",
+      "properties": {
+        "bmadBridge": { "type": "boolean", "default": true },
+        "autoStatus": { "type": "boolean", "default": true },
+        "parallelExecution": { "type": "boolean", "default": true },
+        "notifications": { "type": "boolean", "default": true },
+        "contextMonitor": { "type": "boolean", "default": true },
+        "commentChecker": { "type": "boolean", "default": true },
+        "lspTools": { "type": "boolean", "default": true }
+      }
+    },
+    "mcps": {
+      "type": "object",
+      "description": "MCP server toggles",
+      "properties": {
+        "context7": { "type": "boolean", "default": true },
+        "exa": { "type": "boolean", "default": true },
+        "grepApp": { "type": "boolean", "default": true }
+      }
+    }
+  },
+  "required": ["version", "subscriptions", "models", "bmad", "features", "mcps"]
+}

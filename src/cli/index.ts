@@ -7,6 +7,11 @@
 import chalk from "chalk";
 import { Command } from "commander";
 import { DISPLAY_NAME, TAGLINE, VERSION } from "../shared/constants.js";
+import { doctor } from "./commands/doctor.js";
+import { info } from "./commands/info.js";
+import { install } from "./commands/install.js";
+import { uninstall } from "./commands/uninstall.js";
+import { update } from "./commands/update.js";
 
 const program = new Command();
 
@@ -25,44 +30,27 @@ program
   .option("--advanced", "Show advanced configuration options", false)
   .option("--global", "Install globally (default)", true)
   .option("--local", "Install to current project only", false)
-  .action(async (_options) => {
-    // TODO: Implement in Phase 2
-    console.log(chalk.yellow("Install command will be implemented in Phase 2"));
-  });
+  .action(install);
 
 program
   .command("update")
   .description("Update OpenCode Athena to latest version")
   .option("--check", "Check for updates without installing", false)
-  .action(async (_options) => {
-    // TODO: Implement in Phase 2
-    console.log(chalk.yellow("Update command will be implemented in Phase 2"));
-  });
+  .action(update);
 
 program
   .command("doctor")
   .description("Diagnose and fix common issues")
   .option("--fix", "Automatically fix issues", false)
-  .action(async (_options) => {
-    // TODO: Implement in Phase 2
-    console.log(chalk.yellow("Doctor command will be implemented in Phase 2"));
-  });
+  .action(doctor);
 
 program
   .command("uninstall")
   .description("Remove OpenCode Athena")
   .option("--keep-config", "Keep configuration files", false)
-  .action(async (_options) => {
-    // TODO: Implement in Phase 2
-    console.log(chalk.yellow("Uninstall command will be implemented in Phase 2"));
-  });
+  .option("--keep-deps", "Keep npm dependencies", false)
+  .action(uninstall);
 
-program
-  .command("info")
-  .description("Show current configuration and status")
-  .action(async () => {
-    // TODO: Implement in Phase 2
-    console.log(chalk.yellow("Info command will be implemented in Phase 2"));
-  });
+program.command("info").description("Show current configuration and status").action(info);
 
 program.parse();

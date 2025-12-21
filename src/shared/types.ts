@@ -18,6 +18,28 @@ export interface InstallOptions {
 }
 
 /**
+ * Options passed to the update command
+ */
+export interface UpdateOptions {
+  check: boolean;
+}
+
+/**
+ * Options passed to the doctor command
+ */
+export interface DoctorOptions {
+  fix: boolean;
+}
+
+/**
+ * Options passed to the uninstall command
+ */
+export interface UninstallOptions {
+  keepConfig: boolean;
+  keepDeps: boolean;
+}
+
+/**
  * Subscription information gathered during install
  */
 export interface SubscriptionAnswers {
@@ -53,10 +75,49 @@ export interface AdvancedAnswers {
 }
 
 /**
+ * Available model choices by provider
+ */
+export type LLMProvider = "anthropic" | "openai" | "google";
+
+/**
+ * Model definition
+ */
+export interface ModelChoice {
+  id: string;
+  name: string;
+  provider: LLMProvider;
+  description?: string;
+}
+
+/**
+ * Agent roles that require model assignment
+ */
+export type AgentRole =
+  | "sisyphus"
+  | "oracle"
+  | "librarian"
+  | "frontend"
+  | "documentWriter"
+  | "multimodalLooker";
+
+/**
+ * Model assignments for each agent role
+ */
+export interface ModelAnswers {
+  sisyphus: string;
+  oracle: string;
+  librarian: string;
+  frontend?: string;
+  documentWriter?: string;
+  multimodalLooker?: string;
+}
+
+/**
  * All answers from the install wizard
  */
 export interface InstallAnswers {
   subscriptions: SubscriptionAnswers;
+  models: ModelAnswers;
   methodology: MethodologyAnswers;
   features: FeatureAnswers;
   advanced: AdvancedAnswers;
@@ -94,6 +155,14 @@ export interface AthenaConfig {
       enabled: boolean;
       authMethod: "antigravity" | "personal" | "api" | "none";
     };
+  };
+  models: {
+    sisyphus: string;
+    oracle: string;
+    librarian: string;
+    frontend?: string;
+    documentWriter?: string;
+    multimodalLooker?: string;
   };
   bmad: {
     defaultTrack: "quick-flow" | "bmad-method" | "enterprise";

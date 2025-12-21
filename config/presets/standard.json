@@ -1,0 +1,37 @@
+{
+  "$schema": "../schemas/athena.schema.json",
+  "version": "1.0.0",
+  "description": "Standard configuration - recommended for most users",
+  "subscriptions": {
+    "claude": { "enabled": true, "tier": "max5x" },
+    "openai": { "enabled": true },
+    "google": { "enabled": true, "authMethod": "antigravity" }
+  },
+  "models": {
+    "sisyphus": "anthropic/claude-sonnet-4-20250514-thinking",
+    "oracle": "openai/o3",
+    "librarian": "anthropic/claude-sonnet-4-20250514",
+    "frontend": "anthropic/claude-sonnet-4-20250514",
+    "documentWriter": "google/gemini-2.5-pro",
+    "multimodalLooker": "google/gemini-2.5-flash"
+  },
+  "bmad": {
+    "defaultTrack": "bmad-method",
+    "autoStatusUpdate": true,
+    "parallelStoryLimit": 3
+  },
+  "features": {
+    "bmadBridge": true,
+    "autoStatus": true,
+    "parallelExecution": true,
+    "notifications": true,
+    "contextMonitor": true,
+    "commentChecker": true,
+    "lspTools": true
+  },
+  "mcps": {
+    "context7": true,
+    "exa": true,
+    "grepApp": true
+  }
+}
