@@ -4,10 +4,18 @@
  * Handles session lifecycle events like idle, created, and error.
  */
 
-import type { PluginInput, Event } from "@opencode-ai/plugin";
+import type { PluginInput } from "@opencode-ai/plugin";
 import type { StoryTracker } from "../tracker/story-tracker.js";
 import type { AthenaConfig } from "../../shared/types.js";
 import { sendNotification } from "../utils/notifications.js";
+
+/**
+ * Generic event type for session events
+ */
+interface SessionEvent {
+  type?: string;
+  error?: unknown;
+}
 
 /**
  * Create session event handler
@@ -22,7 +30,7 @@ export function createSessionHooks(
   tracker: StoryTracker,
   config: AthenaConfig
 ) {
-  return async ({ event }: { event: Event }) => {
+  return async ({ event }: { event: SessionEvent }) => {
     // Event type is in event.type for most events
     const eventType = (event as { type?: string }).type;
 
@@ -87,16 +95,15 @@ function handleSessionCreated(tracker: StoryTracker): void {
  * Log errors that occur during story implementation
  */
 function handleSessionError(
-  event: Event,
+  event: SessionEvent,
   tracker: StoryTracker
 ): void {
   const currentStory = tracker.getCurrentStory();
-  const errorEvent = event as { error?: unknown };
 
-  if (currentStory && errorEvent.error) {
+  if (currentStory && event.error) {
     console.error(
       `[Athena] Error during Story ${currentStory.id}:`,
-      errorEvent.error
+      event.error
     );
   }
 }

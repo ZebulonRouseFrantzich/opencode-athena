@@ -149,6 +149,16 @@ export const ConfigArgsSchema = z.object({
 // ============================================================================
 
 /**
+ * Story status enum for sprint tracking
+ */
+export const StoryStatusEnum = z.enum(["pending", "in_progress", "completed", "blocked", "needs_review"]);
+
+/**
+ * Tracker status enum (includes transitional states)
+ */
+export const TrackerStatusEnum = z.enum(["pending", "in_progress", "completed", "blocked", "needs_review", "loading"]);
+
+/**
  * Schema for sprint-status.yaml content
  */
 export const SprintStatusSchema = z.object({
@@ -163,7 +173,7 @@ export const SprintStatusSchema = z.object({
   story_updates: z
     .record(
       z.object({
-        status: z.enum(["pending", "in_progress", "completed", "blocked", "needs_review"]),
+        status: StoryStatusEnum,
         updated_at: z.string(),
         notes: z.string().optional(),
         completion_summary: z.string().optional(),

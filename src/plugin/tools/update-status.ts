@@ -115,33 +115,31 @@ async function updateStoryStatus(
   // Remove story from all status arrays
   removeFromAllArrays(sprint, storyId);
 
-  // Add to appropriate array based on new status
+  // Add to appropriate array based on new status (with deduplication)
   switch (status) {
     case "in_progress":
-      sprint.in_progress_stories.push(storyId);
+      addToArrayIfNotPresent(sprint.in_progress_stories, storyId);
       sprint.current_story = storyId;
       break;
 
     case "completed":
-      sprint.completed_stories.push(storyId);
+      addToArrayIfNotPresent(sprint.completed_stories, storyId);
       if (sprint.current_story === storyId) {
         sprint.current_story = null;
       }
       break;
 
     case "blocked":
-      sprint.blocked_stories.push(storyId);
+      addToArrayIfNotPresent(sprint.blocked_stories, storyId);
       if (sprint.current_story === storyId) {
         sprint.current_story = null;
       }
       break;
 
     case "needs_review":
-      sprint.in_progress_stories.push(storyId);
+      addToArrayIfNotPresent(sprint.in_progress_stories, storyId);
       sprint.stories_needing_review = sprint.stories_needing_review || [];
-      if (!sprint.stories_needing_review.includes(storyId)) {
-        sprint.stories_needing_review.push(storyId);
-      }
+      addToArrayIfNotPresent(sprint.stories_needing_review, storyId);
       break;
   }
 
@@ -200,7 +198,7 @@ async function updateStoryStatus(
 }
 
 /**
- * Remove a story from all status arrays
+ * Remove a story from all status arrays and deduplicate
  */
 function removeFromAllArrays(
   sprint: {
@@ -212,17 +210,21 @@ function removeFromAllArrays(
   },
   storyId: string
 ): void {
-  sprint.completed_stories = sprint.completed_stories.filter(
-    (s) => s !== storyId
-  );
-  sprint.pending_stories = sprint.pending_stories.filter((s) => s !== storyId);
-  sprint.in_progress_stories = sprint.in_progress_stories.filter(
-    (s) => s !== storyId
-  );
-  sprint.blocked_stories = sprint.blocked_stories.filter((s) => s !== storyId);
+  // Remove the story and deduplicate arrays to prevent duplicates
+  sprint.completed_stories = [...new Set(sprint.completed_stories.filter((s) => s !== storyId))];
+  sprint.pending_stories = [...new Set(sprint.pending_stories.filter((s) => s !== storyId))];
+  sprint.in_progress_stories = [...new Set(sprint.in_progress_stories.filter((s) => s !== storyId))];
+  sprint.blocked_stories = [...new Set(sprint.blocked_stories.filter((s) => s !== storyId))];
   if (sprint.stories_needing_review) {
-    sprint.stories_needing_review = sprint.stories_needing_review.filter(
-      (s) => s !== storyId
-    );
+    sprint.stories_needing_review = [...new Set(sprint.stories_needing_review.filter((s) => s !== storyId))];
+  }
+}
+
+/**
+ * Add a story to an array if not already present
+ */
+function addToArrayIfNotPresent(array: string[], storyId: string): void {
+  if (!array.includes(storyId)) {
+    array.push(storyId);
   }
 }

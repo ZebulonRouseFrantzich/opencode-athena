@@ -118,10 +118,11 @@ async function getStoryContext(
   // Load PRD context
   const prdContent = await extractRelevantPRD(paths.prd, storyContent);
 
-  // Update tracker
+  // Update tracker with "loading" transitional state
+  // The story will be promoted to "in_progress" when athena_update_status is called
   await tracker.setCurrentStory(storyId, {
     content: storyContent,
-    status: "in_progress",
+    status: "loading",
     startedAt: new Date().toISOString(),
   });
 

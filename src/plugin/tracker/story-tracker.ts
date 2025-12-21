@@ -9,7 +9,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { CONFIG_PATHS } from "../../shared/constants.js";
-import type { TrackedStory, TrackerState, StoryStatus } from "../../shared/types.js";
+import type { TrackedStory, TrackerState, StoryStatus, TrackerStatus } from "../../shared/types.js";
 
 /**
  * Story tracker that persists state across sessions.
@@ -75,7 +75,7 @@ export class StoryTracker {
    */
   async updateStoryStatus(
     storyId: string,
-    status: StoryStatus
+    status: TrackerStatus
   ): Promise<void> {
     if (this.state.currentStory?.id === storyId) {
       this.state.currentStory.status = status;

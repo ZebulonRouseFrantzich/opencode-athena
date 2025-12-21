@@ -215,12 +215,17 @@ export interface Prerequisites {
 export type StoryStatus = "pending" | "in_progress" | "completed" | "blocked" | "needs_review";
 
 /**
+ * Internal tracker status (includes transitional states)
+ */
+export type TrackerStatus = StoryStatus | "loading";
+
+/**
  * Tracked story state
  */
 export interface TrackedStory {
   id: string;
   content: string;
-  status: StoryStatus;
+  status: TrackerStatus;
   startedAt: string;
   completedAt?: string;
 }

@@ -21,6 +21,7 @@ export type {
   Prerequisites,
   SprintStatus,
   StoryStatus,
+  TrackerStatus,
   TrackedStory,
   TrackerState,
   GetStoryResult,
@@ -31,6 +32,8 @@ export type {
 export {
   AthenaConfigSchema,
   SprintStatusSchema,
+  StoryStatusEnum,
+  TrackerStatusEnum,
   GetStoryArgsSchema,
   UpdateStatusArgsSchema,
 } from "./shared/schemas.js";
