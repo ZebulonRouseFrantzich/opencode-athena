@@ -165,6 +165,96 @@ Common issues:
 | BMAD not found | Run `npx bmad-method@alpha install` in your project |
 | Commands not available | Verify commands are in `~/.config/opencode/command/` |
 
+## Publishing Releases
+
+This package uses **Trusted Publishing (OIDC)** for secure, credential-free releases via GitHub Actions.
+
+### For Maintainers: Creating a New Release
+
+1. **Update version:**
+   ```bash
+   npm version patch  # 0.0.3 -> 0.0.4
+   npm version minor  # 0.1.0 -> 0.2.0
+   npm version major  # 1.0.0 -> 2.0.0
+   ```
+
+2. **Commit and push:**
+   ```bash
+   git add package.json
+   git commit -m "Bump version to X.Y.Z"
+   git push origin main
+   ```
+
+3. **Create and push tag:**
+   ```bash
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+4. **Monitor:** GitHub Actions publishes automatically
+   - Watch: [Actions](https://github.com/ZebulonRouseFrantzich/opencode-athena/actions)
+   - Verify: [npm package](https://www.npmjs.com/package/opencode-athena)
+   - Check: [GitHub Releases](https://github.com/ZebulonRouseFrantzich/opencode-athena/releases)
+
+### Security Features
+
+**Trusted Publishing (OIDC):**
+- ✅ Zero stored credentials (no npm tokens in GitHub)
+- ✅ Short-lived authentication (hours, not years)
+- ✅ Cannot be leaked (runtime-only tokens)
+- ✅ Automatic provenance attestations
+- ✅ OpenSSF industry standard
+
+**Provenance Attestations:**
+
+Every release includes cryptographically signed provenance via [Sigstore](https://www.sigstore.dev/), providing:
+- Verifiable link between npm package and GitHub source code
+- Proof of which GitHub Actions workflow built the package
+- Immutable transparency log entry
+- Supply chain security guarantees
+
+**Verify any published version:**
+```bash
+npm install opencode-athena
+npm audit signatures
+```
+
+### CI/CD Configuration
+
+The release workflow uses:
+- **Trusted Publishing** - OIDC authentication (no long-lived tokens)
+- **npm CLI 11+** - Required for Trusted Publishing support
+- **GitHub-hosted runners** - Secure, isolated build environment
+- **Automatic provenance** - Generated without `--provenance` flag
+
+Trusted Publisher configuration:
+- **Provider:** GitHub Actions
+- **Repository:** `ZebulonRouseFrantzich/opencode-athena`
+- **Workflow:** `release.yml`
+- **Permissions:** `id-token: write`, `contents: write`
+
+### Troubleshooting Releases
+
+| Issue | Solution |
+|-------|----------|
+| "Unable to authenticate" | Verify Trusted Publisher config on npmjs.com matches exactly (case-sensitive) |
+| Workflow filename mismatch | Must be `release.yml` (not `Release.yml` or full path) |
+| npm version error | Ensure npm 11.5.1+ (workflow upgrades automatically) |
+| No provenance generated | Automatic with Trusted Publishing - check npmjs.com package page |
+| Self-hosted runner error | Use GitHub-hosted runners only (required for OIDC) |
+
+For detailed setup: [`.github/workflows/release.yml`](.github/workflows/release.yml)
+
+### Why Trusted Publishing?
+
+We use Trusted Publishing instead of traditional npm tokens because:
+- **Security:** Eliminates risks from npm credential breaches
+- **Compliance:** Implements OpenSSF Trusted Publishers standard
+- **Simplicity:** No manual token management or rotation
+- **Transparency:** Automatic provenance provides supply chain visibility
+
+Learn more: [npm Trusted Publishing Documentation](https://docs.npmjs.com/trusted-publishers)
+
 ## Credits
 
 Built on top of:
