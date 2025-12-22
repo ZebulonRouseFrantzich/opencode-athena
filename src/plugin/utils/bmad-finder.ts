@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
-const BMAD_DIR_NAMES = ["_bmad", ".bmad", "bmad"] as const;
+const BMAD_DIR_NAMES = ["docs", ".bmad", "bmad"] as const;
 
 const BMAD_V6_DEFAULTS = {
   planningArtifacts: "docs/project-planning-artifacts",
@@ -111,28 +111,24 @@ export async function getBmadPaths(startDir: string): Promise<BmadPaths> {
     config?.sprint_artifacts || "docs/sprint-artifacts",
     LEGACY_PATHS.sprintArtifacts,
     LEGACY_PATHS.docsDir,
-    "_bmad/docs",
   ];
   const sprintStatus = searchForFile(projectRoot, "sprint-status.yaml", sprintStatusSearchPaths);
 
   const architectureSearchPaths = [
     config?.planning_artifacts || BMAD_V6_DEFAULTS.planningArtifacts,
     LEGACY_PATHS.docsDir,
-    "_bmad/docs",
   ];
   const architecture = searchForFile(projectRoot, "architecture.md", architectureSearchPaths);
 
   const prdSearchPaths = [
     config?.planning_artifacts || BMAD_V6_DEFAULTS.planningArtifacts,
     LEGACY_PATHS.docsDir,
-    "_bmad/docs",
   ];
   const prd = searchForFile(projectRoot, "PRD.md", prdSearchPaths);
 
   const epicsSearchPaths = [
     config?.planning_artifacts || BMAD_V6_DEFAULTS.planningArtifacts,
     LEGACY_PATHS.docsDir,
-    "_bmad/docs",
   ];
   const epics = searchForFile(projectRoot, "epics.md", epicsSearchPaths);
 

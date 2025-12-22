@@ -12,7 +12,7 @@
  *    - Inject implementation instructions
  *
  * 3. BMAD file protection:
- *    - Before Write/Edit on _bmad/ files
+ *    - Before Write/Edit on docs/ files (BMAD artifacts)
  *    - Warn or block direct modifications
  *
  * 4. Story progress tracking:

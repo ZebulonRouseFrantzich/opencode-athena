@@ -72,7 +72,7 @@ src/
 ## Key Patterns
 
 ### BMAD Integration
-- BMAD artifacts live in `_bmad/docs/` within user projects
+- BMAD artifacts live in `docs/` within user projects (BMAD METHOD v6 default)
 - `sprint-status.yaml` is the source of truth for story state
 - Story files follow naming: `story-{epic}-{number}.md` (e.g., `story-2-3.md`)
 

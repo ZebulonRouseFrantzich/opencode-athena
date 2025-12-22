@@ -56,22 +56,22 @@ export const PROJECT_PATHS = {
   localConfig: ".opencode/athena.json",
 
   /** BMAD directory */
-  bmadDir: "_bmad",
+  bmadDir: "docs",
 
-  /** BMAD docs directory */
-  bmadDocsDir: "_bmad/docs",
+  /** BMAD docs directory (deprecated - same as bmadDir in v6) */
+  bmadDocsDir: "docs",
 
   /** Sprint status file */
-  sprintStatus: "_bmad/docs/sprint-status.yaml",
+  sprintStatus: "docs/implementation-artifacts/sprint-status.yaml",
 
   /** Stories directory */
-  storiesDir: "_bmad/docs/stories",
+  storiesDir: "docs/implementation-artifacts/stories",
 
   /** Architecture document */
-  architecture: "_bmad/docs/architecture.md",
+  architecture: "docs/project-planning-artifacts/architecture.md",
 
   /** PRD document */
-  prd: "_bmad/docs/PRD.md",
+  prd: "docs/project-planning-artifacts/PRD.md",
 } as const;
 
 /**
