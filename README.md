@@ -72,13 +72,38 @@ Load SM agent → *sprint-planning → *create-story
 
 ### 2. Implement with Athena (Phase 4)
 
-Use Athena bridge commands:
+Use Athena bridge commands in an iterative loop:
 
 ```
 /athena-dev        # Load story, implement with Sisyphus
-/athena-review     # Quality gate
+/athena-review     # Quality gate with collaborative discussion
+```
+
+**If review passes:**
+```
 /athena-status     # Mark complete, get next story
 ```
+
+**If review finds issues:**
+1. Sisyphus auto-updates story status to `in_progress`
+2. You discuss findings together and decide which to address
+3. Sisyphus updates story file with implementation notes
+4. Sisyphus recommends: **Stay in session** or **Restart `/athena-dev`**
+5. You decide and proceed:
+   - **Stay in session**: Continue fixing in current session
+   - **Restart**: Exit and run `/athena-dev` again (loads implementation notes)
+6. After fixes, run `/athena-review` again (respects previous decisions)
+
+**Iterative Quality Loop:**
+```
+Implement → Review → Discuss → Fix → Review → ... → PASS
+```
+
+**Key Features:**
+- Review discussions are preserved in story file
+- Subsequent reviews don't re-block on deferred/rejected items
+- Checkboxed implementation notes track progress
+- Flexible: stay in session for simple fixes, restart for complex rework
 
 ### 3. Repeat
 

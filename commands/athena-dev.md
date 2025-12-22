@@ -28,6 +28,55 @@ This returns:
 - **PRD**: Relevant functional requirements
 - **Sprint progress**: Where this story fits in the overall sprint
 
+**CRITICAL: Check for Implementation Notes from Previous Review**
+
+After loading the story, check if the story file contains an **Implementation Notes** section.
+
+### If Implementation Notes Exist:
+
+This means `/athena-review` was run previously and findings were discussed with the user.
+
+**What to do:**
+1. **Read the Implementation Notes section carefully** - It contains:
+   - **Findings to Address**: Checkboxed list of fixes the user agreed to implement
+   - **Deferred to Future Work**: Items the user decided not to fix now
+   - **Not Implemented**: Items the user decided not to implement at all
+
+2. **Prioritize the "Findings to Address" items** - These are your PRIMARY work items for this session
+
+3. **Check off items as you complete them**:
+   - Use the Read tool to load the story file
+   - Use the Edit tool to change `- [ ]` to `- [x]` for completed items
+   - This provides progress tracking
+
+4. **Respect the decisions**:
+   - DO NOT work on items marked as "Deferred" or "Not Implemented"
+   - These represent user decisions from the review discussion
+   - Focus only on agreed fixes
+
+5. **Verify your fixes**:
+   - Run `lsp_diagnostics` on changed files after each fix
+   - When all checkboxes are complete, run `/athena-review` again to verify
+
+**Your approach with Implementation Notes:**
+```
+1. Load story context (athena_get_story)
+2. Review implementation notes
+3. Work through checkboxed items systematically
+4. Check off completed items
+5. Verify with lsp_diagnostics
+6. When done, recommend running /athena-review
+```
+
+### If No Implementation Notes Exist:
+
+This is a **fresh implementation** - proceed with the normal workflow:
+- Understand requirements and acceptance criteria
+- Plan your approach (Step 2)
+- Implement the story (Step 3)
+- Verify implementation (Step 4)
+- Complete the story (Step 5)
+
 ## Step 2: Plan Your Approach
 
 Before diving into code, plan your implementation strategy:
