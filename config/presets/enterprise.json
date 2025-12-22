@@ -1,18 +1,18 @@
 {
   "$schema": "../schemas/athena.schema.json",
   "version": "1.0.0",
-  "description": "Enterprise configuration - all features, compliance-ready",
+  "description": "Enterprise configuration - all features enabled, optimized for Claude Max 20x with OpenAI and Google",
   "subscriptions": {
     "claude": { "enabled": true, "tier": "max20x" },
     "openai": { "enabled": true },
     "google": { "enabled": true, "authMethod": "antigravity" }
   },
   "models": {
-    "sisyphus": "anthropic/claude-opus-4-20250514-thinking",
-    "oracle": "openai/o3",
-    "librarian": "anthropic/claude-sonnet-4-20250514-thinking",
+    "sisyphus": "anthropic/claude-opus-4-5-thinking",
+    "oracle": "openai/gpt-5.1-high",
+    "librarian": "anthropic/claude-sonnet-4-5-thinking",
     "frontend": "google/gemini-2.5-pro",
-    "documentWriter": "anthropic/claude-opus-4-20250514",
+    "documentWriter": "anthropic/claude-opus-4-5",
     "multimodalLooker": "google/gemini-2.5-pro"
   },
   "bmad": {

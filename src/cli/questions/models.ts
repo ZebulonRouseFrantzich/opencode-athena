@@ -8,31 +8,43 @@ import { select } from "@inquirer/prompts";
 import type { ModelAnswers, ModelChoice, SubscriptionAnswers } from "../../shared/types.js";
 
 /**
+ * Default values for model questions
+ */
+export interface ModelDefaults {
+  sisyphus?: string;
+  oracle?: string;
+  librarian?: string;
+  frontend?: string;
+  documentWriter?: string;
+  multimodalLooker?: string;
+}
+
+/**
  * Available models by provider
  */
 const AVAILABLE_MODELS: ModelChoice[] = [
   // Anthropic models
   {
-    id: "anthropic/claude-sonnet-4-20250514",
-    name: "Claude Sonnet 4",
+    id: "anthropic/claude-sonnet-4-5",
+    name: "Claude Sonnet 4.5",
     provider: "anthropic",
     description: "Latest Sonnet - balanced performance and speed",
   },
   {
-    id: "anthropic/claude-opus-4-20250514",
-    name: "Claude Opus 4",
+    id: "anthropic/claude-opus-4-5",
+    name: "Claude Opus 4.5",
     provider: "anthropic",
     description: "Most capable Claude model",
   },
   {
-    id: "anthropic/claude-sonnet-4-20250514-thinking",
-    name: "Claude Sonnet 4 (Thinking)",
+    id: "anthropic/claude-sonnet-4-5-thinking",
+    name: "Claude Sonnet 4.5 (Thinking)",
     provider: "anthropic",
     description: "Sonnet with extended thinking enabled",
   },
   {
-    id: "anthropic/claude-opus-4-20250514-thinking",
-    name: "Claude Opus 4 (Thinking)",
+    id: "anthropic/claude-opus-4-5-thinking",
+    name: "Claude Opus 4.5 (Thinking)",
     provider: "anthropic",
     description: "Opus with extended thinking enabled",
   },
@@ -45,22 +57,16 @@ const AVAILABLE_MODELS: ModelChoice[] = [
     description: "Fast multimodal model",
   },
   {
-    id: "openai/gpt-4.1",
-    name: "GPT-4.1",
+    id: "openai/gpt-5.1",
+    name: "GPT-5.1",
     provider: "openai",
-    description: "Latest GPT-4 variant",
+    description: "Latest GPT model",
   },
   {
-    id: "openai/o1",
-    name: "o1",
+    id: "openai/gpt-5.1-high",
+    name: "GPT-5.1 High",
     provider: "openai",
-    description: "Reasoning model for complex tasks",
-  },
-  {
-    id: "openai/o3",
-    name: "o3",
-    provider: "openai",
-    description: "Latest reasoning model",
+    description: "GPT-5.1 with high reasoning effort",
   },
 
   // Google models
@@ -87,13 +93,44 @@ const AVAILABLE_MODELS: ModelChoice[] = [
 /**
  * Filter models based on enabled providers
  */
-function getAvailableModels(subscriptions: SubscriptionAnswers): ModelChoice[] {
+export function getAvailableModels(subscriptions: SubscriptionAnswers): ModelChoice[] {
   return AVAILABLE_MODELS.filter((model) => {
     if (model.provider === "anthropic" && !subscriptions.hasClaude) return false;
     if (model.provider === "openai" && !subscriptions.hasOpenAI) return false;
     if (model.provider === "google" && !subscriptions.hasGoogle) return false;
     return true;
   });
+}
+
+/**
+ * Check if a model is available given the subscriptions
+ */
+function isModelAvailable(modelId: string, availableModels: ModelChoice[]): boolean {
+  return availableModels.some((m) => m.id === modelId);
+}
+
+/**
+ * Get a fallback model when preset model is not available
+ *
+ * @param presetModel - The model from the preset
+ * @param role - The agent role
+ * @param subscriptions - The user's subscriptions
+ * @param availableModels - List of available models
+ * @returns A valid model ID, either the preset one or a fallback
+ */
+function getValidModelOrFallback(
+  presetModel: string | undefined,
+  role: string,
+  subscriptions: SubscriptionAnswers,
+  availableModels: ModelChoice[]
+): string | undefined {
+  // If preset model is available, use it
+  if (presetModel && isModelAvailable(presetModel, availableModels)) {
+    return presetModel;
+  }
+
+  // Otherwise use the role-based suggestion
+  return getSuggestedModel(role, subscriptions, availableModels);
 }
 
 /**
@@ -117,29 +154,21 @@ function getSuggestedModel(
   // Default suggestions based on role
   const suggestions: Record<string, string[]> = {
     sisyphus: [
-      "anthropic/claude-opus-4-20250514-thinking",
-      "anthropic/claude-sonnet-4-20250514-thinking",
-      "openai/o3",
+      "anthropic/claude-opus-4-5-thinking",
+      "anthropic/claude-sonnet-4-5-thinking",
+      "openai/gpt-5.1-high",
       "google/gemini-2.5-pro",
     ],
     oracle: [
-      "openai/o3",
-      "openai/o1",
-      "anthropic/claude-opus-4-20250514-thinking",
+      "openai/gpt-5.1-high",
+      "anthropic/claude-opus-4-5-thinking",
+      "anthropic/claude-sonnet-4-5-thinking",
       "google/gemini-2.5-pro",
     ],
-    librarian: ["anthropic/claude-sonnet-4-20250514", "openai/gpt-4o", "google/gemini-2.5-flash"],
-    frontend: ["anthropic/claude-sonnet-4-20250514", "google/gemini-2.5-pro", "openai/gpt-4o"],
-    documentWriter: [
-      "google/gemini-2.5-pro",
-      "anthropic/claude-sonnet-4-20250514",
-      "openai/gpt-4o",
-    ],
-    multimodalLooker: [
-      "google/gemini-2.5-flash",
-      "openai/gpt-4o",
-      "anthropic/claude-sonnet-4-20250514",
-    ],
+    librarian: ["anthropic/claude-sonnet-4-5", "openai/gpt-4o", "google/gemini-2.5-flash"],
+    frontend: ["anthropic/claude-sonnet-4-5", "google/gemini-2.5-pro", "openai/gpt-4o"],
+    documentWriter: ["google/gemini-2.5-pro", "anthropic/claude-sonnet-4-5", "openai/gpt-4o"],
+    multimodalLooker: ["google/gemini-2.5-flash", "openai/gpt-4o", "anthropic/claude-sonnet-4-5"],
   };
 
   const roleDefaults = suggestions[role] || [];
@@ -156,8 +185,14 @@ function getSuggestedModel(
 
 /**
  * Gather model selections from user
+ *
+ * @param subscriptions - The user's provider subscriptions
+ * @param defaults - Optional default values from a preset
  */
-export async function gatherModels(subscriptions: SubscriptionAnswers): Promise<ModelAnswers> {
+export async function gatherModels(
+  subscriptions: SubscriptionAnswers,
+  defaults?: ModelDefaults
+): Promise<ModelAnswers> {
   const availableModels = getAvailableModels(subscriptions);
 
   if (availableModels.length === 0) {
@@ -168,29 +203,64 @@ export async function gatherModels(subscriptions: SubscriptionAnswers): Promise<
 
   const choices = createModelChoices(availableModels);
 
+  // Get valid defaults (either from preset if available, or fallback)
+  const sisyphusDefault = getValidModelOrFallback(
+    defaults?.sisyphus,
+    "sisyphus",
+    subscriptions,
+    availableModels
+  );
+  const oracleDefault = getValidModelOrFallback(
+    defaults?.oracle,
+    "oracle",
+    subscriptions,
+    availableModels
+  );
+  const librarianDefault = getValidModelOrFallback(
+    defaults?.librarian,
+    "librarian",
+    subscriptions,
+    availableModels
+  );
+
   // Required agents
   const sisyphus = await select({
     message: "Model for Sisyphus (main orchestrator - implements stories)?",
     choices,
-    default: getSuggestedModel("sisyphus", subscriptions, availableModels),
+    default: sisyphusDefault,
   });
 
   const oracle = await select({
     message: "Model for Oracle (debugging and complex reasoning)?",
     choices,
-    default: getSuggestedModel("oracle", subscriptions, availableModels),
+    default: oracleDefault,
   });
 
   const librarian = await select({
     message: "Model for Librarian (research and documentation lookup)?",
     choices,
-    default: getSuggestedModel("librarian", subscriptions, availableModels),
+    default: librarianDefault,
   });
 
-  // Optional agents - use defaults
-  const frontend = getSuggestedModel("frontend", subscriptions, availableModels);
-  const documentWriter = getSuggestedModel("documentWriter", subscriptions, availableModels);
-  const multimodalLooker = getSuggestedModel("multimodalLooker", subscriptions, availableModels);
+  // Optional agents - use defaults with fallback
+  const frontend = getValidModelOrFallback(
+    defaults?.frontend,
+    "frontend",
+    subscriptions,
+    availableModels
+  );
+  const documentWriter = getValidModelOrFallback(
+    defaults?.documentWriter,
+    "documentWriter",
+    subscriptions,
+    availableModels
+  );
+  const multimodalLooker = getValidModelOrFallback(
+    defaults?.multimodalLooker,
+    "multimodalLooker",
+    subscriptions,
+    availableModels
+  );
 
   return {
     sisyphus,
@@ -207,4 +277,33 @@ export async function gatherModels(subscriptions: SubscriptionAnswers): Promise<
  */
 export function getModelList(subscriptions: SubscriptionAnswers): ModelChoice[] {
   return getAvailableModels(subscriptions);
+}
+
+/**
+ * Validate that preset models are compatible with given subscriptions.
+ * Returns warnings for any models that won't be available.
+ */
+export function validatePresetModels(
+  presetModels: ModelDefaults,
+  subscriptions: SubscriptionAnswers
+): string[] {
+  const warnings: string[] = [];
+  const availableModels = getAvailableModels(subscriptions);
+
+  const checkModel = (model: string | undefined, role: string) => {
+    if (model && !isModelAvailable(model, availableModels)) {
+      warnings.push(
+        `Preset model for ${role} (${model}) is not available with your subscriptions. A fallback will be used.`
+      );
+    }
+  };
+
+  checkModel(presetModels.sisyphus, "Sisyphus");
+  checkModel(presetModels.oracle, "Oracle");
+  checkModel(presetModels.librarian, "Librarian");
+  checkModel(presetModels.frontend, "Frontend");
+  checkModel(presetModels.documentWriter, "Document Writer");
+  checkModel(presetModels.multimodalLooker, "Multimodal Looker");
+
+  return warnings;
 }

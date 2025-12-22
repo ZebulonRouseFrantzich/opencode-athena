@@ -2,13 +2,14 @@
  * Install command
  *
  * Interactive installer for OpenCode Athena.
+ * Supports presets for quick configuration.
  */
 
-import { confirm } from "@inquirer/prompts";
+import { confirm, select } from "@inquirer/prompts";
 import chalk from "chalk";
 import ora from "ora";
 import { DEFAULTS } from "../../shared/constants.js";
-import type { InstallAnswers, InstallOptions } from "../../shared/types.js";
+import type { InstallAnswers, InstallOptions, SubscriptionAnswers } from "../../shared/types.js";
 import { ConfigGenerator } from "../generators/config-generator.js";
 import {
   gatherAdvanced,
@@ -16,9 +17,20 @@ import {
   gatherMethodology,
   gatherModels,
   gatherSubscriptions,
+  validatePresetModels,
 } from "../questions/index.js";
 import { FileManager } from "../utils/file-manager.js";
 import { logger } from "../utils/logger.js";
+import {
+  formatPresetSummary,
+  isValidPresetName,
+  listPresets,
+  loadPreset,
+  presetToDefaults,
+  type PresetConfig,
+  type PresetDefaults,
+  PRESET_NAMES,
+} from "../utils/preset-loader.js";
 import { checkPrerequisites } from "../utils/prerequisites.js";
 
 /**
@@ -67,38 +79,144 @@ export async function install(options: InstallOptions): Promise<void> {
     }
   }
 
-  // Step 2: Gather subscription information
+  // Step 2: Handle preset loading
+  let preset: PresetConfig | null = null;
+  let presetDefaults: PresetDefaults | null = null;
+  let presetName: string | null = null;
+
+  // Validate and load preset from --preset flag
+  if (options.preset && options.preset !== "none") {
+    if (!isValidPresetName(options.preset)) {
+      logger.error(`Invalid preset: "${options.preset}"`);
+      logger.info(`Valid presets: ${PRESET_NAMES.join(", ")}`);
+      process.exit(1);
+    }
+
+    try {
+      preset = loadPreset(options.preset);
+      presetDefaults = presetToDefaults(preset);
+      presetName = options.preset;
+      logger.success(`Loaded preset: ${options.preset}`);
+    } catch (error) {
+      logger.error(error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  }
+
+  // If no preset specified via flag, ask interactively (unless --yes)
+  if (!preset && !options.yes) {
+    const selectedPreset = await askForPreset();
+    if (selectedPreset) {
+      preset = selectedPreset.preset;
+      presetDefaults = presetToDefaults(preset);
+      presetName = selectedPreset.name;
+    }
+  }
+
+  // Step 3: Always gather subscription information (regardless of preset)
   logger.section("LLM Subscriptions");
 
   const subscriptions = await gatherSubscriptions();
 
-  // Step 3: Model selection
-  logger.section("Model Selection");
+  // Step 4: If preset loaded, show summary and ask if they want to customize
+  let shouldCustomize = true;
 
-  const models = await gatherModels(subscriptions);
+  if (preset && presetDefaults && presetName) {
+    // Check if preset models are compatible with subscriptions
+    const modelWarnings = validatePresetModels(presetDefaults.models, subscriptions);
+    if (modelWarnings.length > 0) {
+      console.log(chalk.yellow("\nPreset model compatibility warnings:"));
+      for (const warning of modelWarnings) {
+        console.log(chalk.yellow(`  - ${warning}`));
+      }
+      console.log();
+    }
 
-  // Step 4: Methodology preferences
-  logger.section("Methodology Preferences");
+    // Show preset summary
+    console.log(chalk.bold("\nPreset Configuration:\n"));
+    console.log(chalk.gray(formatPresetSummary(preset, presetName)));
+    console.log();
 
-  const methodology = await gatherMethodology();
-
-  // Step 5: Feature selection
-  logger.section("Feature Selection");
-
-  const features = await gatherFeatures();
-
-  // Step 6: Advanced options (optional)
-  let advanced: { parallelStoryLimit?: number; experimental?: string[] } = {
-    parallelStoryLimit: DEFAULTS.parallelStoryLimit,
-    experimental: [],
-  };
-
-  if (options.advanced) {
-    logger.section("Advanced Configuration");
-    advanced = await gatherAdvanced();
+    // Ask if they want to customize (unless --yes flag)
+    if (options.yes) {
+      shouldCustomize = false;
+      logger.info("Using preset defaults (--yes flag)");
+    } else {
+      shouldCustomize = await confirm({
+        message: "Would you like to customize these settings?",
+        default: false,
+      });
+    }
   }
 
-  // Step 7: Generate configuration
+  // Step 5: Gather configuration (with preset defaults if available)
+  let models: InstallAnswers["models"];
+  let methodology: InstallAnswers["methodology"];
+  let features: InstallAnswers["features"];
+  let advanced: InstallAnswers["advanced"];
+
+  if (!shouldCustomize && presetDefaults) {
+    // Use preset defaults directly (validated against subscriptions)
+    logger.section("Applying Preset Configuration");
+
+    // For models, we still need to validate and potentially substitute
+    const availableModels = await import("../questions/models.js").then((m) =>
+      m.getAvailableModels(subscriptions)
+    );
+
+    // Fail early if no models are available
+    if (availableModels.length === 0) {
+      logger.error(
+        "No models available. Please enable at least one provider (Claude, OpenAI, or Google)."
+      );
+      process.exit(1);
+    }
+
+    models = {
+      sisyphus: getValidModelOrFirst(presetDefaults.models.sisyphus, availableModels),
+      oracle: getValidModelOrFirst(presetDefaults.models.oracle, availableModels),
+      librarian: getValidModelOrFirst(presetDefaults.models.librarian, availableModels),
+      frontend: getValidModelOrFirst(presetDefaults.models.frontend, availableModels),
+      documentWriter: getValidModelOrFirst(presetDefaults.models.documentWriter, availableModels),
+      multimodalLooker: getValidModelOrFirst(
+        presetDefaults.models.multimodalLooker,
+        availableModels
+      ),
+    };
+
+    methodology = presetDefaults.methodology;
+    features = presetDefaults.features;
+    advanced = presetDefaults.advanced;
+
+    logger.success("Preset configuration applied");
+  } else {
+    // Interactive configuration (with preset defaults if available)
+
+    // Model selection
+    logger.section("Model Selection");
+    models = await gatherModels(subscriptions, presetDefaults?.models);
+
+    // Methodology preferences
+    logger.section("Methodology Preferences");
+    methodology = await gatherMethodology(presetDefaults?.methodology);
+
+    // Feature selection
+    logger.section("Feature Selection");
+    features = await gatherFeatures(presetDefaults?.features);
+
+    // Advanced options (optional, unless --advanced flag)
+    if (options.advanced) {
+      logger.section("Advanced Configuration");
+      advanced = await gatherAdvanced(presetDefaults?.advanced);
+    } else {
+      advanced = presetDefaults?.advanced ?? {
+        parallelStoryLimit: DEFAULTS.parallelStoryLimit,
+        experimental: [],
+      };
+    }
+  }
+
+  // Step 6: Generate configuration
   logger.section("Generating Configuration");
 
   const answers: InstallAnswers = {
@@ -113,7 +231,7 @@ export async function install(options: InstallOptions): Promise<void> {
   const generator = new ConfigGenerator(answers);
   const files = await generator.generate();
 
-  // Step 8: Preview files
+  // Step 7: Preview files
   console.log(chalk.bold("Files to be created/modified:\n"));
   for (const file of files) {
     const action = file.exists ? chalk.yellow("update") : chalk.green("create");
@@ -121,7 +239,7 @@ export async function install(options: InstallOptions): Promise<void> {
   }
   console.log();
 
-  // Step 9: Confirm installation
+  // Step 8: Confirm installation
   if (!options.yes) {
     const proceed = await confirm({
       message: "Proceed with installation?",
@@ -134,7 +252,7 @@ export async function install(options: InstallOptions): Promise<void> {
     }
   }
 
-  // Step 10: Install
+  // Step 9: Install
   const installSpinner = ora("Installing OpenCode Athena...").start();
 
   try {
@@ -166,14 +284,60 @@ export async function install(options: InstallOptions): Promise<void> {
     process.exit(1);
   }
 
-  // Step 11: Print next steps
+  // Step 10: Print next steps
   printNextSteps(subscriptions);
+}
+
+/**
+ * Ask user if they want to start from a preset
+ */
+async function askForPreset(): Promise<{ preset: PresetConfig; name: string } | null> {
+  const presets = listPresets();
+
+  const choices = [
+    { name: "No preset - Configure everything manually", value: "none" },
+    ...presets.map((p) => ({
+      name: `${p.name} - ${p.description}`,
+      value: p.name,
+    })),
+  ];
+
+  const selected = await select({
+    message: "Start from a preset?",
+    choices,
+    default: "standard",
+  });
+
+  if (selected === "none") {
+    return null;
+  }
+
+  try {
+    const preset = loadPreset(selected);
+    return { preset, name: selected };
+  } catch (error) {
+    logger.warn(`Failed to load preset: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
+}
+
+/**
+ * Get a valid model ID or fall back to the first available model
+ */
+function getValidModelOrFirst(
+  modelId: string | undefined,
+  availableModels: Array<{ id: string }>
+): string {
+  if (modelId && availableModels.some((m) => m.id === modelId)) {
+    return modelId;
+  }
+  return availableModels[0]?.id ?? "";
 }
 
 /**
  * Print next steps after installation
  */
-function printNextSteps(subscriptions: InstallAnswers["subscriptions"]): void {
+function printNextSteps(subscriptions: SubscriptionAnswers): void {
   const steps: string[] = [];
 
   if (subscriptions.hasClaude) {

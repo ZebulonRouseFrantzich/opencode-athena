@@ -1,17 +1,17 @@
 {
   "$schema": "../schemas/athena.schema.json",
   "version": "1.0.0",
-  "description": "Standard configuration - recommended for most users",
+  "description": "Standard configuration - recommended for users with Claude Max 5x, OpenAI, and Google Workspace",
   "subscriptions": {
     "claude": { "enabled": true, "tier": "max5x" },
     "openai": { "enabled": true },
     "google": { "enabled": true, "authMethod": "antigravity" }
   },
   "models": {
-    "sisyphus": "anthropic/claude-sonnet-4-20250514-thinking",
-    "oracle": "openai/o3",
-    "librarian": "anthropic/claude-sonnet-4-20250514",
-    "frontend": "anthropic/claude-sonnet-4-20250514",
+    "sisyphus": "anthropic/claude-sonnet-4-5-thinking",
+    "oracle": "openai/gpt-5.1-high",
+    "librarian": "anthropic/claude-sonnet-4-5",
+    "frontend": "anthropic/claude-sonnet-4-5",
     "documentWriter": "google/gemini-2.5-pro",
     "multimodalLooker": "google/gemini-2.5-flash"
   },

@@ -62,8 +62,8 @@ export async function generateOpencodeConfig(
         models: {
           ...existingAnthropicModels,
           // Add thinking model variants
-          "claude-opus-4-20250514-thinking": {
-            id: "claude-opus-4-20250514",
+          "claude-opus-4-5-thinking": {
+            id: "claude-opus-4-5",
             options: {
               thinking: {
                 type: "enabled",
@@ -71,8 +71,8 @@ export async function generateOpencodeConfig(
               },
             },
           },
-          "claude-sonnet-4-20250514-thinking": {
-            id: "claude-sonnet-4-20250514",
+          "claude-sonnet-4-5-thinking": {
+            id: "claude-sonnet-4-5",
             options: {
               thinking: {
                 type: "enabled",
@@ -98,8 +98,8 @@ export async function generateOpencodeConfig(
         models: {
           ...existingOpenAIModels,
           // Add reasoning effort configurations
-          "gpt-4.1-high": {
-            id: "gpt-4.1",
+          "gpt-5.1-high": {
+            id: "gpt-5.1",
             options: {
               reasoningEffort: "high",
               reasoningSummary: "auto",

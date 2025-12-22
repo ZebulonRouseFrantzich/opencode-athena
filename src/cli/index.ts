@@ -12,6 +12,7 @@ import { info } from "./commands/info.js";
 import { install } from "./commands/install.js";
 import { uninstall } from "./commands/uninstall.js";
 import { update } from "./commands/update.js";
+import { listPresets } from "./utils/preset-loader.js";
 
 const program = new Command();
 
@@ -25,12 +26,24 @@ program
 program
   .command("install")
   .description("Install and configure OpenCode Athena")
-  .option("-p, --preset <preset>", "Use a preset configuration", "standard")
+  .option(
+    "-p, --preset <preset>",
+    "Use a preset configuration (minimal, standard, enterprise, solo-quick)",
+    "standard"
+  )
   .option("-y, --yes", "Skip confirmation prompts", false)
   .option("--advanced", "Show advanced configuration options", false)
   .option("--global", "Install globally (default)", true)
   .option("--local", "Install to current project only", false)
-  .action(install);
+  .option("--list-presets", "List available presets and exit", false)
+  .action(async (options) => {
+    // Handle --list-presets flag
+    if (options.listPresets) {
+      displayPresets();
+      return;
+    }
+    await install(options);
+  });
 
 program
   .command("update")
@@ -52,5 +65,23 @@ program
   .action(uninstall);
 
 program.command("info").description("Show current configuration and status").action(info);
+
+/**
+ * Display available presets in a formatted way
+ */
+function displayPresets(): void {
+  console.log(chalk.bold.cyan("\nAvailable Presets:\n"));
+
+  const presets = listPresets();
+
+  for (const preset of presets) {
+    console.log(chalk.bold(`  ${preset.name}`));
+    console.log(chalk.gray(`    ${preset.description}`));
+    console.log();
+  }
+
+  console.log(chalk.gray("Usage: opencode-athena install --preset <name>"));
+  console.log(chalk.gray("       opencode-athena install --preset standard --yes\n"));
+}
 
 program.parse();

@@ -8,9 +8,21 @@ import { confirm, select } from "@inquirer/prompts";
 import type { MethodologyAnswers } from "../../shared/types.js";
 
 /**
- * Gather methodology preferences from user
+ * Default values for methodology questions
  */
-export async function gatherMethodology(): Promise<MethodologyAnswers> {
+export interface MethodologyDefaults {
+  defaultTrack?: "quick-flow" | "bmad-method" | "enterprise";
+  autoStatusUpdate?: boolean;
+}
+
+/**
+ * Gather methodology preferences from user
+ *
+ * @param defaults - Optional default values from a preset
+ */
+export async function gatherMethodology(
+  defaults?: MethodologyDefaults
+): Promise<MethodologyAnswers> {
   const defaultTrack = await select({
     message: "Default BMAD track for new projects?",
     choices: [
@@ -27,12 +39,12 @@ export async function gatherMethodology(): Promise<MethodologyAnswers> {
         value: "enterprise" as const,
       },
     ],
-    default: "bmad-method",
+    default: defaults?.defaultTrack ?? "bmad-method",
   });
 
   const autoStatusUpdate = await confirm({
     message: "Automatically update sprint-status.yaml when stories complete?",
-    default: true,
+    default: defaults?.autoStatusUpdate ?? true,
   });
 
   return {
