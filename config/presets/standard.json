@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/athena.schema.json",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Standard configuration - recommended for users with Claude Max 5x, OpenAI, and Google Workspace",
   "subscriptions": {
     "claude": { "enabled": true, "tier": "max5x" },

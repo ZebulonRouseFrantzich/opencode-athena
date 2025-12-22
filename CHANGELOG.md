@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - TBD
+## [0.0.1] - TBD
 
 ### Added
 
@@ -48,5 +48,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - opencode-antigravity-auth (optional, for Google Workspace)
 - opencode-openai-codex-auth (optional, for OpenAI)
 
-[Unreleased]: https://github.com/ZebulonRouseFrantzich/opencode-athena/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/ZebulonRouseFrantzich/opencode-athena/releases/tag/v1.0.0
+[Unreleased]: https://github.com/ZebulonRouseFrantzich/opencode-athena/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/ZebulonRouseFrantzich/opencode-athena/releases/tag/v0.0.1

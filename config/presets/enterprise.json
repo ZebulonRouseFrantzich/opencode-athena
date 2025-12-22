@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/athena.schema.json",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Enterprise configuration - all features enabled, optimized for Claude Max 20x with OpenAI and Google",
   "subscriptions": {
     "claude": { "enabled": true, "tier": "max20x" },

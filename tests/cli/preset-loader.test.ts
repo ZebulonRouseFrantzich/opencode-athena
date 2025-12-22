@@ -34,7 +34,7 @@ describe("preset-loader", () => {
       const preset = loadPreset("standard");
 
       expect(preset).toBeDefined();
-      expect(preset.version).toBe("1.0.0");
+      expect(preset.version).toBe("0.0.1");
       expect(preset.description).toContain("Standard");
       expect(preset.models).toBeDefined();
       expect(preset.models.sisyphus).toBeDefined();

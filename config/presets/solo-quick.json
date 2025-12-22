@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/athena.schema.json",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Solo quick flow - fast iteration for solo developers with Claude Max 5x",
   "subscriptions": {
     "claude": { "enabled": true, "tier": "max5x" },

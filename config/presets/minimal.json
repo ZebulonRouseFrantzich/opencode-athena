@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/athena.schema.json",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Minimal configuration - essential features only, works with Claude Pro alone",
   "subscriptions": {
     "claude": { "enabled": true, "tier": "pro" },
