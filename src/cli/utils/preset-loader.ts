@@ -84,22 +84,26 @@ export type PresetName = (typeof PRESET_NAMES)[number];
 
 /**
  * Get the path to the presets directory.
- * Handles both development (src/) and installed (dist/) scenarios.
+ * Handles both development and bundled scenarios.
  */
 function getPresetsDir(): string {
-  // Get the directory of this file
   const currentFileDir = dirname(fileURLToPath(import.meta.url));
 
-  // In development: src/cli/utils/preset-loader.ts -> go up 3 levels to root, then config/presets
-  // In dist: dist/cli/utils/preset-loader.js -> go up 3 levels to root, then config/presets
-  const rootDir = join(currentFileDir, "..", "..", "..");
-  const presetsDir = join(rootDir, "config", "presets");
-
-  if (existsSync(presetsDir)) {
-    return presetsDir;
+  // After tsup bundling: dist/cli/index.js -> 2 levels up to package root
+  const bundledRoot = join(currentFileDir, "..", "..");
+  const bundledPresetsDir = join(bundledRoot, "config", "presets");
+  if (existsSync(bundledPresetsDir)) {
+    return bundledPresetsDir;
   }
 
-  // Fallback: check if we're in node_modules and need to find the package root
+  // Unbundled development: src/cli/utils/preset-loader.ts -> 3 levels up
+  const devRoot = join(currentFileDir, "..", "..", "..");
+  const devPresetsDir = join(devRoot, "config", "presets");
+  if (existsSync(devPresetsDir)) {
+    return devPresetsDir;
+  }
+
+  // Fallback: check if we're in node_modules
   const nodeModulesPath = currentFileDir.split("node_modules")[0];
   if (nodeModulesPath !== currentFileDir) {
     const packagePresetsDir = join(
@@ -114,7 +118,9 @@ function getPresetsDir(): string {
     }
   }
 
-  throw new Error(`Could not find presets directory. Searched: ${presetsDir}`);
+  throw new Error(
+    `Could not find presets directory. Searched:\n  - ${bundledPresetsDir}\n  - ${devPresetsDir}`
+  );
 }
 
 /**

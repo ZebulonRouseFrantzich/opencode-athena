@@ -17,11 +17,25 @@ const execAsync = promisify(exec);
 
 /**
  * Get the package root directory (where commands/ and config/ live)
+ * Handles both bundled and unbundled scenarios.
  */
 function getPackageRoot(): string {
-  const currentFile = fileURLToPath(import.meta.url);
-  // Navigate from dist/cli/utils/file-manager.js to package root
-  return join(dirname(currentFile), "..", "..", "..");
+  const currentFileDir = dirname(fileURLToPath(import.meta.url));
+
+  // After tsup bundling: dist/cli/index.js -> 2 levels up to package root
+  const bundledRoot = join(currentFileDir, "..", "..");
+  if (existsSync(join(bundledRoot, "commands"))) {
+    return bundledRoot;
+  }
+
+  // Unbundled development: src/cli/utils/file-manager.ts -> 3 levels up
+  const devRoot = join(currentFileDir, "..", "..", "..");
+  if (existsSync(join(devRoot, "commands"))) {
+    return devRoot;
+  }
+
+  // Fallback to bundled root even if commands dir doesn't exist
+  return bundledRoot;
 }
 
 export class FileManager {
