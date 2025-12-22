@@ -1,93 +1,178 @@
 # OpenCode Athena
 
-> **Strategic Wisdom Meets Practical Execution**
+> **Strategic wisdom meets practical execution**
 
-A comprehensive OpenCode plugin that orchestrates [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) and [BMAD METHOD v6](https://github.com/bmad-method/bmad-method) into a unified agentic development experience.
+Unified [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) + [BMAD METHOD v6](https://github.com/bmad-method/bmad-method) toolkit for [OpenCode](https://opencode.ai).
 
-## Overview
+[![npm version](https://img.shields.io/npm/v/opencode-athena)](https://www.npmjs.com/package/opencode-athena)
+[![License: MIT-0](https://img.shields.io/badge/License-MIT--0-yellow.svg)](https://opensource.org/licenses/MIT-0)
 
-OpenCode Athena is a meta-plugin for OpenCode that bridges the gap between strategic planning and practical code execution. Named after the Greek goddess of wisdom and practical crafts, Athena unifies two powerful development methodologies:
+## What is Athena?
 
-- **BMAD METHOD** - Rigorous planning workflows (PRD, Architecture, Stories)
-- **oh-my-opencode** - Superior code execution capabilities (Sisyphus, Oracle, Librarian)
+OpenCode Athena bridges the gap between **BMAD METHOD's rigorous planning** and **oh-my-opencode's superior execution**:
 
-## What It Does
+- **Planning** (BMAD): PRD → Architecture → Epics → Stories
+- **Execution** (oh-my-opencode): Sisyphus + Oracle + Librarian + LSP tools + parallel agents
+- **Bridge** (Athena): Automatic handoff, status tracking, context injection
 
-| Capability | Description |
-|------------|-------------|
-| **Unified Installation** | One-command setup for oh-my-opencode with optimal configuration |
-| **Bridge Commands** | Seamless handoff between BMAD planning artifacts and Sisyphus execution |
-| **Auto Sprint Tracking** | Automatic updates to `sprint-status.yaml` as stories complete |
-| **Context Injection** | Unified context management across planning and implementation |
-| **Guided Setup** | Interactive wizard for auth and subscription configuration |
+| Without Athena | With Athena |
+|----------------|-------------|
+| Manual oh-my-opencode setup | One-command installation |
+| Manual BMAD ↔ Sisyphus handoff | Automated bridge commands |
+| Manual sprint-status.yaml updates | Auto-tracking |
+| Separate context management | Unified context injection |
+| Manual auth configuration | Guided setup wizard |
 
-## Core Features
+## Quick Start
 
-### Bridge Commands
+```bash
+npx opencode-athena install
+```
 
-- `/athena-dev` - Implement a BMAD story with full Sisyphus capabilities
-- `/athena-review` - Combined quality gate with architecture validation
-- `/athena-debug` - Debug with Oracle subagent
-- `/athena-research` - Research with Librarian subagent
-- `/athena-parallel` - Multi-story parallel execution
-- `/athena-status` - Sprint status management
+The interactive installer will:
+1. Ask about your LLM subscriptions (Claude, OpenAI, Google)
+2. Configure oh-my-opencode with optimal agent models
+3. Set up authentication plugins
+4. Install bridge commands
 
-### Custom Plugin Tools
+## Requirements
 
-- `athena_get_story` - Load story context with architecture and PRD sections
-- `athena_update_status` - Update sprint-status.yaml automatically
-- `athena_get_context` - Build comprehensive agent context
-- `athena_parallel` - Orchestrate parallel story implementation
-- `athena_config` - Runtime configuration management
+- [OpenCode](https://opencode.ai/docs) 1.0.132+
+- Node.js 20+
+- One or more LLM subscriptions:
+  - Claude Pro/Max (recommended)
+  - ChatGPT Plus/Pro
+  - Google/Gemini
 
-### Intelligent Subagent Routing
+## Commands
 
-Athena automatically routes work to the optimal subagent based on task type:
+After installation, these commands are available in OpenCode:
 
-- **Sisyphus** - Main orchestrator for story implementation
-- **Oracle** - Complex debugging and architectural decisions
-- **Librarian** - Pattern research and documentation lookup
-- **Frontend Engineer** - UI/UX component implementation
+| Command | Description |
+|---------|-------------|
+| `/athena-dev` | Implement current BMAD story with Sisyphus |
+| `/athena-review` | Combined quality gate (BMAD + oh-my-opencode) |
+| `/athena-debug` | Debug with Oracle (GPT-5.1 reasoning) |
+| `/athena-research` | Research with Librarian + MCPs |
+| `/athena-parallel` | Execute multiple stories in parallel |
+| `/athena-status` | View/update sprint status |
+| `/athena-info` | Show toolkit configuration |
 
-## Target Users
+## Workflow
 
-- Solo developers or small team leads
-- OpenCode users wanting structured BMAD planning
-- Teams seeking oh-my-opencode's execution capabilities
-- Developers who value automation and best practices
+### 1. Plan with BMAD (Phases 1-3)
+
+Use BMAD agents for planning:
+
+```
+Load PM agent → *prd
+Load Architect agent → *create-architecture
+Load SM agent → *sprint-planning → *create-story
+```
+
+### 2. Implement with Athena (Phase 4)
+
+Use Athena bridge commands:
+
+```
+/athena-dev        # Load story, implement with Sisyphus
+/athena-review     # Quality gate
+/athena-status     # Mark complete, get next story
+```
+
+### 3. Repeat
+
+Continue until sprint is complete, then run retrospective with BMAD SM.
+
+## Configuration
+
+Configuration files are stored in `~/.config/opencode/`:
+
+- `athena.json` - Athena-specific settings
+- `oh-my-opencode.json` - Agent model configuration
+- `opencode.json` - Plugin registration
+
+### Presets
+
+Use `--preset` during installation:
+
+```bash
+npx opencode-athena install --preset minimal    # Bare essentials
+npx opencode-athena install --preset standard   # Recommended (default)
+npx opencode-athena install --preset enterprise # Full features
+npx opencode-athena install --preset solo-quick # Solo dev quick flow
+```
+
+### Project Overrides
+
+Create `.opencode/athena.json` in your project root to override global settings.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     OPENCODE ATHENA                          │
-├─────────────────────────────────────────────────────────────┤
-│  CLI Installer          OpenCode Plugin     Bridge Commands │
-│  ├─ install             ├─ Custom Tools     ├─ /athena-dev  │
-│  ├─ update              ├─ Event Hooks      ├─ /athena-*    │
-│  ├─ doctor              └─ Story Tracker    └─ ...          │
-│  └─ uninstall                                                │
-├─────────────────────────────────────────────────────────────┤
-│  oh-my-opencode (managed)  │  BMAD METHOD v6 (per-project)  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                         OpenCode (Base)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           OPENCODE ATHENA                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                         CLI Installer                                │   │
+│  │   npx opencode-athena install    npx opencode-athena doctor         │   │
+│  │   npx opencode-athena update     npx opencode-athena uninstall      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                       OpenCode Plugin                                │   │
+│  │   Custom Tools:                    Event Hooks:                      │   │
+│  │   • athena_get_story              • session.idle                     │   │
+│  │   • athena_update_status          • session.created                  │   │
+│  │   • athena_get_context            • tool.execute.before              │   │
+│  │   • athena_parallel               • tool.execute.after               │   │
+│  │   • athena_config                 • session.compacting               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                       Bridge Commands                                │   │
+│  │   /athena-dev       /athena-review      /athena-debug               │   │
+│  │   /athena-research  /athena-parallel    /athena-status              │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  ┌──────────────────────┐  ┌──────────────────────┐  ┌────────────────┐   │
+│  │    oh-my-opencode    │  │    BMAD METHOD v6    │  │  Auth Plugins  │   │
+│  │      (managed)       │  │   (per-project)      │  │   (managed)    │   │
+│  └──────────────────────┘  └──────────────────────┘  └────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+                              ┌─────────────┐
+                              │  OpenCode   │
+                              │   (Base)    │
+                              └─────────────┘
 ```
 
-## Project Structure
+## Troubleshooting
 
+```bash
+npx opencode-athena doctor        # Diagnose issues
+npx opencode-athena doctor --fix  # Auto-fix common problems
 ```
-opencode-athena/
-├── src/
-│   ├── cli/           # CLI installer commands
-│   ├── plugin/        # OpenCode plugin (tools, hooks, tracker)
-│   └── shared/        # Shared types, constants, schemas
-├── commands/          # Bridge command definitions (.md)
-├── config/            # Templates, schemas, presets
-└── tests/             # Test suites
-```
+
+Common issues:
+
+| Issue | Solution |
+|-------|----------|
+| Plugin not loading | Run `doctor --fix` to reinstall |
+| Auth errors | Run `opencode auth login` for each provider |
+| BMAD not found | Run `npx bmad-method@alpha install` in your project |
+| Commands not available | Verify commands are in `~/.config/opencode/command/` |
+
+## Credits
+
+Built on top of:
+
+- [OpenCode](https://opencode.ai) by SST
+- [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) by code-yeongyu
+- [BMAD METHOD](https://github.com/bmad-method/bmad-method) by bmad-method
 
 ## License
 
-MIT-0 - See [LICENSE](LICENSE) for details.
+MIT-0 (MIT No Attribution) - See [LICENSE](LICENSE) for details.
