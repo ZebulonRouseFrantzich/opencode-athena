@@ -21,7 +21,25 @@ Be specific about what you need:
 - "What testing patterns are used for React components?"
 - "How do other parts of the code handle error states?"
 
-## Step 2: Librarian Research Process
+## Step 2: Invoke Librarian
+
+Ask @librarian to research:
+
+```
+@librarian I need to implement <feature>.
+
+Context:
+- Using <technology/framework>
+- Per architecture: <relevant pattern>
+- Similar to: <any existing code reference>
+
+Please find:
+1. Examples in this codebase
+2. Best practices for this pattern
+3. Any relevant documentation
+```
+
+### Librarian Research Process
 
 Librarian will:
 1. Search the codebase for relevant patterns
@@ -50,3 +68,11 @@ Use the research to inform your implementation:
 - Follow established patterns in the codebase
 - Apply best practices from documentation
 - Adapt examples to your specific needs
+
+## Available Research Tools
+
+Librarian has access to:
+- **Codebase search**: Find patterns in your project
+- **context7 MCP**: Official documentation lookup
+- **grep.app MCP**: Search GitHub public repositories
+- **websearch_exa MCP**: General web search

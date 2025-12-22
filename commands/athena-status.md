@@ -8,18 +8,18 @@ View and manage the current sprint status.
 
 ## View Current Status
 
-Get an overview of the current sprint:
+Get an overview of the current sprint by loading story context:
 
 ```
-athena_get_context({ includeSprintStatus: true })
+athena_get_story()
 ```
 
-This will show:
+This returns:
 - Current sprint number and epic
-- Completed stories (with completion summaries)
-- In-progress stories
-- Pending stories
-- Blocked stories (with blockers)
+- Completed stories count
+- In-progress, pending, and blocked stories
+- Next story to work on
+- Relevant architecture and PRD sections
 
 ## Update Story Status
 
@@ -69,3 +69,9 @@ The response will include sprint progress:
 ## Next Story
 
 After completing a story, the response includes the next suggested story to work on.
+
+## Tips
+
+- Always include a completionSummary when marking complete
+- Always include notes when blocking
+- Use /athena-dev to start implementing the next story

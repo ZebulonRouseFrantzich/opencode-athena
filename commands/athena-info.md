@@ -65,3 +65,10 @@ To change configuration:
    ```
    athena_config({ action: "set", key: "bmad.parallelStoryLimit", value: 5 })
    ```
+
+## Troubleshooting
+
+If something isn't working:
+1. Run `npx opencode-athena doctor` in terminal
+2. Check that auth is configured for all providers
+3. Verify BMAD is installed in the project

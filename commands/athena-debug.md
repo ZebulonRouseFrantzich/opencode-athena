@@ -23,6 +23,18 @@ Provide:
 
 ## Step 2: Invoke Oracle
 
+Ask @oracle to analyze the problem:
+
+```
+@oracle Please analyze this issue:
+
+**Expected**: <what should happen>
+**Actual**: <what happens instead>
+**Error**: <error message if any>
+
+<relevant code or context>
+```
+
 Oracle will:
 1. Analyze the problem description
 2. Search the codebase for relevant code
@@ -56,3 +68,10 @@ athena_update_status({
   notes: "Debug complete. Issue was <root cause>. Fixed by <solution>."
 })
 ```
+
+## Tips
+
+- Provide as much context as possible
+- Include relevant file paths and line numbers
+- Share error stack traces
+- Mention what you've already tried

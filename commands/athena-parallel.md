@@ -33,7 +33,7 @@ Use **athena_parallel** to kick off multiple stories:
 ```
 athena_parallel({
   storyIds: ["2.1", "2.2", "2.3"],
-  maxConcurrent: 3
+  waitForCompletion: true
 })
 ```
 
@@ -64,6 +64,14 @@ When all parallel stories complete:
 - Choose stories in different modules/directories
 - Have one story be "primary" where you maintain focus
 - Use background agents for the others
+
+## Limitations (Planned)
+
+> **Note**: This feature is not yet implemented. The following describes planned behavior.
+
+- Default limit: 3 parallel stories (configurable)
+- Stories with file conflicts cannot run in parallel
+- Context window must have capacity for coordination
 
 ## Handling Conflicts
 

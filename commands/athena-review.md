@@ -46,10 +46,27 @@ athena_get_story()
 
 ## Step 3: Generate Review Report
 
-Provide a structured review with:
-- Pass/Fail status for each check
-- Specific issues found (if any)
-- Recommendations for fixes
+Provide a structured review:
+
+```
+## Review Report: Story <ID>
+
+### Code Quality
+- [ ] LSP diagnostics clean (X errors, Y warnings)
+- [ ] Comment density appropriate
+- [ ] Code structure follows patterns
+
+### BMAD Compliance
+- [ ] Acceptance Criteria 1: <status>
+- [ ] Acceptance Criteria 2: <status>
+- [ ] Architecture alignment: <status>
+- [ ] Test coverage: <status>
+
+### Overall: PASS / FAIL / NEEDS WORK
+
+### Recommendations:
+- <any improvements needed>
+```
 
 ## Step 4: Update Status
 
