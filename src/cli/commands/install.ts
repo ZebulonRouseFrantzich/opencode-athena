@@ -21,17 +21,17 @@ import {
 } from "../questions/index.js";
 import { FileManager } from "../utils/file-manager.js";
 import { logger } from "../utils/logger.js";
+import { checkPrerequisites } from "../utils/prerequisites.js";
 import {
+  PRESET_NAMES,
+  type PresetConfig,
+  type PresetDefaults,
   formatPresetSummary,
   isValidPresetName,
   listPresets,
   loadPreset,
   presetToDefaults,
-  type PresetConfig,
-  type PresetDefaults,
-  PRESET_NAMES,
 } from "../utils/preset-loader.js";
-import { checkPrerequisites } from "../utils/prerequisites.js";
 
 /**
  * Main install command handler

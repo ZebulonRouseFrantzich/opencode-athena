@@ -22,10 +22,7 @@ interface CompactionOutput {
  * so the agent retains awareness of the story being implemented.
  */
 export function createCompactionHook(tracker: StoryTracker) {
-  return async (
-    _input: CompactionInput,
-    output: CompactionOutput
-  ): Promise<void> => {
+  return async (_input: CompactionInput, output: CompactionOutput): Promise<void> => {
     const storyContext = await tracker.getCurrentStoryContext();
 
     if (storyContext) {

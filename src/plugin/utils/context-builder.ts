@@ -36,9 +36,7 @@ export async function extractRelevantArchitecture(
     const sections: string[] = [];
 
     // Always include tech stack section
-    const techStackMatch = archContent.match(
-      /## Tech(?:nology)? Stack[\s\S]*?(?=\n## |$)/i
-    );
+    const techStackMatch = archContent.match(/## Tech(?:nology)? Stack[\s\S]*?(?=\n## |$)/i);
     if (techStackMatch) {
       sections.push(techStackMatch[0].trim());
     }
@@ -85,7 +83,7 @@ export async function extractRelevantArchitecture(
       ? sections.join("\n\n---\n\n")
       : "See full architecture document for details.";
   } catch (error) {
-    console.warn(`[Athena] Failed to read architecture file:`, error);
+    console.warn("[Athena] Failed to read architecture file:", error);
     return "";
   }
 }
@@ -100,10 +98,7 @@ export async function extractRelevantArchitecture(
  * @param storyContent - Content of the story file
  * @returns Extracted PRD sections
  */
-export async function extractRelevantPRD(
-  prdPath: string,
-  storyContent: string
-): Promise<string> {
+export async function extractRelevantPRD(prdPath: string, storyContent: string): Promise<string> {
   if (!existsSync(prdPath)) {
     return "";
   }
@@ -126,10 +121,7 @@ export async function extractRelevantPRD(
       // Try to find the FR section in the PRD
       // Match patterns like "### FR-1" or "#### FR1" or "### FR-001: Title"
       const normalizedFR = fr.replace("-", "-?");
-      const regex = new RegExp(
-        `###+ ${normalizedFR}[:\\s][\\s\\S]*?(?=\\n###+ |$)`,
-        "i"
-      );
+      const regex = new RegExp(`###+ ${normalizedFR}[:\\s][\\s\\S]*?(?=\\n###+ |$)`, "i");
       const match = prdContent.match(regex);
 
       if (match) {
@@ -139,7 +131,7 @@ export async function extractRelevantPRD(
 
     return sections.join("\n\n");
   } catch (error) {
-    console.warn(`[Athena] Failed to read PRD file:`, error);
+    console.warn("[Athena] Failed to read PRD file:", error);
     return "";
   }
 }

@@ -9,7 +9,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { CONFIG_PATHS } from "../../shared/constants.js";
-import type { TrackedStory, TrackerState, StoryStatus, TrackerStatus } from "../../shared/types.js";
+import type { TrackedStory, TrackerState, TrackerStatus } from "../../shared/types.js";
 
 /**
  * Story tracker that persists state across sessions.
@@ -61,10 +61,7 @@ export class StoryTracker {
   /**
    * Set the current story being worked on
    */
-  async setCurrentStory(
-    storyId: string,
-    data: Omit<TrackedStory, "id">
-  ): Promise<void> {
+  async setCurrentStory(storyId: string, data: Omit<TrackedStory, "id">): Promise<void> {
     this.state.currentStory = { id: storyId, ...data };
     this.addHistoryEntry(storyId, data.status);
     await this.saveState();
@@ -73,10 +70,7 @@ export class StoryTracker {
   /**
    * Update the status of a story
    */
-  async updateStoryStatus(
-    storyId: string,
-    status: TrackerStatus
-  ): Promise<void> {
+  async updateStoryStatus(storyId: string, status: TrackerStatus): Promise<void> {
     if (this.state.currentStory?.id === storyId) {
       this.state.currentStory.status = status;
       if (status === "completed") {
@@ -167,11 +161,7 @@ ${recentHistory}
       if (!existsSync(dir)) {
         await mkdir(dir, { recursive: true });
       }
-      await writeFile(
-        this.stateFilePath,
-        JSON.stringify(this.state, null, 2),
-        "utf-8"
-      );
+      await writeFile(this.stateFilePath, JSON.stringify(this.state, null, 2), "utf-8");
     } catch (error) {
       console.warn("[Athena] Failed to save tracker state:", error);
     }

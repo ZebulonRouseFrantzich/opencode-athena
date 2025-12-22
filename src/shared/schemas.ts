@@ -151,12 +151,25 @@ export const ConfigArgsSchema = z.object({
 /**
  * Story status enum for sprint tracking
  */
-export const StoryStatusEnum = z.enum(["pending", "in_progress", "completed", "blocked", "needs_review"]);
+export const StoryStatusEnum = z.enum([
+  "pending",
+  "in_progress",
+  "completed",
+  "blocked",
+  "needs_review",
+]);
 
 /**
  * Tracker status enum (includes transitional states)
  */
-export const TrackerStatusEnum = z.enum(["pending", "in_progress", "completed", "blocked", "needs_review", "loading"]);
+export const TrackerStatusEnum = z.enum([
+  "pending",
+  "in_progress",
+  "completed",
+  "blocked",
+  "needs_review",
+  "loading",
+]);
 
 /**
  * Schema for sprint-status.yaml content

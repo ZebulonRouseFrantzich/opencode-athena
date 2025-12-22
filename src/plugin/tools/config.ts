@@ -4,9 +4,9 @@
  * View current Athena configuration.
  */
 
-import { tool, type ToolDefinition } from "@opencode-ai/plugin";
-import type { AthenaConfig } from "../../shared/types.js";
+import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import { VERSION } from "../../shared/constants.js";
+import type { AthenaConfig } from "../../shared/types.js";
 
 /**
  * Create the athena_config tool

@@ -5,12 +5,8 @@
  */
 
 import type { Plugin } from "@opencode-ai/plugin";
+import { createCompactionHook, createSessionHooks, createToolHooks } from "./hooks/index.js";
 import { createTools } from "./tools/index.js";
-import {
-  createSessionHooks,
-  createToolHooks,
-  createCompactionHook,
-} from "./hooks/index.js";
 import { StoryTracker } from "./tracker/story-tracker.js";
 import { loadAthenaConfig } from "./utils/config-loader.js";
 

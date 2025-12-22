@@ -67,10 +67,7 @@ async function loadConfigFile(filePath: string): Promise<Partial<AthenaConfig> |
 /**
  * Validate a partial config file and return it with warnings for invalid fields
  */
-function validatePartialConfig(
-  config: unknown,
-  filePath: string
-): Partial<AthenaConfig> | null {
+function validatePartialConfig(config: unknown, filePath: string): Partial<AthenaConfig> | null {
   if (typeof config !== "object" || config === null) {
     console.warn(`[Athena] Config file ${filePath} must be an object`);
     return null;
@@ -122,7 +119,14 @@ function validatePartialConfig(
     const models = configObj.models as Record<string, unknown>;
     result.models = {} as AthenaConfig["models"];
 
-    for (const key of ["sisyphus", "oracle", "librarian", "frontend", "documentWriter", "multimodalLooker"]) {
+    for (const key of [
+      "sisyphus",
+      "oracle",
+      "librarian",
+      "frontend",
+      "documentWriter",
+      "multimodalLooker",
+    ]) {
       if (key in models && typeof models[key] === "string") {
         (result.models as Record<string, string>)[key] = models[key] as string;
       }

@@ -4,20 +4,20 @@
  * Loads the current BMAD story context for implementation.
  */
 
-import { tool, type ToolDefinition } from "@opencode-ai/plugin";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
-import type { StoryTracker } from "../tracker/story-tracker.js";
 import type { AthenaConfig, GetStoryResult, SprintStatus } from "../../shared/types.js";
+import type { StoryTracker } from "../tracker/story-tracker.js";
 import { findBmadDir, getBmadPaths } from "../utils/bmad-finder.js";
-import { readSprintStatus } from "../utils/yaml-handler.js";
 import {
   extractRelevantArchitecture,
   extractRelevantPRD,
   generateImplementationInstructions,
 } from "../utils/context-builder.js";
+import { readSprintStatus } from "../utils/yaml-handler.js";
 
 /**
  * Create the athena_get_story tool
@@ -67,8 +67,7 @@ async function getStoryContext(
   if (!bmadDir) {
     return {
       error: "No BMAD directory found",
-      suggestion:
-        "Run 'npx bmad-method@alpha install' to set up BMAD in this project.",
+      suggestion: "Run 'npx bmad-method@alpha install' to set up BMAD in this project.",
     };
   }
 
@@ -79,8 +78,7 @@ async function getStoryContext(
   if (!sprint) {
     return {
       error: "No sprint-status.yaml found",
-      suggestion:
-        "Run the sprint-planning workflow with BMAD's SM agent first.",
+      suggestion: "Run the sprint-planning workflow with BMAD's SM agent first.",
     };
   }
 
@@ -110,10 +108,7 @@ async function getStoryContext(
   }
 
   // Load architecture context
-  const archContent = await extractRelevantArchitecture(
-    paths.architecture,
-    storyContent
-  );
+  const archContent = await extractRelevantArchitecture(paths.architecture, storyContent);
 
   // Load PRD context
   const prdContent = await extractRelevantPRD(paths.prd, storyContent);
@@ -170,10 +165,7 @@ function findNextPendingStory(sprint: SprintStatus): string | null {
  * - story-{id}.md (e.g., story-2.3.md)
  * - {id}.md (e.g., 2.3.md)
  */
-async function loadStoryFile(
-  storiesDir: string,
-  storyId: string
-): Promise<string | null> {
+async function loadStoryFile(storiesDir: string, storyId: string): Promise<string | null> {
   // Generate possible file names
   const possibleNames = [
     `story-${storyId.replace(".", "-")}.md`, // story-2-3.md
@@ -187,7 +179,7 @@ async function loadStoryFile(
       try {
         return await readFile(filePath, "utf-8");
       } catch {
-        continue;
+        // File not readable, try next path
       }
     }
   }

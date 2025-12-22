@@ -6,7 +6,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import type { SprintStatus } from "../../shared/types.js";
@@ -195,6 +195,8 @@ export async function writeSprintStatus(filePath: string, status: SprintStatus):
     // This handles the case where another process updated between our read and write
     const currentStatus = await readSprintStatus(filePath);
 
+    let statusToWrite = status;
+
     if (currentStatus) {
       // Check for concurrent modification using last_modified
       if (
@@ -203,13 +205,13 @@ export async function writeSprintStatus(filePath: string, status: SprintStatus):
         currentStatus.last_modified !== status.last_modified
       ) {
         // Another process modified the file - merge the changes
-        status = mergeSprintStatus(currentStatus, status);
+        statusToWrite = mergeSprintStatus(currentStatus, status);
       }
     }
 
     // Update last_modified timestamp
-    status.last_modified = new Date().toISOString();
-    await writeYamlFile(filePath, status);
+    statusToWrite.last_modified = new Date().toISOString();
+    await writeYamlFile(filePath, statusToWrite);
   } finally {
     await releaseLock();
   }

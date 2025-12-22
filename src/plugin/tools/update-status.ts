@@ -4,18 +4,14 @@
  * Updates the BMAD sprint status for a story.
  */
 
-import { tool, type ToolDefinition } from "@opencode-ai/plugin";
 import { existsSync } from "node:fs";
+import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
+import type { AthenaConfig, StoryStatus, UpdateStatusResult } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
-import type {
-  AthenaConfig,
-  UpdateStatusResult,
-  StoryStatus,
-} from "../../shared/types.js";
 import { findBmadDir, getBmadPaths } from "../utils/bmad-finder.js";
-import { readSprintStatus, writeSprintStatus } from "../utils/yaml-handler.js";
 import { sendNotification } from "../utils/notifications.js";
+import { readSprintStatus, writeSprintStatus } from "../utils/yaml-handler.js";
 
 /**
  * Create the athena_update_status tool
@@ -44,15 +40,11 @@ The sprint-status.yaml file will be automatically updated.`,
       notes: tool.schema
         .string()
         .optional()
-        .describe(
-          "Notes about the status change (required for 'blocked' status)"
-        ),
+        .describe("Notes about the status change (required for 'blocked' status)"),
       completionSummary: tool.schema
         .string()
         .optional()
-        .describe(
-          "Summary of what was implemented (required for 'completed' status)"
-        ),
+        .describe("Summary of what was implemented (required for 'completed' status)"),
     },
 
     async execute(args): Promise<string> {
@@ -160,11 +152,7 @@ async function updateStoryStatus(
 
   // Send notification if enabled and story completed
   if (config.features?.notifications && status === "completed") {
-    await sendNotification(
-      `Story ${storyId} completed!`,
-      "OpenCode Athena",
-      ctx.$
-    );
+    await sendNotification(`Story ${storyId} completed!`, "OpenCode Athena", ctx.$);
   }
 
   // Calculate sprint progress
@@ -175,9 +163,7 @@ async function updateStoryStatus(
     sprint.blocked_stories.length;
 
   const percentComplete =
-    totalStories > 0
-      ? Math.round((sprint.completed_stories.length / totalStories) * 100)
-      : 0;
+    totalStories > 0 ? Math.round((sprint.completed_stories.length / totalStories) * 100) : 0;
 
   return {
     success: true,
@@ -192,8 +178,7 @@ async function updateStoryStatus(
       total: totalStories,
       percentComplete,
     },
-    nextStory:
-      status === "completed" ? sprint.pending_stories[0] || null : null,
+    nextStory: status === "completed" ? sprint.pending_stories[0] || null : null,
   };
 }
 
@@ -213,10 +198,14 @@ function removeFromAllArrays(
   // Remove the story and deduplicate arrays to prevent duplicates
   sprint.completed_stories = [...new Set(sprint.completed_stories.filter((s) => s !== storyId))];
   sprint.pending_stories = [...new Set(sprint.pending_stories.filter((s) => s !== storyId))];
-  sprint.in_progress_stories = [...new Set(sprint.in_progress_stories.filter((s) => s !== storyId))];
+  sprint.in_progress_stories = [
+    ...new Set(sprint.in_progress_stories.filter((s) => s !== storyId)),
+  ];
   sprint.blocked_stories = [...new Set(sprint.blocked_stories.filter((s) => s !== storyId))];
   if (sprint.stories_needing_review) {
-    sprint.stories_needing_review = [...new Set(sprint.stories_needing_review.filter((s) => s !== storyId))];
+    sprint.stories_needing_review = [
+      ...new Set(sprint.stories_needing_review.filter((s) => s !== storyId)),
+    ];
   }
 }
 

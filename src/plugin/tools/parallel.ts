@@ -13,7 +13,7 @@
  * See: https://github.com/code-yeongyu/oh-my-opencode for background agent API
  */
 
-import { tool, type ToolDefinition } from "@opencode-ai/plugin";
+import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 
 /**
  * Create the athena_parallel tool (stub)
@@ -48,8 +48,7 @@ When implemented, this tool will:
           message:
             "Parallel story execution is not yet implemented. This feature requires integration with oh-my-opencode's background agent system.",
           requestedStories: args.storyIds,
-          suggestion:
-            "For now, implement stories sequentially using /athena-dev for each story.",
+          suggestion: "For now, implement stories sequentially using /athena-dev for each story.",
         },
         null,
         2

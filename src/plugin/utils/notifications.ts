@@ -31,7 +31,7 @@ export async function sendNotification(
   try {
     if (os === "darwin") {
       // macOS - use osascript (built-in)
-      await $`osascript -e ${"display notification \"" + escapeAppleScript(message) + "\" with title \"" + escapeAppleScript(title) + "\""}`;
+      await $`osascript -e ${`display notification "${escapeAppleScript(message)}" with title "${escapeAppleScript(title)}"`}`;
     } else if (os === "linux") {
       // Linux - use notify-send (requires libnotify)
       await $`notify-send ${title} ${message}`;

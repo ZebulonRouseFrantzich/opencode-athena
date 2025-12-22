@@ -4,17 +4,14 @@
  * Quick access to current story context from tracker.
  */
 
-import { tool, type ToolDefinition } from "@opencode-ai/plugin";
-import type { StoryTracker } from "../tracker/story-tracker.js";
+import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { AthenaConfig } from "../../shared/types.js";
+import type { StoryTracker } from "../tracker/story-tracker.js";
 
 /**
  * Create the athena_get_context tool
  */
-export function createGetContextTool(
-  tracker: StoryTracker,
-  _config: AthenaConfig
-): ToolDefinition {
+export function createGetContextTool(tracker: StoryTracker, _config: AthenaConfig): ToolDefinition {
   return tool({
     description: `Get the current story context without reloading from files.
 
@@ -33,8 +30,7 @@ Use this for quick status checks. Use athena_get_story to reload full context fr
       if (!currentStory) {
         return JSON.stringify({
           status: "no_active_story",
-          message:
-            "No story is currently being tracked. Use athena_get_story to load a story.",
+          message: "No story is currently being tracked. Use athena_get_story to load a story.",
         });
       }
 

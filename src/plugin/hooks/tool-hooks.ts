@@ -25,8 +25,8 @@
  * - agent-usage-reminder: Reminds to use specialized agents
  */
 
-import type { StoryTracker } from "../tracker/story-tracker.js";
 import type { AthenaConfig } from "../../shared/types.js";
+import type { StoryTracker } from "../tracker/story-tracker.js";
 
 interface BeforeHookInput {
   tool: string;
@@ -55,19 +55,13 @@ interface AfterHookOutput {
  *
  * Currently returns stubs. See TODO comments for future implementation ideas.
  */
-export function createToolHooks(
-  _tracker: StoryTracker,
-  _config: AthenaConfig
-) {
+export function createToolHooks(_tracker: StoryTracker, _config: AthenaConfig) {
   return {
     /**
      * Called before a tool executes
      * Can modify args or throw to block execution
      */
-    before: async (
-      _input: BeforeHookInput,
-      _output: BeforeHookOutput
-    ): Promise<void> => {
+    before: async (_input: BeforeHookInput, _output: BeforeHookOutput): Promise<void> => {
       // TODO: Implement tool.execute.before hooks
       // Currently a no-op stub
     },
@@ -76,10 +70,7 @@ export function createToolHooks(
      * Called after a tool executes
      * Can modify output or append messages
      */
-    after: async (
-      _input: AfterHookInput,
-      _output: AfterHookOutput
-    ): Promise<void> => {
+    after: async (_input: AfterHookInput, _output: AfterHookOutput): Promise<void> => {
       // TODO: Implement tool.execute.after hooks
       // Currently a no-op stub
     },
