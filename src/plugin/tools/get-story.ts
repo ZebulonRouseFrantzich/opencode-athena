@@ -11,7 +11,7 @@ import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
 import type { AthenaConfig, GetStoryResult, SprintStatus } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
-import { findBmadDir, getBmadPaths } from "../utils/bmad-finder.js";
+import { getBmadPaths } from "../utils/bmad-finder.js";
 import {
   extractRelevantArchitecture,
   extractRelevantPRD,
@@ -62,16 +62,13 @@ async function getStoryContext(
   tracker: StoryTracker,
   requestedStoryId?: string
 ): Promise<GetStoryResult> {
-  // Find BMAD directory
-  const bmadDir = await findBmadDir(ctx.directory);
-  if (!bmadDir) {
+  const paths = await getBmadPaths(ctx.directory);
+  if (!paths.bmadDir) {
     return {
       error: "No BMAD directory found",
       suggestion: "Run 'npx bmad-method@alpha install' to set up BMAD in this project.",
     };
   }
-
-  const paths = getBmadPaths(bmadDir);
 
   // Read sprint status
   const sprint = await readSprintStatus(paths.sprintStatus);

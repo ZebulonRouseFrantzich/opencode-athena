@@ -9,7 +9,7 @@ import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
 import type { AthenaConfig, StoryStatus, UpdateStatusResult } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
-import { findBmadDir, getBmadPaths } from "../utils/bmad-finder.js";
+import { getBmadPaths } from "../utils/bmad-finder.js";
 import { sendNotification } from "../utils/notifications.js";
 import { readSprintStatus, writeSprintStatus } from "../utils/yaml-handler.js";
 
@@ -84,15 +84,11 @@ async function updateStoryStatus(
     };
   }
 
-  // Find BMAD directory
-  const bmadDir = await findBmadDir(ctx.directory);
-  if (!bmadDir) {
+  const paths = await getBmadPaths(ctx.directory);
+  if (!paths.bmadDir) {
     return { error: "No BMAD directory found" };
   }
 
-  const paths = getBmadPaths(bmadDir);
-
-  // Read sprint status
   if (!existsSync(paths.sprintStatus)) {
     return { error: "No sprint-status.yaml found" };
   }

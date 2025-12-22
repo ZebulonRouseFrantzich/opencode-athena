@@ -29,7 +29,7 @@ export async function generateOpencodeConfig(
   }
 
   // Build plugin array
-  const plugins: string[] = ["oh-my-opencode"];
+  const plugins: string[] = ["opencode-athena/plugin", "oh-my-opencode"];
 
   if (answers.subscriptions.hasGoogle && answers.subscriptions.googleAuth === "antigravity") {
     plugins.push("opencode-antigravity-auth");
@@ -117,7 +117,7 @@ export async function generateOpencodeConfig(
  * Get the list of plugins to install based on answers
  */
 export function getRequiredPlugins(answers: InstallAnswers): string[] {
-  const plugins: string[] = ["oh-my-opencode"];
+  const plugins: string[] = ["opencode-athena", "oh-my-opencode"];
 
   if (answers.subscriptions.hasGoogle && answers.subscriptions.googleAuth === "antigravity") {
     plugins.push("opencode-antigravity-auth");
