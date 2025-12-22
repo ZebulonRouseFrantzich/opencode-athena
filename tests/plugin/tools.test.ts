@@ -142,6 +142,17 @@ describe("athena_get_story tool", () => {
 
   it("should return error when BMAD directory not found", async () => {
     mockFindBmadDir.mockResolvedValue(null);
+    mockGetBmadPaths.mockResolvedValue({
+      projectRoot: "/test/project",
+      bmadDir: null,
+      planningDir: "/test/project/docs/project-planning-artifacts",
+      implementationDir: "/test/project/docs/implementation-artifacts",
+      storiesDir: "/test/project/docs/implementation-artifacts/stories",
+      sprintStatus: "/test/project/docs/implementation-artifacts/sprint-status.yaml",
+      architecture: "/test/project/docs/project-planning-artifacts/architecture.md",
+      prd: "/test/project/docs/project-planning-artifacts/PRD.md",
+      epics: "/test/project/docs/project-planning-artifacts/epics.md",
+    });
 
     const { createGetStoryTool } = await import("../../src/plugin/tools/get-story.js");
     const ctx = createMockContext();
@@ -157,12 +168,16 @@ describe("athena_get_story tool", () => {
 
   it("should return error when sprint-status.yaml not found", async () => {
     mockFindBmadDir.mockResolvedValue("/test/project/_bmad");
-    mockGetBmadPaths.mockReturnValue({
-      docsDir: "/test/project/_bmad/docs",
+    mockGetBmadPaths.mockResolvedValue({
+      projectRoot: "/test/project",
+      bmadDir: "/test/project/_bmad",
+      planningDir: "/test/project/_bmad/docs",
+      implementationDir: "/test/project/_bmad/docs",
       storiesDir: "/test/project/_bmad/docs/stories",
       sprintStatus: "/test/project/_bmad/docs/sprint-status.yaml",
       architecture: "/test/project/_bmad/docs/architecture.md",
       prd: "/test/project/_bmad/docs/PRD.md",
+      epics: "/test/project/_bmad/docs/epics.md",
     });
     mockReadSprintStatus.mockResolvedValue(null);
 
@@ -187,12 +202,16 @@ describe("athena_get_story tool", () => {
     };
 
     mockFindBmadDir.mockResolvedValue("/test/project/_bmad");
-    mockGetBmadPaths.mockReturnValue({
-      docsDir: "/test/project/_bmad/docs",
+    mockGetBmadPaths.mockResolvedValue({
+      projectRoot: "/test/project",
+      bmadDir: "/test/project/_bmad",
+      planningDir: "/test/project/_bmad/docs",
+      implementationDir: "/test/project/_bmad/docs",
       storiesDir: "/test/project/_bmad/docs/stories",
       sprintStatus: "/test/project/_bmad/docs/sprint-status.yaml",
       architecture: "/test/project/_bmad/docs/architecture.md",
       prd: "/test/project/_bmad/docs/PRD.md",
+      epics: "/test/project/_bmad/docs/epics.md",
     });
     mockReadSprintStatus.mockResolvedValue(sprint);
     mockExistsSync.mockImplementation((path) => {
@@ -259,12 +278,16 @@ describe("athena_update_status tool", () => {
     };
 
     mockFindBmadDir.mockResolvedValue("/test/project/_bmad");
-    mockGetBmadPaths.mockReturnValue({
-      docsDir: "/test/project/_bmad/docs",
+    mockGetBmadPaths.mockResolvedValue({
+      projectRoot: "/test/project",
+      bmadDir: "/test/project/_bmad",
+      planningDir: "/test/project/_bmad/docs",
+      implementationDir: "/test/project/_bmad/docs",
       storiesDir: "/test/project/_bmad/docs/stories",
       sprintStatus: "/test/project/_bmad/docs/sprint-status.yaml",
       architecture: "/test/project/_bmad/docs/architecture.md",
       prd: "/test/project/_bmad/docs/PRD.md",
+      epics: "/test/project/_bmad/docs/epics.md",
     });
     mockExistsSync.mockReturnValue(true);
     mockReadSprintStatus.mockResolvedValue(sprint);

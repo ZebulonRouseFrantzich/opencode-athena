@@ -5,7 +5,7 @@ import { join } from "node:path";
  * Current version of OpenCode Athena
  * Updated during release process
  */
-export const VERSION = "1.0.0";
+export const VERSION = "0.0.1";
 
 /**
  * Package name for CLI display
