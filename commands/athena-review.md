@@ -194,7 +194,7 @@ For each finding:
 
 ## Step 5: Automated Quality Checks
 
-While Oracle reviews are running or after they complete, run automated checks:
+After receiving both Oracle reviews (Steps 3 and 4), run automated checks:
 
 ### 5.1 LSP Diagnostics
 

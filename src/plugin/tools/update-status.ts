@@ -131,15 +131,6 @@ async function updateStoryStatus(
       break;
   }
 
-  // Update story metadata
-  sprint.story_updates = sprint.story_updates || {};
-  sprint.story_updates[storyId] = {
-    status: status as StoryStatus,
-    updated_at: now,
-    ...(notes && { notes }),
-    ...(completionSummary && { completion_summary: completionSummary }),
-  };
-
   // Write updated sprint status
   await writeSprintStatus(paths.sprintStatus, sprint);
 
