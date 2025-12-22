@@ -1,6 +1,6 @@
 {
   "name": "opencode-athena",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Strategic wisdom meets practical execution - Unified oh-my-opencode + BMAD METHOD toolkit for OpenCode",
   "keywords": [
     "opencode",
@@ -38,8 +38,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "opencode-athena": "./dist/cli/index.js",
-    "athena": "./dist/cli/index.js"
+    "opencode-athena": "dist/cli/index.js",
+    "athena": "dist/cli/index.js"
   },
   "files": [
     "dist",
