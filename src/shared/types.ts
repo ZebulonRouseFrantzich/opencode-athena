@@ -233,6 +233,7 @@ export interface AthenaConfig {
     contextMonitor: boolean;
     commentChecker: boolean;
     lspTools: boolean;
+    autoGitOperations: boolean;
   };
   mcps: {
     context7: boolean;

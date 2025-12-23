@@ -149,7 +149,8 @@
         "notifications": { "type": "boolean", "default": true },
         "contextMonitor": { "type": "boolean", "default": true },
         "commentChecker": { "type": "boolean", "default": true },
-        "lspTools": { "type": "boolean", "default": true }
+        "lspTools": { "type": "boolean", "default": true },
+        "autoGitOperations": { "type": "boolean", "default": false, "description": "Allow agents to perform git/gh operations automatically (false = requires explicit user permission)" }
       }
     },
     "mcps": {

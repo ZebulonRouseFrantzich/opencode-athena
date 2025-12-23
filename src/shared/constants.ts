@@ -96,6 +96,7 @@ export const DEFAULTS = {
     contextMonitor: true,
     commentChecker: true,
     lspTools: true,
+    autoGitOperations: false,
   },
 
   /** Default MCPs enabled */

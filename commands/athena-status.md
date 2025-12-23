@@ -4,6 +4,23 @@ description: View and manage BMAD sprint status
 
 # Athena Status - Sprint Status Management
 
+## Git Operations Policy
+
+**⚠️ AUTOMATIC GIT OPERATIONS ARE PROHIBITED**
+
+You must NOT perform any git operations automatically:
+- ❌ Do NOT run `git commit` to save changes
+- ❌ Do NOT run `git push` to push to remote
+- ❌ Do NOT run `git checkout -b` or `git branch` to create branches
+- ❌ Do NOT run `git merge`, `git rebase`, or `git cherry-pick`
+- ❌ Do NOT run `gh pr create` or other GitHub CLI operations
+
+**Git operations are ONLY permitted if the user explicitly requests them.**
+
+This command focuses on status management and should not involve git operations.
+
+---
+
 View current sprint progress and manage story statuses. This command helps you track where you are in the sprint and what to work on next.
 
 ## Quick Status Check

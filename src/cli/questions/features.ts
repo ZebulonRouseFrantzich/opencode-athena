@@ -47,12 +47,18 @@ const AVAILABLE_FEATURES = [
     name: "LSP Refactoring Tools - Enable lsp_rename, lsp_find_references, etc.",
     value: "lsp-tools",
   },
+  {
+    name: "Auto Git Operations - Allow agents to commit/push/branch automatically (unchecked = requires explicit permission)",
+    value: "auto-git-operations",
+  },
 ];
 
 /**
  * All feature values for reference
  */
 const ALL_FEATURE_VALUES = AVAILABLE_FEATURES.map((f) => f.value);
+
+const FEATURES_ENABLED_BY_DEFAULT = ALL_FEATURE_VALUES.filter((f) => f !== "auto-git-operations");
 
 /**
  * Available MCP servers with descriptions
@@ -81,8 +87,7 @@ const ALL_MCP_VALUES = AVAILABLE_MCPS.map((m) => m.value);
  * Create choices with checked state based on defaults
  */
 function createFeatureChoices(defaults?: string[]) {
-  // If no defaults provided, check all by default
-  const enabledSet = new Set(defaults ?? ALL_FEATURE_VALUES);
+  const enabledSet = new Set(defaults ?? FEATURES_ENABLED_BY_DEFAULT);
 
   return AVAILABLE_FEATURES.map((feature) => ({
     ...feature,
@@ -137,6 +142,7 @@ export function featuresToFlags(enabledFeatures: string[]): Record<string, boole
     contextMonitor: enabledFeatures.includes("context-monitor"),
     commentChecker: enabledFeatures.includes("comment-checker"),
     lspTools: enabledFeatures.includes("lsp-tools"),
+    autoGitOperations: enabledFeatures.includes("auto-git-operations"),
   };
 }
 

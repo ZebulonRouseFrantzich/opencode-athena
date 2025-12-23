@@ -34,6 +34,7 @@ const BASE_CONFIG: AthenaConfig = {
     contextMonitor: true,
     commentChecker: true,
     lspTools: true,
+    autoGitOperations: false,
   },
   mcps: {
     context7: true,

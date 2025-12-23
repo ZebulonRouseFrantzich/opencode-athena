@@ -1,28 +1,7 @@
 /**
- * Tool execution hooks (STUB)
+ * Tool execution hooks
  *
- * TODO: Potential use cases for tool hooks in Athena:
- *
- * 1. Auto-status on test pass:
- *    - After Bash tool runs tests successfully
- *    - Prompt to mark story as completed
- *
- * 2. Context injection on file read:
- *    - When reading story files
- *    - Inject implementation instructions
- *
- * 3. BMAD file protection:
- *    - Before Write/Edit on docs/ files (BMAD artifacts)
- *    - Warn or block direct modifications
- *
- * 4. Story progress tracking:
- *    - Track which files are modified during story implementation
- *    - Generate change summary for completion
- *
- * See oh-my-opencode for examples:
- * - comment-checker: Checks for excessive comments after Write/Edit
- * - tool-output-truncator: Truncates large outputs
- * - agent-usage-reminder: Reminds to use specialized agents
+ * Implements safety net warnings for git operations.
  */
 
 import type { AthenaConfig } from "../../shared/types.js";
@@ -50,29 +29,63 @@ interface AfterHookOutput {
   metadata: unknown;
 }
 
+const GIT_WRITE_COMMANDS = [
+  "git commit",
+  "git push",
+  "git checkout -b",
+  "git branch ",
+  "git merge",
+  "git rebase",
+  "git cherry-pick",
+  "git stash",
+  "gh pr create",
+  "gh pr edit",
+  "gh pr merge",
+  "gh pr close",
+  "gh issue create",
+  "gh release create",
+];
+
+function containsGitWriteCommand(command: string): boolean {
+  const normalizedCommand = command.trim().toLowerCase();
+  return GIT_WRITE_COMMANDS.some((gitCmd) => normalizedCommand.includes(gitCmd.toLowerCase()));
+}
+
 /**
  * Create tool execution hooks
- *
- * Currently returns stubs. See TODO comments for future implementation ideas.
  */
-export function createToolHooks(_tracker: StoryTracker, _config: AthenaConfig) {
+export function createToolHooks(_tracker: StoryTracker, config: AthenaConfig) {
   return {
     /**
      * Called before a tool executes
-     * Can modify args or throw to block execution
      */
     before: async (_input: BeforeHookInput, _output: BeforeHookOutput): Promise<void> => {
-      // TODO: Implement tool.execute.before hooks
-      // Currently a no-op stub
+      return;
     },
 
     /**
      * Called after a tool executes
-     * Can modify output or append messages
      */
-    after: async (_input: AfterHookInput, _output: AfterHookOutput): Promise<void> => {
-      // TODO: Implement tool.execute.after hooks
-      // Currently a no-op stub
+    after: async (input: AfterHookInput, output: AfterHookOutput): Promise<void> => {
+      if (config.features.autoGitOperations) {
+        return;
+      }
+
+      if (input.tool === "bash") {
+        const args = output.metadata as { command?: string };
+        const command = args?.command || "";
+
+        if (containsGitWriteCommand(command)) {
+          output.output +=
+            "\n\n⚠️ ATHENA GIT OPERATIONS POLICY REMINDER:\n" +
+            "Git operations should only be performed when explicitly requested by the user.\n" +
+            "If this command was run automatically (not requested by the user), please:\n" +
+            "1. Ask the user before proceeding with further git operations\n" +
+            "2. Use athena_update_status() to track story progress instead of git commits\n" +
+            "\n" +
+            "To enable automatic git operations, set features.autoGitOperations=true in athena.json";
+        }
+      }
     },
   };
 }
