@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GitHub Copilot Support**
   - GitHub Copilot as a model provider option during installation
   - Plan-based model filtering (Free/Pro/Pro+/Business/Enterprise)
-  - 15 Copilot-routed models: Claude Sonnet 4, Claude 3.5 Sonnet, GPT-4o, GPT-4.1, o3-mini, o4-mini, Gemini 2.5 Pro
+  - 14 Copilot-routed models: Claude Haiku 4.5, Sonnet 4, Sonnet 4.5, Opus 4.1, Opus 4.5, GPT-4.1, GPT-5, GPT-5-mini, GPT-5.1, GPT-5.1-codex, GPT-5.2, Gemini 2.5 Pro, Gemini 3 Flash, Gemini 3 Pro
   - New `copilot-only` preset for users with only GitHub Copilot access
   - Automatic preference for direct provider models when both available
 

@@ -227,7 +227,13 @@ Athena provides fine-grained control over model behavior through `temperature` a
 }
 ```
 
-**Temperature** controls response randomness (0.0-2.0). Lower values = more focused, higher = more creative. Defaults are model-family-aware (e.g., Claude thinking models use higher defaults).
+**Temperature** controls response randomness. Valid range is provider-specific:
+- Anthropic: 0.0-1.0
+- OpenAI: 0.0-2.0
+- Google: 0.0-2.0
+- GitHub Copilot: Not supported
+
+Lower values = more focused, higher = more creative. Defaults are model-family-aware and clamped to valid ranges.
 
 **ThinkingLevel** controls reasoning depth for supported models:
 - `"low"` - Quick responses, minimal reasoning
@@ -237,9 +243,9 @@ Athena provides fine-grained control over model behavior through `temperature` a
 ThinkingLevel maps to provider-specific parameters:
 | Provider | Parameter | Values |
 |----------|-----------|--------|
-| Anthropic | `thinking.budget_tokens` | 1024 / 8192 / 32768 |
+| Anthropic | `thinking.budget_tokens` | 4096 / 16384 / 32768 |
 | OpenAI | `reasoning_effort` | `"low"` / `"medium"` / `"high"` |
-| Google | `thinking_level` | `"LOW"` / `"MEDIUM"` / `"HIGH"` |
+| Google | `thinking_level` | `"low"` / `"medium"` / `"high"` |
 
 Note: Temperature and thinkingLevel are not supported for GitHub Copilot-routed models.
 
@@ -308,11 +314,11 @@ Model availability depends on your GitHub Copilot plan:
 
 | Plan | Claude Models | GPT Models | Gemini Models |
 |------|---------------|------------|---------------|
-| **Free** | Sonnet 4 | GPT-4o | - |
-| **Pro** | Sonnet 4 | GPT-4o, GPT-4.1 | - |
-| **Pro+** | Sonnet 4, Claude 3.5 Sonnet | GPT-4o, GPT-4.1, o3 mini, o4 mini | Gemini 2.5 Pro |
-| **Business** | Sonnet 4, Claude 3.5 Sonnet | GPT-4o, GPT-4.1, o3 mini, o4 mini | Gemini 2.5 Pro |
-| **Enterprise** | Sonnet 4, Claude 3.5 Sonnet | GPT-4o, GPT-4.1, o3 mini, o4 mini | Gemini 2.5 Pro |
+| **Free** | Haiku 4.5 | GPT-4.1, GPT-5-mini | - |
+| **Pro** | Haiku 4.5, Sonnet 4, Sonnet 4.5 | GPT-4.1, GPT-5, GPT-5-mini, GPT-5.1, GPT-5.1-codex, GPT-5.2 | Gemini 2.5 Pro, Gemini 3 Flash, Gemini 3 Pro |
+| **Pro+** | All Pro models + Opus 4.1, Opus 4.5 | All Pro models | All Pro models |
+| **Business** | Haiku 4.5, Sonnet 4, Sonnet 4.5 | GPT-4.1, GPT-5, GPT-5-mini, GPT-5.1, GPT-5.1-codex, GPT-5.2 | Gemini 2.5 Pro, Gemini 3 Flash, Gemini 3 Pro |
+| **Enterprise** | All Pro models + Opus 4.1, Opus 4.5 | All Pro models | All Pro models |
 
 ### How It Works
 

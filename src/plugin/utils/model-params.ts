@@ -79,6 +79,27 @@ function getModelFamily(modelId: string): ModelFamily {
   return "claude";
 }
 
+/**
+ * Get the maximum allowed temperature for a model based on its provider.
+ * - Anthropic: 0.0-1.0
+ * - OpenAI: 0.0-2.0
+ * - Google: 0.0-2.0
+ * - Copilot: temperature not supported
+ */
+function getMaxTemperatureForModel(modelId: string): number {
+  if (modelId.startsWith("anthropic/") || modelId.includes("claude")) {
+    return 1.0;
+  }
+  if (modelId.startsWith("openai/") || modelId.includes("gpt")) {
+    return 2.0;
+  }
+  if (modelId.startsWith("google/") || modelId.includes("gemini")) {
+    return 2.0;
+  }
+  // Default to conservative 1.0 for unknown providers
+  return 1.0;
+}
+
 function getModelCapabilities(modelId: string): ModelCapabilities {
   const known = MODEL_CAPABILITIES[modelId];
   if (known) {
@@ -116,8 +137,9 @@ export function getEffectiveTemperature(
   const family = getModelFamily(modelId);
   const baseTemp = MODEL_FAMILY_BASE_TEMPS[family];
   const adjustment = ROLE_TEMP_ADJUSTMENTS[role];
+  const maxTemp = getMaxTemperatureForModel(modelId);
 
-  return Math.max(0, Math.min(1, baseTemp + adjustment));
+  return Math.max(0, Math.min(maxTemp, baseTemp + adjustment));
 }
 
 export function getEffectiveThinkingLevel(
@@ -141,7 +163,7 @@ export interface ProviderParams {
   temperature?: number;
   reasoning_effort?: "low" | "medium" | "high";
   thinking_budget?: number;
-  thinking_level?: "include_thoughts" | "auto";
+  thinking_level?: "low" | "medium" | "high";
 }
 
 export function getProviderParams(
@@ -168,7 +190,7 @@ export function getProviderParams(
         result.thinking_budget = thinkingLevelToTokenBudget(thinkingLevel);
         break;
       case "google":
-        result.thinking_level = thinkingLevel === "high" ? "include_thoughts" : "auto";
+        result.thinking_level = thinkingLevel;
         break;
     }
   }
