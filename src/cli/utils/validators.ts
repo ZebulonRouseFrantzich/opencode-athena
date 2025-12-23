@@ -95,13 +95,24 @@ export function validateJsonConfig(path: string): ValidationResult {
  */
 export function validateModelForProvider(
   model: string,
-  providers: { claude: boolean; openai: boolean; google: boolean }
+  providers: { claude: boolean; openai: boolean; google: boolean; githubCopilot?: boolean }
 ): ValidationResult {
   const result: ValidationResult = { valid: true, errors: [], warnings: [] };
 
   const modelLower = model.toLowerCase();
 
-  // Check if model matches an enabled provider
+  const isGitHubCopilot = modelLower.startsWith("github-copilot/");
+
+  if (isGitHubCopilot) {
+    if (!providers.githubCopilot) {
+      result.valid = false;
+      result.errors.push(
+        "GitHub Copilot model selected but GitHub Copilot provider is not enabled"
+      );
+    }
+    return result;
+  }
+
   const claudeModels = ["claude", "opus", "sonnet", "haiku"];
   const openaiModels = ["gpt", "o1", "o3"];
   const googleModels = ["gemini", "palm"];
@@ -151,7 +162,7 @@ export function validateAgentModels(config: AthenaConfig): ValidationResult {
  * Validate a preset name
  */
 export function isValidPreset(preset: string): boolean {
-  const validPresets = ["minimal", "standard", "enterprise", "solo-quick"];
+  const validPresets = ["minimal", "standard", "enterprise", "solo-quick", "copilot-only"];
   return validPresets.includes(preset);
 }
 

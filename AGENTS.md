@@ -131,9 +131,20 @@ npm run build
 # Run CLI locally
 node dist/cli/index.js install
 
-# Run tests
+# Run tests (watch mode - for interactive development)
 npm test
+
+# Run tests once and exit (for CI/automation - USE THIS IN AGENTS)
+npm run test:run
+
+# Run tests with coverage
+npm run test:coverage
+
+# Type check only
+npm run typecheck
 ```
+
+**Important for AI agents**: Always use `npm run test:run` instead of `npm test`. The default `npm test` runs Vitest in watch mode which will hang indefinitely waiting for input.
 
 ## External Dependencies
 

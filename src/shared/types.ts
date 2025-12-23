@@ -48,6 +48,9 @@ export interface SubscriptionAnswers {
   hasOpenAI: boolean;
   hasGoogle: boolean;
   googleAuth: "antigravity" | "personal" | "api" | "none";
+  hasGitHubCopilot: boolean;
+  copilotPlan: "free" | "pro" | "pro-plus" | "business" | "enterprise" | "none";
+  copilotEnabledModels?: string[];
 }
 
 /**
@@ -77,7 +80,7 @@ export interface AdvancedAnswers {
 /**
  * Available model choices by provider
  */
-export type LLMProvider = "anthropic" | "openai" | "google";
+export type LLMProvider = "anthropic" | "openai" | "google" | "github-copilot";
 
 /**
  * Model definition
@@ -87,6 +90,21 @@ export interface ModelChoice {
   name: string;
   provider: LLMProvider;
   description?: string;
+}
+
+/**
+ * Custom model definition for user-added models
+ */
+export interface CustomModelDefinition {
+  id: string;
+  name: string;
+  provider: LLMProvider;
+  description?: string;
+  capabilities?: {
+    thinking?: boolean;
+    contextWindow?: number;
+    supportsTemperature?: boolean;
+  };
 }
 
 /**
@@ -101,6 +119,19 @@ export type AgentRole =
   | "multimodalLooker";
 
 /**
+ * Thinking level for reasoning-capable models
+ */
+export type ThinkingLevel = "off" | "low" | "medium" | "high";
+
+/**
+ * Agent-specific settings for temperature and thinking level
+ */
+export interface AgentSettings {
+  temperature?: number; // 0.0 - 1.0
+  thinkingLevel?: ThinkingLevel;
+}
+
+/**
  * Model assignments for each agent role
  */
 export interface ModelAnswers {
@@ -110,6 +141,16 @@ export interface ModelAnswers {
   frontend?: string;
   documentWriter?: string;
   multimodalLooker?: string;
+  settings?: {
+    sisyphus?: AgentSettings;
+    oracle?: AgentSettings;
+    librarian?: AgentSettings;
+    frontend?: AgentSettings;
+    documentWriter?: AgentSettings;
+    multimodalLooker?: AgentSettings;
+    overrides?: Record<string, AgentSettings>; // Per-model overrides
+  };
+  custom?: CustomModelDefinition[];
 }
 
 /**
@@ -155,6 +196,11 @@ export interface AthenaConfig {
       enabled: boolean;
       authMethod: "antigravity" | "personal" | "api" | "none";
     };
+    githubCopilot: {
+      enabled: boolean;
+      plan: "free" | "pro" | "pro-plus" | "business" | "enterprise" | "none";
+      enabledModels?: string[];
+    };
   };
   models: {
     sisyphus: string;
@@ -163,6 +209,16 @@ export interface AthenaConfig {
     frontend?: string;
     documentWriter?: string;
     multimodalLooker?: string;
+    settings?: {
+      sisyphus?: AgentSettings;
+      oracle?: AgentSettings;
+      librarian?: AgentSettings;
+      frontend?: AgentSettings;
+      documentWriter?: AgentSettings;
+      multimodalLooker?: AgentSettings;
+      overrides?: Record<string, AgentSettings>;
+    };
+    custom?: CustomModelDefinition[];
   };
   bmad: {
     defaultTrack: "quick-flow" | "bmad-method" | "enterprise";

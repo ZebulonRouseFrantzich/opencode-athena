@@ -43,6 +43,7 @@ The interactive installer will:
   - Claude Pro/Max (recommended)
   - ChatGPT Plus/Pro
   - Google/Gemini
+  - GitHub Copilot (Free/Pro/Pro+/Business/Enterprise)
 
 ## Commands
 
@@ -192,15 +193,151 @@ Configuration files are stored in `~/.config/opencode/`:
 Use `--preset` during installation:
 
 ```bash
-npx opencode-athena install --preset minimal    # Bare essentials
-npx opencode-athena install --preset standard   # Recommended (default)
-npx opencode-athena install --preset enterprise # Full features
-npx opencode-athena install --preset solo-quick # Solo dev quick flow
+npx opencode-athena install --preset minimal     # Bare essentials
+npx opencode-athena install --preset standard    # Recommended (default)
+npx opencode-athena install --preset enterprise  # Full features
+npx opencode-athena install --preset solo-quick  # Solo dev quick flow
+npx opencode-athena install --preset copilot-only # GitHub Copilot users
 ```
 
 ### Project Overrides
 
 Create `.opencode/athena.json` in your project root to override global settings.
+
+### Model Settings
+
+Athena provides fine-grained control over model behavior through `temperature` and `thinkingLevel` settings. These can be configured per agent role in `athena.json`:
+
+```json
+{
+  "models": {
+    "settings": {
+      "sisyphus": {
+        "temperature": 0.3,
+        "thinkingLevel": "medium"
+      },
+      "oracle": {
+        "thinkingLevel": "high"
+      },
+      "librarian": {
+        "temperature": 0.2
+      }
+    }
+  }
+}
+```
+
+**Temperature** controls response randomness. Valid range is provider-specific:
+- Anthropic: 0.0-1.0
+- OpenAI: 0.0-2.0
+- Google: 0.0-2.0
+- GitHub Copilot: Not supported
+
+Lower values = more focused, higher = more creative. Defaults are model-family-aware and clamped to valid ranges.
+
+**ThinkingLevel** controls reasoning depth for supported models:
+- `"low"` - Quick responses, minimal reasoning
+- `"medium"` - Balanced (default)
+- `"high"` - Deep reasoning, slower
+
+ThinkingLevel maps to provider-specific parameters:
+| Provider | Parameter | Values |
+|----------|-----------|--------|
+| Anthropic | `thinking.budget_tokens` | 4096 / 16384 / 32768 |
+| OpenAI | `reasoning_effort` | `"low"` / `"medium"` / `"high"` |
+| Google | `thinking_level` | `"low"` / `"medium"` / `"high"` |
+
+Note: Temperature and thinkingLevel are not supported for GitHub Copilot-routed models.
+
+### Custom Models
+
+Add custom models to use models not in the built-in list. Custom models can override built-in models or add entirely new ones:
+
+```json
+{
+  "models": {
+    "sisyphus": "custom/my-finetuned-model",
+    "custom": [
+      {
+        "id": "custom/my-finetuned-model",
+        "name": "My Fine-tuned Model",
+        "provider": "openai",
+        "description": "Custom fine-tuned GPT for our codebase",
+        "capabilities": {
+          "thinking": false,
+          "contextWindow": 128000,
+          "supportsTemperature": true
+        }
+      },
+      {
+        "id": "anthropic/claude-4-opus",
+        "name": "Claude 4 Opus (Override)",
+        "provider": "anthropic",
+        "description": "Override built-in model with custom settings"
+      }
+    ]
+  }
+}
+```
+
+Custom model fields:
+- `id` (required): Unique identifier, format: `provider/model-name`
+- `name` (required): Display name
+- `provider` (required): `"anthropic"`, `"openai"`, `"google"`, or `"github-copilot"`
+- `description`: Optional description
+- `capabilities`: Optional capability hints
+  - `thinking`: Whether the model supports extended thinking
+  - `contextWindow`: Context window size in tokens
+  - `supportsTemperature`: Whether temperature can be adjusted
+
+## GitHub Copilot Support
+
+Athena supports GitHub Copilot as a model provider, allowing you to use Claude, GPT, and Gemini models through your Copilot subscription. This is especially useful for enterprise users who only have access to LLMs through Copilot.
+
+### Setup
+
+1. Run the installer and select "GitHub Copilot" when asked about subscriptions
+2. Select your Copilot plan level (determines available models)
+3. After installation, authenticate:
+   ```bash
+   opencode auth login github-copilot
+   ```
+
+Or use the `copilot-only` preset:
+```bash
+npx opencode-athena install --preset copilot-only
+```
+
+### Plan Levels and Models
+
+Model availability depends on your GitHub Copilot plan:
+
+| Plan | Claude Models | GPT Models | Gemini Models |
+|------|---------------|------------|---------------|
+| **Free** | Haiku 4.5 | GPT-4.1, GPT-5-mini | - |
+| **Pro** | Haiku 4.5, Sonnet 4, Sonnet 4.5 | GPT-4.1, GPT-5, GPT-5-mini, GPT-5.1, GPT-5.1-codex, GPT-5.2 | Gemini 2.5 Pro, Gemini 3 Flash, Gemini 3 Pro |
+| **Pro+** | All Pro models + Opus 4.1, Opus 4.5 | All Pro models | All Pro models |
+| **Business** | Haiku 4.5, Sonnet 4, Sonnet 4.5 | GPT-4.1, GPT-5, GPT-5-mini, GPT-5.1, GPT-5.1-codex, GPT-5.2 | Gemini 2.5 Pro, Gemini 3 Flash, Gemini 3 Pro |
+| **Enterprise** | All Pro models + Opus 4.1, Opus 4.5 | All Pro models | All Pro models |
+
+### How It Works
+
+GitHub Copilot acts as a proxy to multiple LLM providers. When you configure a Copilot-routed model (e.g., `github-copilot/claude-sonnet-4`), requests are sent through GitHub's API.
+
+**Naming convention:** Copilot-routed models use the format `github-copilot/{model}` (e.g., `github-copilot/gpt-4o`).
+
+**Priority behavior:** If you have both direct provider access and Copilot access (e.g., Claude Pro + Copilot), Athena prefers direct provider models for better feature support.
+
+### Limitations
+
+Models accessed through GitHub Copilot have some limitations compared to direct provider access:
+
+- **No temperature control**: Copilot strips temperature parameters
+- **No thinking/reasoning modes**: Extended thinking (Claude), reasoning effort (OpenAI), and thinking level (Google) are not supported
+- **Rate limits**: Subject to Copilot's rate limits rather than provider limits
+- **Feature lag**: New model features may not be immediately available
+
+For full model capabilities, use direct provider subscriptions when possible.
 
 ## Architecture
 

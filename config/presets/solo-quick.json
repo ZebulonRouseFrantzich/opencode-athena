@@ -5,12 +5,18 @@
   "subscriptions": {
     "claude": { "enabled": true, "tier": "max5x" },
     "openai": { "enabled": false },
-    "google": { "enabled": false, "authMethod": "none" }
+    "google": { "enabled": false, "authMethod": "none" },
+    "githubCopilot": { "enabled": false, "plan": "none" }
   },
   "models": {
     "sisyphus": "anthropic/claude-sonnet-4-5-thinking",
     "oracle": "anthropic/claude-sonnet-4-5-thinking",
-    "librarian": "anthropic/claude-sonnet-4-5"
+    "librarian": "anthropic/claude-sonnet-4-5",
+    "settings": {
+      "sisyphus": { "thinkingLevel": "medium" },
+      "oracle": { "thinkingLevel": "high" },
+      "librarian": { "temperature": 0.3 }
+    }
   },
   "bmad": {
     "defaultTrack": "quick-flow",
