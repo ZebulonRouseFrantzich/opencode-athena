@@ -2,7 +2,7 @@
 
 > **Strategic wisdom meets practical execution**
 
-Unified [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) + [BMAD METHOD v6](https://github.com/bmad-method/bmad-method) toolkit for [OpenCode](https://opencode.ai).
+Unified [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) + [BMAD METHOD v6](https://github.com/bmad-code-org/BMAD-METHOD) toolkit for [OpenCode](https://opencode.ai).
 
 [![npm version](https://img.shields.io/npm/v/opencode-athena)](https://www.npmjs.com/package/opencode-athena)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-yellow.svg)](https://opensource.org/licenses/MIT-0)
@@ -57,6 +57,7 @@ After installation, these commands are available in OpenCode:
 | `/athena-parallel` | Execute multiple stories in parallel |
 | `/athena-status` | View/update sprint status |
 | `/athena-info` | Show toolkit configuration |
+| `/athena-review-story` | Party review stories for security/logic/performance gaps (pre-dev) |
 
 ## Workflow
 
@@ -109,6 +110,75 @@ Implement → Review → Discuss → Fix → Review → ... → PASS
 
 Continue until sprint is complete, then run retrospective with BMAD SM.
 
+## Pre-Development Story Review
+
+The `/athena-review-story` command runs a comprehensive "party review" of stories **before** development begins, catching issues when they're cheap to fix (in markdown, not code).
+
+### Usage
+
+```bash
+/athena-review-story epic-2       # Review all stories in Epic 2
+/athena-review-story 2.3          # Deep dive on Story 2.3
+/athena-review-story --thorough   # Force advanced model
+```
+
+### 3-Phase Review Architecture
+
+```
+┌─────────────────────────────────────────┐
+│  PHASE 1: Automated Analysis            │
+│  • Oracle finds security/logic gaps     │
+│  • Recommends BMAD agents by findings   │
+│  • Saves review to docs/reviews/        │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+        User: [Q]uick review or [D]iscuss?
+                    │
+                   [D]
+                    ▼
+┌─────────────────────────────────────────┐
+│  PHASE 2: Parallel Agent Analysis       │
+│  • Architect, DEV, TEA, PM in parallel  │
+│  • Each analyzes ALL stories            │
+│  • Cross-story pattern detection        │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│  PHASE 3: Informed Discussion           │
+│  • BMAD *party-mode with pre-context    │
+│  • Interactive agent debate             │
+│  • Decisions captured to story files    │
+└─────────────────────────────────────────┘
+```
+
+### Finding Categories
+
+| Category | Icon | Examples |
+|----------|------|----------|
+| Security | 🔒 | Missing auth, input validation, data exposure |
+| Logic | 🧠 | Edge cases, error handling, race conditions |
+| Best Practices | ✨ | Anti-patterns, testing gaps, accessibility |
+| Performance | ⚡ | N+1 queries, caching, large data handling |
+
+### Agent Selection
+
+Agents are recommended based on finding types:
+
+| Finding Type | Agents Recommended |
+|--------------|-------------------|
+| Security issues | Architect (Winston), DEV (Amelia), TEA (Murat) |
+| Logic gaps | DEV, TEA, Analyst (Mary) |
+| Performance concerns | Architect, DEV |
+| Best practice issues | DEV, Tech Writer (Paige) |
+| High severity (any) | PM (John) - always required |
+
+### Quick vs Full Review
+
+- **Quick Review [Q]**: Accept Phase 1 findings, skip discussion. Best for low-severity issues.
+- **Full Discussion [D]**: Run Phases 2-3 with parallel agents and party-mode debate. Best for complex or high-severity findings.
+
 ## Configuration
 
 Configuration files are stored in `~/.config/opencode/`:
@@ -157,8 +227,9 @@ Create `.opencode/athena.json` in your project root to override global settings.
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                       Bridge Commands                                │   │
-│  │   /athena-dev       /athena-review      /athena-debug               │   │
-│  │   /athena-research  /athena-parallel    /athena-status              │   │
+│  │   /athena-dev       /athena-review        /athena-debug             │   │
+│  │   /athena-research  /athena-parallel      /athena-status            │   │
+│  │   /athena-review-story                                              │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  ┌──────────────────────┐  ┌──────────────────────┐  ┌────────────────┐   │
@@ -286,7 +357,7 @@ Built on top of:
 
 - [OpenCode](https://opencode.ai) by SST
 - [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) by code-yeongyu
-- [BMAD METHOD](https://github.com/bmad-method/bmad-method) by bmad-method
+- [BMAD METHOD](https://github.com/bmad-code-org/BMAD-METHOD) by bmad-code-org
 
 ## License
 

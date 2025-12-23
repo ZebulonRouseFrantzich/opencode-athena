@@ -314,3 +314,448 @@ export interface UpdateStatusResult {
   nextStory?: string | null;
   error?: string;
 }
+
+// ============================================================================
+// Party Review Types
+// ============================================================================
+
+/**
+ * Scope of a party review
+ */
+export type ReviewScope = "epic" | "story";
+
+/**
+ * Severity level of a review finding
+ */
+export type FindingSeverity = "high" | "medium" | "low";
+
+/**
+ * Category of a review finding
+ */
+export type FindingCategory = "security" | "logic" | "bestPractices" | "performance";
+
+/**
+ * User decision on a finding
+ */
+export type ReviewDecision = "accept" | "defer" | "reject" | "pending";
+
+/**
+ * A single party review finding
+ */
+export interface PartyReviewFinding {
+  id: string;
+  category: FindingCategory;
+  severity: FindingSeverity;
+  title: string;
+  description: string;
+  impact: string;
+  suggestion: string;
+  storyId?: string;
+  fileReference?: string;
+  lineNumber?: number;
+  decision?: ReviewDecision;
+  decisionReason?: string;
+  deferredTo?: string;
+}
+
+/**
+ * Findings grouped by story
+ */
+export interface StoryFindings {
+  storyId: string;
+  title: string;
+  filePath: string;
+  findings: {
+    security: PartyReviewFinding[];
+    logic: PartyReviewFinding[];
+    bestPractices: PartyReviewFinding[];
+    performance: PartyReviewFinding[];
+  };
+  summary: {
+    total: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+}
+
+/**
+ * Cross-story issues found in epic reviews
+ */
+export interface CrossStoryIssue {
+  id: string;
+  category: FindingCategory;
+  severity: FindingSeverity;
+  title: string;
+  description: string;
+  affectedStories: string[];
+  suggestion: string;
+  decision?: ReviewDecision;
+  decisionReason?: string;
+}
+
+/**
+ * Model complexity assessment result
+ */
+export interface StoryComplexity {
+  isSimple: boolean;
+  reason: string;
+  recommendedModel: string;
+  factors: {
+    acceptanceCriteriaCount: number;
+    hasSecurityConcerns: boolean;
+    hasDataModelChanges: boolean;
+    hasApiChanges: boolean;
+    isCrudOnly: boolean;
+  };
+}
+
+/**
+ * Reference to another review document
+ */
+export interface ReviewDocumentReference {
+  type: "epic" | "focused";
+  filePath: string;
+  date: string;
+  findingsCount: number;
+  acceptedCount: number;
+  deferredCount: number;
+  rejectedCount: number;
+}
+
+/**
+ * Complete party review document structure
+ */
+export interface PartyReviewDocument {
+  scope: ReviewScope;
+  identifier: string;
+  date: string;
+  reviewer: string;
+  epicNumber?: string;
+  storyId?: string;
+  storiesReviewed?: string[];
+  relatedReviews?: ReviewDocumentReference[];
+  summary: {
+    totalIssues: number;
+    highSeverity: number;
+    mediumSeverity: number;
+    lowSeverity: number;
+    recommendation: string;
+  };
+  storyFindings?: StoryFindings[];
+  crossStoryIssues?: CrossStoryIssue[];
+  previousFindings?: {
+    accepted: PartyReviewFinding[];
+    deferred: PartyReviewFinding[];
+    rejected: PartyReviewFinding[];
+  };
+  newFindings?: {
+    security: PartyReviewFinding[];
+    logic: PartyReviewFinding[];
+    bestPractices: PartyReviewFinding[];
+    performance: PartyReviewFinding[];
+  };
+  oracleAnalysis?: string;
+}
+
+/**
+ * Result from athena_review_story tool (prepares context for Oracle invocation)
+ */
+export interface ReviewStoryResult {
+  success: boolean;
+  scope: ReviewScope;
+  identifier: string;
+  documentPath?: string;
+  document?: PartyReviewDocument;
+  error?: string;
+  suggestion?: string;
+  // Context prepared for command file to invoke Oracle
+  oraclePrompt?: string;
+  storiesContent?: Array<{ id: string; content: string | null }>;
+  architectureContent?: string;
+  existingReviews?: ReviewDocumentReference[];
+  complexity?: StoryComplexity;
+  selectedModel?: string;
+  reviewsDir?: string;
+}
+
+/**
+ * Argument for applying review decisions
+ */
+export interface ApplyReviewDecisionsArgs {
+  documentPath: string;
+  decisions: Record<string, ReviewDecision>;
+  decisionReasons?: Record<string, string>;
+  deferredTargets?: Record<string, string>;
+}
+
+/**
+ * Result from applying review decisions
+ */
+export interface ApplyReviewDecisionsResult {
+  success: boolean;
+  updatedStories: string[];
+  updatedDocuments: string[];
+  summary: {
+    accepted: number;
+    deferred: number;
+    rejected: number;
+  };
+  error?: string;
+}
+
+// ============================================================================
+// Enhanced Party Review Types (3-Phase Architecture)
+// ============================================================================
+
+/**
+ * BMAD agent types that can participate in party review
+ */
+export type BmadAgentType =
+  | "architect"
+  | "dev"
+  | "tea"
+  | "pm"
+  | "analyst"
+  | "ux-designer"
+  | "tech-writer"
+  | "sm";
+
+/**
+ * BMAD agent persona details
+ */
+export interface BmadAgentPersona {
+  type: BmadAgentType;
+  name: string;
+  title: string;
+  expertise: string[];
+  perspective: string;
+}
+
+/**
+ * Mapping of BMAD agents with their personas
+ */
+export const BMAD_AGENTS: Record<BmadAgentType, BmadAgentPersona> = {
+  architect: {
+    type: "architect",
+    name: "Winston",
+    title: "Software Architect",
+    expertise: ["system design", "security architecture", "scalability", "technical debt"],
+    perspective: "architecture and system design",
+  },
+  dev: {
+    type: "dev",
+    name: "Amelia",
+    title: "Senior Developer",
+    expertise: ["implementation", "code quality", "debugging", "performance optimization"],
+    perspective: "implementation feasibility and code quality",
+  },
+  tea: {
+    type: "tea",
+    name: "Murat",
+    title: "Test Engineer",
+    expertise: ["testing strategy", "edge cases", "test automation", "quality assurance"],
+    perspective: "testability and quality assurance",
+  },
+  pm: {
+    type: "pm",
+    name: "John",
+    title: "Product Manager",
+    expertise: ["requirements", "stakeholder needs", "prioritization", "business value"],
+    perspective: "business impact and stakeholder value",
+  },
+  analyst: {
+    type: "analyst",
+    name: "Mary",
+    title: "Business Analyst",
+    expertise: ["requirements analysis", "user stories", "acceptance criteria", "edge cases"],
+    perspective: "requirements completeness and clarity",
+  },
+  "ux-designer": {
+    type: "ux-designer",
+    name: "Sally",
+    title: "UX Designer",
+    expertise: ["user experience", "accessibility", "usability", "user flows"],
+    perspective: "user experience and accessibility",
+  },
+  "tech-writer": {
+    type: "tech-writer",
+    name: "Paige",
+    title: "Technical Writer",
+    expertise: ["documentation", "API docs", "user guides", "clarity"],
+    perspective: "documentation and clarity",
+  },
+  sm: {
+    type: "sm",
+    name: "Bob",
+    title: "Scrum Master",
+    expertise: ["process", "team dynamics", "sprint planning", "blockers"],
+    perspective: "process and team coordination",
+  },
+};
+
+/**
+ * Agent recommendation with reasoning
+ */
+export interface AgentRecommendation {
+  agent: BmadAgentType;
+  reason: string;
+  relevantFindings: string[];
+  priority: "required" | "recommended" | "optional";
+}
+
+/**
+ * Cross-story pattern identified by an agent
+ */
+export interface CrossStoryPattern {
+  id: string;
+  pattern: string;
+  affectedStories: string[];
+  severity: FindingSeverity;
+  recommendation: string;
+}
+
+/**
+ * Single agent's analysis output (Phase 2)
+ */
+export interface AgentAnalysis {
+  agent: BmadAgentType;
+  agentName: string;
+  analyzedAt: string;
+  storiesAnalyzed: string[];
+  perspective: string;
+  findings: {
+    agreements: string[];
+    concerns: string[];
+    suggestions: string[];
+  };
+  crossStoryPatterns: CrossStoryPattern[];
+  prioritizedIssues: Array<{
+    findingId: string;
+    agentPriority: "critical" | "important" | "minor";
+    rationale: string;
+  }>;
+  summary: string;
+}
+
+/**
+ * Phase 1 context: Prepared by tool for Oracle invocation (before Oracle runs)
+ */
+export type Phase1Context = Phase1ContextSuccess | Phase1ContextError;
+
+export interface Phase1ContextSuccess {
+  success: true;
+  scope: ReviewScope;
+  identifier: string;
+  reviewsDir: string;
+  storiesContent: Array<{ id: string; content: string | null }>;
+  architectureContent: string;
+  oraclePrompt: string;
+  selectedModel: string;
+  complexity?: StoryComplexity;
+  existingReviews?: ReviewDocumentReference[];
+}
+
+export interface Phase1ContextError {
+  success: false;
+  scope: ReviewScope;
+  identifier: string;
+  error: string;
+  suggestion?: string;
+}
+
+/**
+ * Phase 1 result: Complete result after Oracle analysis with agent recommendations
+ */
+export interface Phase1Result {
+  success: boolean;
+  scope: ReviewScope;
+  identifier: string;
+  reviewDocumentPath: string;
+  storiesContent: Array<{ id: string; title: string; content: string }>;
+  architectureContent: string;
+  findings: {
+    total: number;
+    high: number;
+    medium: number;
+    low: number;
+    byCategory: Record<FindingCategory, number>;
+  };
+  recommendedAgents: AgentRecommendation[];
+  oracleAnalysis: string;
+  error?: string;
+  suggestion?: string;
+}
+
+/**
+ * Phase 2 result: Aggregated agent analyses
+ */
+export interface Phase2Result {
+  success: boolean;
+  identifier: string;
+  agentAnalyses: AgentAnalysis[];
+  consensusPoints: string[];
+  debatePoints: Array<{
+    topic: string;
+    positions: Array<{
+      agent: BmadAgentType;
+      position: string;
+    }>;
+  }>;
+  aggregatedPriorities: Array<{
+    findingId: string;
+    votes: Record<BmadAgentType, "critical" | "important" | "minor" | "not-rated">;
+    consensus: "strong" | "moderate" | "disputed";
+  }>;
+  error?: string;
+}
+
+/**
+ * Discussion context for Phase 3 party mode
+ */
+export interface DiscussionContext {
+  scope: ReviewScope;
+  identifier: string;
+  epicNumber?: string;
+  storyIds: string[];
+  phase1Summary: {
+    totalFindings: number;
+    highSeverity: number;
+    reviewDocumentPath: string;
+  };
+  agentAnalyses: AgentAnalysis[];
+  agendaItems: Array<{
+    id: string;
+    topic: string;
+    type: "consensus" | "debate" | "decision-needed";
+    relatedFindings: string[];
+    agentPositions?: Record<BmadAgentType, string>;
+  }>;
+  preloadedContext: string;
+}
+
+/**
+ * Final review session result
+ */
+export interface ReviewSessionResult {
+  success: boolean;
+  identifier: string;
+  decisions: Record<string, ReviewDecision>;
+  decisionSummary: {
+    accepted: number;
+    deferred: number;
+    rejected: number;
+    discussed: number;
+  };
+  storyUpdates: Array<{
+    storyId: string;
+    addedCriteria: string[];
+    modifiedCriteria: string[];
+  }>;
+  actionItems: Array<{
+    description: string;
+    assignedTo?: BmadAgentType;
+    deferredToStory?: string;
+  }>;
+  sessionNotes: string;
+}
