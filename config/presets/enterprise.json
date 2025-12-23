@@ -5,7 +5,8 @@
   "subscriptions": {
     "claude": { "enabled": true, "tier": "max20x" },
     "openai": { "enabled": true },
-    "google": { "enabled": true, "authMethod": "antigravity" }
+    "google": { "enabled": true, "authMethod": "antigravity" },
+    "githubCopilot": { "enabled": false, "plan": "none" }
   },
   "models": {
     "sisyphus": "anthropic/claude-opus-4-5-thinking",
@@ -13,7 +14,15 @@
     "librarian": "anthropic/claude-sonnet-4-5-thinking",
     "frontend": "google/gemini-2.5-pro",
     "documentWriter": "anthropic/claude-opus-4-5",
-    "multimodalLooker": "google/gemini-2.5-pro"
+    "multimodalLooker": "google/gemini-2.5-pro",
+    "settings": {
+      "sisyphus": { "thinkingLevel": "high" },
+      "oracle": { "thinkingLevel": "high" },
+      "librarian": { "thinkingLevel": "medium" },
+      "frontend": { "temperature": 0.5 },
+      "documentWriter": { "temperature": 0.4 },
+      "multimodalLooker": { "temperature": 0.2 }
+    }
   },
   "bmad": {
     "defaultTrack": "enterprise",

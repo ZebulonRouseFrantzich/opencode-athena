@@ -1,0 +1,38 @@
+{
+  "$schema": "../schemas/athena.schema.json",
+  "version": "0.0.1",
+  "description": "Configuration for users with only GitHub Copilot access (Business/Enterprise)",
+  "subscriptions": {
+    "claude": { "enabled": false, "tier": "none" },
+    "openai": { "enabled": false },
+    "google": { "enabled": false, "authMethod": "none" },
+    "githubCopilot": { "enabled": true, "plan": "business" }
+  },
+  "models": {
+    "sisyphus": "github-copilot/claude-sonnet-4.5",
+    "oracle": "github-copilot/gpt-5.1",
+    "librarian": "github-copilot/claude-haiku-4.5",
+    "frontend": "github-copilot/claude-sonnet-4.5",
+    "documentWriter": "github-copilot/gemini-2.5-pro",
+    "multimodalLooker": "github-copilot/gemini-2.5-pro"
+  },
+  "bmad": {
+    "defaultTrack": "bmad-method",
+    "autoStatusUpdate": true,
+    "parallelStoryLimit": 3
+  },
+  "features": {
+    "bmadBridge": true,
+    "autoStatus": true,
+    "parallelExecution": true,
+    "notifications": true,
+    "contextMonitor": true,
+    "commentChecker": true,
+    "lspTools": true
+  },
+  "mcps": {
+    "context7": true,
+    "exa": true,
+    "grepApp": true
+  }
+}

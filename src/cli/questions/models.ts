@@ -5,7 +5,12 @@
  */
 
 import { select } from "@inquirer/prompts";
-import type { ModelAnswers, ModelChoice, SubscriptionAnswers } from "../../shared/types.js";
+import type {
+  CustomModelDefinition,
+  ModelAnswers,
+  ModelChoice,
+  SubscriptionAnswers,
+} from "../../shared/types.js";
 
 /**
  * Default values for model questions
@@ -88,16 +93,180 @@ const AVAILABLE_MODELS: ModelChoice[] = [
     provider: "google",
     description: "Previous generation fast model",
   },
+
+  // GitHub Copilot models (routed through Copilot - smaller context, no thinking)
+  // Free tier models
+  {
+    id: "github-copilot/gpt-4.1",
+    name: "GPT-4.1 (via Copilot)",
+    provider: "github-copilot",
+    description: "GPT-4.1 through GitHub Copilot",
+  },
+  {
+    id: "github-copilot/gpt-5-mini",
+    name: "GPT-5 mini (via Copilot)",
+    provider: "github-copilot",
+    description: "Fast GPT-5 variant through GitHub Copilot",
+  },
+  {
+    id: "github-copilot/claude-haiku-4.5",
+    name: "Claude Haiku 4.5 (via Copilot)",
+    provider: "github-copilot",
+    description: "Fast Claude model through GitHub Copilot",
+  },
+  // Pro/Business/Enterprise models
+  {
+    id: "github-copilot/claude-sonnet-4",
+    name: "Claude Sonnet 4 (via Copilot)",
+    provider: "github-copilot",
+    description: "Claude Sonnet 4 through GitHub Copilot",
+  },
+  {
+    id: "github-copilot/claude-sonnet-4.5",
+    name: "Claude Sonnet 4.5 (via Copilot)",
+    provider: "github-copilot",
+    description: "Latest Sonnet through GitHub Copilot - no thinking mode",
+  },
+  {
+    id: "github-copilot/gpt-5",
+    name: "GPT-5 (via Copilot)",
+    provider: "github-copilot",
+    description: "GPT-5 through GitHub Copilot",
+  },
+  {
+    id: "github-copilot/gpt-5.1",
+    name: "GPT-5.1 (via Copilot)",
+    provider: "github-copilot",
+    description: "GPT-5.1 through GitHub Copilot",
+  },
+  {
+    id: "github-copilot/gpt-5.1-codex",
+    name: "GPT-5.1-Codex (via Copilot)",
+    provider: "github-copilot",
+    description: "Code-optimized GPT-5.1 through GitHub Copilot",
+  },
+  {
+    id: "github-copilot/gpt-5.2",
+    name: "GPT-5.2 (via Copilot)",
+    provider: "github-copilot",
+    description: "Latest GPT through GitHub Copilot",
+  },
+  {
+    id: "github-copilot/gemini-2.5-pro",
+    name: "Gemini 2.5 Pro (via Copilot)",
+    provider: "github-copilot",
+    description: "Gemini 2.5 Pro through GitHub Copilot",
+  },
+  {
+    id: "github-copilot/gemini-3-flash",
+    name: "Gemini 3 Flash (via Copilot)",
+    provider: "github-copilot",
+    description: "Fast Gemini 3 through GitHub Copilot",
+  },
+  {
+    id: "github-copilot/gemini-3-pro",
+    name: "Gemini 3 Pro (via Copilot)",
+    provider: "github-copilot",
+    description: "Gemini 3 Pro through GitHub Copilot",
+  },
+  // Pro+/Enterprise only (Opus models)
+  {
+    id: "github-copilot/claude-opus-4.1",
+    name: "Claude Opus 4.1 (via Copilot)",
+    provider: "github-copilot",
+    description: "Claude Opus 4.1 through GitHub Copilot - Pro+/Enterprise only",
+  },
+  {
+    id: "github-copilot/claude-opus-4.5",
+    name: "Claude Opus 4.5 (via Copilot)",
+    provider: "github-copilot",
+    description: "Most capable Claude through GitHub Copilot - Pro+/Enterprise only",
+  },
 ];
+
+type CopilotPlan = SubscriptionAnswers["copilotPlan"];
+
+/**
+ * Convert a CustomModelDefinition to a ModelChoice
+ */
+function customModelToChoice(custom: CustomModelDefinition): ModelChoice {
+  return {
+    id: custom.id,
+    name: custom.name,
+    provider: custom.provider,
+    description: custom.description,
+  };
+}
+
+/**
+ * Merge custom models with built-in models
+ * Custom models with the same ID override built-in models
+ */
+export function mergeCustomModels(
+  builtInModels: ModelChoice[],
+  customModels?: CustomModelDefinition[]
+): ModelChoice[] {
+  if (!customModels || customModels.length === 0) {
+    return builtInModels;
+  }
+
+  const modelMap = new Map<string, ModelChoice>();
+  for (const model of builtInModels) {
+    modelMap.set(model.id, model);
+  }
+
+  for (const custom of customModels) {
+    modelMap.set(custom.id, customModelToChoice(custom));
+  }
+
+  return Array.from(modelMap.values());
+}
+
+const COPILOT_FREE_MODELS = [
+  "github-copilot/gpt-4.1",
+  "github-copilot/gpt-5-mini",
+  "github-copilot/claude-haiku-4.5",
+];
+
+const COPILOT_OPUS_MODELS = ["github-copilot/claude-opus-4.1", "github-copilot/claude-opus-4.5"];
+
+function isModelAvailableForCopilotPlan(modelId: string, plan: CopilotPlan): boolean {
+  if (plan === "none") return false;
+
+  if (COPILOT_OPUS_MODELS.includes(modelId)) {
+    return plan === "pro-plus" || plan === "enterprise";
+  }
+
+  if (plan === "free") {
+    return COPILOT_FREE_MODELS.includes(modelId);
+  }
+
+  return true;
+}
 
 /**
  * Filter models based on enabled providers
  */
-export function getAvailableModels(subscriptions: SubscriptionAnswers): ModelChoice[] {
-  return AVAILABLE_MODELS.filter((model) => {
+export function getAvailableModels(
+  subscriptions: SubscriptionAnswers,
+  customModels?: CustomModelDefinition[]
+): ModelChoice[] {
+  const allModels = mergeCustomModels(AVAILABLE_MODELS, customModels);
+
+  return allModels.filter((model) => {
     if (model.provider === "anthropic" && !subscriptions.hasClaude) return false;
     if (model.provider === "openai" && !subscriptions.hasOpenAI) return false;
     if (model.provider === "google" && !subscriptions.hasGoogle) return false;
+    if (model.provider === "github-copilot") {
+      if (!subscriptions.hasGitHubCopilot) return false;
+      if (!isModelAvailableForCopilotPlan(model.id, subscriptions.copilotPlan)) return false;
+      if (
+        subscriptions.copilotEnabledModels &&
+        !subscriptions.copilotEnabledModels.includes(model.id)
+      ) {
+        return false;
+      }
+    }
     return true;
   });
 }
@@ -145,30 +314,60 @@ function createModelChoices(models: ModelChoice[]) {
 
 /**
  * Get a suggested default model for a role based on subscriptions
+ * Prioritizes direct providers, with Copilot models as fallback
  */
 function getSuggestedModel(
   role: string,
   _subscriptions: SubscriptionAnswers,
   availableModels: ModelChoice[]
 ): string | undefined {
-  // Default suggestions based on role
   const suggestions: Record<string, string[]> = {
     sisyphus: [
       "anthropic/claude-opus-4-5-thinking",
       "anthropic/claude-sonnet-4-5-thinking",
       "openai/gpt-5.1-high",
       "google/gemini-2.5-pro",
+      "github-copilot/claude-sonnet-4.5",
+      "github-copilot/gpt-5.1",
+      "github-copilot/gemini-2.5-pro",
     ],
     oracle: [
       "openai/gpt-5.1-high",
       "anthropic/claude-opus-4-5-thinking",
       "anthropic/claude-sonnet-4-5-thinking",
       "google/gemini-2.5-pro",
+      "github-copilot/gpt-5.1",
+      "github-copilot/claude-opus-4.5",
+      "github-copilot/claude-sonnet-4.5",
     ],
-    librarian: ["anthropic/claude-sonnet-4-5", "openai/gpt-4o", "google/gemini-2.5-flash"],
-    frontend: ["anthropic/claude-sonnet-4-5", "google/gemini-2.5-pro", "openai/gpt-4o"],
-    documentWriter: ["google/gemini-2.5-pro", "anthropic/claude-sonnet-4-5", "openai/gpt-4o"],
-    multimodalLooker: ["google/gemini-2.5-flash", "openai/gpt-4o", "anthropic/claude-sonnet-4-5"],
+    librarian: [
+      "anthropic/claude-sonnet-4-5",
+      "openai/gpt-4o",
+      "google/gemini-2.5-flash",
+      "github-copilot/claude-haiku-4.5",
+      "github-copilot/gpt-5-mini",
+    ],
+    frontend: [
+      "anthropic/claude-sonnet-4-5",
+      "google/gemini-2.5-pro",
+      "openai/gpt-4o",
+      "github-copilot/claude-sonnet-4.5",
+      "github-copilot/gemini-2.5-pro",
+    ],
+    documentWriter: [
+      "google/gemini-2.5-pro",
+      "anthropic/claude-sonnet-4-5",
+      "openai/gpt-4o",
+      "github-copilot/gemini-2.5-pro",
+      "github-copilot/claude-sonnet-4.5",
+    ],
+    multimodalLooker: [
+      "google/gemini-2.5-flash",
+      "openai/gpt-4o",
+      "anthropic/claude-sonnet-4-5",
+      "github-copilot/gemini-3-flash",
+      "github-copilot/gpt-5-mini",
+    ],
   };
 
   const roleDefaults = suggestions[role] || [];
@@ -188,16 +387,18 @@ function getSuggestedModel(
  *
  * @param subscriptions - The user's provider subscriptions
  * @param defaults - Optional default values from a preset
+ * @param customModels - Optional custom model definitions to include
  */
 export async function gatherModels(
   subscriptions: SubscriptionAnswers,
-  defaults?: ModelDefaults
+  defaults?: ModelDefaults,
+  customModels?: CustomModelDefinition[]
 ): Promise<ModelAnswers> {
-  const availableModels = getAvailableModels(subscriptions);
+  const availableModels = getAvailableModels(subscriptions, customModels);
 
   if (availableModels.length === 0) {
     throw new Error(
-      "No models available. Please enable at least one provider (Claude, OpenAI, or Google)."
+      "No models available. Please enable at least one provider (Claude, OpenAI, Google, or GitHub Copilot)."
     );
   }
 
@@ -275,8 +476,11 @@ export async function gatherModels(
 /**
  * Get the list of available models (for display purposes)
  */
-export function getModelList(subscriptions: SubscriptionAnswers): ModelChoice[] {
-  return getAvailableModels(subscriptions);
+export function getModelList(
+  subscriptions: SubscriptionAnswers,
+  customModels?: CustomModelDefinition[]
+): ModelChoice[] {
+  return getAvailableModels(subscriptions, customModels);
 }
 
 /**
@@ -285,10 +489,11 @@ export function getModelList(subscriptions: SubscriptionAnswers): ModelChoice[] 
  */
 export function validatePresetModels(
   presetModels: ModelDefaults,
-  subscriptions: SubscriptionAnswers
+  subscriptions: SubscriptionAnswers,
+  customModels?: CustomModelDefinition[]
 ): string[] {
   const warnings: string[] = [];
-  const availableModels = getAvailableModels(subscriptions);
+  const availableModels = getAvailableModels(subscriptions, customModels);
 
   const checkModel = (model: string | undefined, role: string) => {
     if (model && !isModelAvailable(model, availableModels)) {

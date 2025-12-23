@@ -352,6 +352,10 @@ function printNextSteps(subscriptions: SubscriptionAnswers): void {
     steps.push(`Run: ${chalk.cyan("opencode auth login")} -> Select Google -> OAuth with Google`);
   }
 
+  if (subscriptions.hasGitHubCopilot) {
+    steps.push(`Run: ${chalk.cyan("opencode auth login")} -> Select GitHub Copilot`);
+  }
+
   logger.successBanner("OPENCODE ATHENA INSTALLED SUCCESSFULLY!");
 
   console.log(chalk.bold("Next Steps:\n"));

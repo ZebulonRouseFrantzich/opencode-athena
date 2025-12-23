@@ -44,9 +44,25 @@
             }
           },
           "required": ["enabled", "authMethod"]
+        },
+        "githubCopilot": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "plan": {
+              "type": "string",
+              "enum": ["none", "free", "pro", "pro-plus", "business", "enterprise"]
+            },
+            "enabledModels": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Optional: specific models enabled by organization admin"
+            }
+          },
+          "required": ["enabled", "plan"]
         }
       },
-      "required": ["claude", "openai", "google"]
+      "required": ["claude", "openai", "google", "githubCopilot"]
     },
     "models": {
       "type": "object",
@@ -75,6 +91,28 @@
         "multimodalLooker": {
           "type": "string",
           "description": "Model for image analysis agent"
+        },
+        "settings": {
+          "type": "object",
+          "description": "Optional agent-specific settings for temperature and thinking level",
+          "properties": {
+            "sisyphus": { "$ref": "#/definitions/agentSettings" },
+            "oracle": { "$ref": "#/definitions/agentSettings" },
+            "librarian": { "$ref": "#/definitions/agentSettings" },
+            "frontend": { "$ref": "#/definitions/agentSettings" },
+            "documentWriter": { "$ref": "#/definitions/agentSettings" },
+            "multimodalLooker": { "$ref": "#/definitions/agentSettings" },
+            "overrides": {
+              "type": "object",
+              "description": "Per-model overrides (key: model ID, value: settings)",
+              "additionalProperties": { "$ref": "#/definitions/agentSettings" }
+            }
+          }
+        },
+        "custom": {
+          "type": "array",
+          "description": "User-defined custom models",
+          "items": { "$ref": "#/definitions/customModel" }
         }
       },
       "required": ["sisyphus", "oracle", "librarian"]
@@ -124,5 +162,57 @@
       }
     }
   },
-  "required": ["version", "subscriptions", "models", "bmad", "features", "mcps"]
+  "required": ["version", "subscriptions", "models", "bmad", "features", "mcps"],
+  "definitions": {
+    "agentSettings": {
+      "type": "object",
+      "description": "Settings for an agent (temperature and thinking level)",
+      "properties": {
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Model temperature (0.0-1.0) - controls randomness/creativity"
+        },
+        "thinkingLevel": {
+          "type": "string",
+          "enum": ["off", "low", "medium", "high"],
+          "description": "Reasoning depth - maps to reasoning_effort (OpenAI), token budget (Anthropic), thinking_level (Google)"
+        }
+      }
+    },
+    "customModel": {
+      "type": "object",
+      "description": "Custom model definition",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Model identifier (e.g., 'anthropic/claude-next-gen')"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["anthropic", "openai", "google", "github-copilot"],
+          "description": "Provider name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description"
+        },
+        "capabilities": {
+          "type": "object",
+          "description": "Model capabilities",
+          "properties": {
+            "thinking": { "type": "boolean" },
+            "contextWindow": { "type": "number" },
+            "supportsTemperature": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["id", "name", "provider"]
+    }
+  }
 }

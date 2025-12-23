@@ -4,10 +4,11 @@
  * Diagnose and fix common issues with OpenCode Athena installation.
  */
 
+import { execSync } from "node:child_process";
 import chalk from "chalk";
 import ora from "ora";
-import { CONFIG_PATHS } from "../../shared/constants.js";
-import type { DoctorOptions } from "../../shared/types.js";
+import { CONFIG_PATHS, VERSION } from "../../shared/constants.js";
+import type { AthenaConfig, DoctorOptions } from "../../shared/types.js";
 import { FileManager } from "../utils/file-manager.js";
 import { logger } from "../utils/logger.js";
 import { checkOhMyOpenCode, checkPrerequisites, validateJsonFile } from "../utils/prerequisites.js";
@@ -18,6 +19,27 @@ interface DiagnosticResult {
   status: "pass" | "warn" | "fail";
   message: string;
   fix?: () => Promise<void>;
+}
+
+interface CopilotAuthResult {
+  authenticated: boolean;
+  message?: string;
+}
+
+function checkCopilotAuth(): CopilotAuthResult {
+  try {
+    const result = execSync("opencode auth status github-copilot 2>&1", {
+      encoding: "utf-8",
+      timeout: 5000,
+    });
+    const isAuthenticated =
+      result.toLowerCase().includes("authenticated") ||
+      result.toLowerCase().includes("logged in") ||
+      !result.toLowerCase().includes("not");
+    return { authenticated: isAuthenticated };
+  } catch {
+    return { authenticated: false, message: "Could not check auth status" };
+  }
 }
 
 /**
@@ -129,6 +151,36 @@ export async function doctor(options: DoctorOptions): Promise<void> {
       }
     },
   });
+
+  // Check 8: Config version freshness
+  if (athenaConfigValid.valid) {
+    const config = fileManager.readJsonFile(CONFIG_PATHS.globalAthenaConfig) as AthenaConfig;
+    const configVersion = config.version || "0.0.0";
+    const isCurrentVersion = configVersion === VERSION;
+    results.push({
+      name: "Config Version",
+      status: isCurrentVersion ? "pass" : "warn",
+      message: isCurrentVersion
+        ? `Version ${configVersion} is current`
+        : `Version ${configVersion} may be outdated (current: ${VERSION})`,
+    });
+  }
+
+  // Check 9: GitHub Copilot auth status (if enabled)
+  if (athenaConfigValid.valid) {
+    const config = fileManager.readJsonFile(CONFIG_PATHS.globalAthenaConfig) as AthenaConfig;
+    if (config.subscriptions?.githubCopilot?.enabled) {
+      const copilotAuthResult = checkCopilotAuth();
+      results.push({
+        name: "GitHub Copilot Auth",
+        status: copilotAuthResult.authenticated ? "pass" : "warn",
+        message: copilotAuthResult.authenticated
+          ? "Authenticated"
+          : copilotAuthResult.message ||
+            "Not authenticated - run 'opencode auth login github-copilot'",
+      });
+    }
+  }
 
   // Display results
   logger.section("Diagnostic Results");

@@ -30,6 +30,10 @@ export function generateAthenaConfig(answers: InstallAnswers): Record<string, un
         enabled: subscriptions.hasGoogle,
         authMethod: subscriptions.googleAuth,
       },
+      githubCopilot: {
+        enabled: subscriptions.hasGitHubCopilot,
+        plan: subscriptions.copilotPlan,
+      },
     },
     models: {
       sisyphus: models.sisyphus,

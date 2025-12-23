@@ -59,11 +59,32 @@ export async function gatherSubscriptions(): Promise<SubscriptionAnswers> {
     });
   }
 
+  const hasGitHubCopilot = await confirm({
+    message: "Do you have GitHub Copilot access?",
+    default: false,
+  });
+
+  let copilotPlan: SubscriptionAnswers["copilotPlan"] = "none";
+  if (hasGitHubCopilot) {
+    copilotPlan = await select({
+      message: "Which GitHub Copilot plan?",
+      choices: [
+        { name: "Enterprise - Full model access including Opus", value: "enterprise" as const },
+        { name: "Pro+ - Includes Claude Opus models", value: "pro-plus" as const },
+        { name: "Pro - Standard paid plan", value: "pro" as const },
+        { name: "Business - Organization plan", value: "business" as const },
+        { name: "Free - Limited model access", value: "free" as const },
+      ],
+    });
+  }
+
   return {
     hasClaude,
     claudeTier,
     hasOpenAI,
     hasGoogle,
     googleAuth,
+    hasGitHubCopilot,
+    copilotPlan,
   };
 }

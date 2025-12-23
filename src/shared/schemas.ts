@@ -23,6 +23,11 @@ export const SubscriptionSchema = z.object({
     enabled: z.boolean(),
     authMethod: z.enum(["antigravity", "personal", "api", "none"]),
   }),
+  githubCopilot: z.object({
+    enabled: z.boolean(),
+    plan: z.enum(["free", "pro", "pro-plus", "business", "enterprise", "none"]),
+    enabledModels: z.array(z.string()).optional(),
+  }),
 });
 
 /**
@@ -57,6 +62,36 @@ export const McpsSchema = z.object({
 });
 
 /**
+ * Schema for thinking level
+ */
+export const ThinkingLevelSchema = z.enum(["off", "low", "medium", "high"]);
+
+/**
+ * Schema for agent settings (temperature and thinking level)
+ */
+export const AgentSettingsSchema = z.object({
+  temperature: z.number().min(0).max(1).optional(),
+  thinkingLevel: ThinkingLevelSchema.optional(),
+});
+
+/**
+ * Schema for custom model definition
+ */
+export const CustomModelDefinitionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  provider: z.enum(["anthropic", "openai", "google", "github-copilot"]),
+  description: z.string().optional(),
+  capabilities: z
+    .object({
+      thinking: z.boolean().optional(),
+      contextWindow: z.number().optional(),
+      supportsTemperature: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+/**
  * Schema for agent model assignments
  */
 export const ModelsSchema = z.object({
@@ -66,6 +101,18 @@ export const ModelsSchema = z.object({
   frontend: z.string().optional().describe("Model for UI/UX agent"),
   documentWriter: z.string().optional().describe("Model for documentation generation agent"),
   multimodalLooker: z.string().optional().describe("Model for image analysis agent"),
+  settings: z
+    .object({
+      sisyphus: AgentSettingsSchema.optional(),
+      oracle: AgentSettingsSchema.optional(),
+      librarian: AgentSettingsSchema.optional(),
+      frontend: AgentSettingsSchema.optional(),
+      documentWriter: AgentSettingsSchema.optional(),
+      multimodalLooker: AgentSettingsSchema.optional(),
+      overrides: z.record(z.string(), AgentSettingsSchema).optional(),
+    })
+    .optional(),
+  custom: z.array(CustomModelDefinitionSchema).optional(),
 });
 
 /**
