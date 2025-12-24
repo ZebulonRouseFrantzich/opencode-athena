@@ -121,6 +121,84 @@ The plugin receives a `PluginContext` with:
 1. Update Zod schema in `src/shared/schemas.ts`
 2. Update generator in `src/cli/generators/`
 3. Update JSON schema in `config/schemas/`
+4. **CRITICAL**: If you add/remove/rename fields in `athena.json` or `oh-my-opencode.json`, you MUST add a migration (see below)
+
+### Adding a Migration
+
+**When to add a migration** (MANDATORY):
+- Adding new fields to `athena.json` config schema
+- Removing fields from `athena.json` config schema
+- Renaming fields in `athena.json` or `oh-my-opencode.json`
+- Changing default values that affect existing installations
+- Any breaking change to config structure
+
+**How to add a migration**:
+
+1. **Increment version in `package.json`**:
+   ```bash
+   npm version patch  # For new fields/non-breaking changes
+   npm version minor  # For new features with migrations
+   npm version major  # For breaking changes
+   ```
+
+2. **Add migration to `src/cli/utils/migrations/migrations.ts`**:
+   ```typescript
+   export const MIGRATIONS: Migration[] = [
+     // ... existing migrations ...
+     {
+       fromVersion: "0.5.0",  // Version users are upgrading FROM
+       toVersion: "0.6.0",    // Version users are upgrading TO
+       description: "Add new feature flag: enableAwesomeFeature",
+       migrateAthena: (config) => {
+         const features = (config.features as Record<string, unknown>) || {};
+         if (features.enableAwesomeFeature === undefined) {
+           features.enableAwesomeFeature = true; // Set safe default
+         }
+         return { ...config, features };
+       },
+       // Optional: migrate oh-my-opencode.json if needed
+       migrateOmo: (config) => {
+         // Transform oh-my-opencode config here
+         return config;
+       },
+     },
+   ];
+   ```
+
+3. **Migration best practices**:
+   - Always check if field exists before setting it (`if (field === undefined)`)
+   - Use safe defaults (don't break existing setups)
+   - Preserve user customizations
+   - Add descriptive `description` field
+   - Keep migrations idempotent (safe to run multiple times)
+   - Migrations run in order based on `fromVersion` (uses semver)
+
+4. **Add test for migration** in `tests/cli/migrations.test.ts`:
+   ```typescript
+   it("adds enableAwesomeFeature when migrating from 0.5.0 to 0.6.0", () => {
+     const oldAthena = {
+       version: "0.5.0",
+       features: { existingFeature: true },
+     };
+
+     const result = migrateConfigs(oldAthena, {}, "0.5.0");
+
+     const features = result.athenaConfig.features as Record<string, unknown>;
+     expect(features.enableAwesomeFeature).toBe(true);
+     expect(features.existingFeature).toBe(true); // Preserved!
+   });
+   ```
+
+5. **Update generator** to include new field:
+   - Add to `src/cli/generators/athena-config.ts` or `omo-config.ts`
+   - Ensure fresh installs get the new field
+
+**Migration system architecture**:
+- Migrations are applied automatically during upgrade
+- Users see what migrations were applied
+- Breaking changes (major version bumps) warn the user
+- All migrations create automatic backups before running
+- Migration chain supports ALL versions (from 0.0.1 to current)
 
 ## Testing Locally
 

@@ -8,7 +8,7 @@
 import { confirm, select } from "@inquirer/prompts";
 import chalk from "chalk";
 import ora from "ora";
-import { DEFAULTS } from "../../shared/constants.js";
+import { DEFAULTS, VERSION } from "../../shared/constants.js";
 import type { InstallAnswers, InstallOptions, SubscriptionAnswers } from "../../shared/types.js";
 import { ConfigGenerator } from "../generators/config-generator.js";
 import {
@@ -19,8 +19,20 @@ import {
   gatherSubscriptions,
   validatePresetModels,
 } from "../questions/index.js";
+import {
+  type LoadedConfigs,
+  detectNewFeatures,
+  extractAdvanced,
+  extractFeatures,
+  extractMethodology,
+  extractModels,
+  extractSubscriptions,
+  loadExistingConfigs,
+} from "../utils/config-loader.js";
+import { createBackups, mergeConfigs, writeMergedConfigs } from "../utils/config-merger.js";
 import { FileManager } from "../utils/file-manager.js";
 import { logger } from "../utils/logger.js";
+import { migrateConfigs } from "../utils/migrations/index.js";
 import { checkPrerequisites } from "../utils/prerequisites.js";
 import {
   PRESET_NAMES,
@@ -33,14 +45,211 @@ import {
   presetToDefaults,
 } from "../utils/preset-loader.js";
 
-/**
- * Main install command handler
- */
+type InstallMode = "fresh" | "upgrade" | "reconfigure";
+
+interface ModeDetectionResult {
+  mode: InstallMode;
+  existingVersion?: string;
+  configs?: LoadedConfigs;
+}
+
+function detectInstallMode(options: InstallOptions, configs: LoadedConfigs): ModeDetectionResult {
+  if (options.reconfigure) {
+    return { mode: "reconfigure" };
+  }
+
+  if (!configs.athena) {
+    return { mode: "fresh" };
+  }
+
+  return {
+    mode: "upgrade",
+    existingVersion: configs.athenaVersion || "0.0.1",
+    configs,
+  };
+}
+
+async function runUpgradeFlow(
+  configs: LoadedConfigs,
+  existingVersion: string,
+  options: InstallOptions
+): Promise<void> {
+  const { athena, omo } = configs;
+
+  logger.section("Upgrading Configuration");
+
+  console.log(chalk.cyan(`\nCurrent version: ${existingVersion}`));
+  console.log(chalk.cyan(`New version: ${VERSION}\n`));
+
+  if (!options.yes) {
+    const proceed = await confirm({
+      message: "Upgrade existing installation?",
+      default: true,
+    });
+
+    if (!proceed) {
+      logger.info("Upgrade cancelled.");
+      process.exit(0);
+    }
+  }
+
+  const spinner = ora("Creating backup...").start();
+  const backups = createBackups();
+  const backupCount = [backups.athenaBackup, backups.omoBackup, backups.opencodeBackup].filter(
+    Boolean
+  ).length;
+  spinner.succeed(`Created ${backupCount} backup file(s)`);
+
+  const migrationSpinner = ora("Applying migrations...").start();
+  const migrationResult = migrateConfigs(athena || {}, omo || {}, existingVersion);
+
+  if (migrationResult.migrationsApplied.length > 0) {
+    migrationSpinner.succeed(`Applied ${migrationResult.migrationsApplied.length} migration(s)`);
+    for (const migration of migrationResult.migrationsApplied) {
+      console.log(chalk.gray(`  • ${migration}`));
+    }
+  } else {
+    migrationSpinner.succeed("No migrations needed");
+  }
+
+  if (migrationResult.hasBreakingChanges && !options.yes) {
+    console.log(chalk.yellow("\nBreaking changes detected:"));
+    for (const warning of migrationResult.breakingChangeWarnings) {
+      console.log(chalk.yellow(`  ⚠ ${warning}`));
+    }
+
+    const continueUpgrade = await confirm({
+      message: "Continue with upgrade despite breaking changes?",
+      default: false,
+    });
+
+    if (!continueUpgrade) {
+      logger.info("Upgrade cancelled. Your backup files are preserved.");
+      process.exit(0);
+    }
+  }
+
+  const existingSubscriptions = extractSubscriptions(migrationResult.athenaConfig);
+  const existingModels = extractModels(migrationResult.athenaConfig);
+  const existingMethodology = extractMethodology(migrationResult.athenaConfig);
+  const existingFeatures = extractFeatures(migrationResult.athenaConfig);
+  const existingAdvanced = extractAdvanced(migrationResult.athenaConfig);
+
+  logger.section("Preserved Configuration");
+
+  if (existingSubscriptions) {
+    console.log(chalk.bold("Subscriptions:"));
+    if (existingSubscriptions.hasClaude)
+      console.log(chalk.green(`  ✓ Claude (${existingSubscriptions.claudeTier})`));
+    if (existingSubscriptions.hasOpenAI) console.log(chalk.green("  ✓ OpenAI"));
+    if (existingSubscriptions.hasGoogle)
+      console.log(chalk.green(`  ✓ Google (${existingSubscriptions.googleAuth})`));
+    if (existingSubscriptions.hasGitHubCopilot)
+      console.log(chalk.green(`  ✓ GitHub Copilot (${existingSubscriptions.copilotPlan})`));
+  }
+
+  if (existingModels) {
+    console.log(chalk.bold("\nModel Assignments:"));
+    console.log(chalk.green(`  ✓ Sisyphus: ${existingModels.sisyphus}`));
+    console.log(chalk.green(`  ✓ Oracle: ${existingModels.oracle}`));
+    console.log(chalk.green(`  ✓ Librarian: ${existingModels.librarian}`));
+  }
+  console.log();
+
+  const newFeatures = detectNewFeatures(migrationResult.athenaConfig);
+  const updatedFeatures = existingFeatures;
+
+  if (newFeatures.length > 0 && !options.yes) {
+    logger.section("New Features Available");
+
+    for (const feature of newFeatures) {
+      if (feature === "autoGitOperations") {
+        const enable = await confirm({
+          message: "Enable automatic git operations? (commits, pushes by agents)",
+          default: false,
+        });
+        if (updatedFeatures) {
+          if (enable) {
+            updatedFeatures.enabledFeatures.push("auto-git");
+          }
+        }
+      }
+    }
+  }
+
+  let finalSubscriptions = existingSubscriptions;
+
+  if (!options.yes) {
+    const changeSubscriptions = await confirm({
+      message: "Do you want to modify your LLM subscriptions?",
+      default: false,
+    });
+
+    if (changeSubscriptions) {
+      logger.section("LLM Subscriptions");
+      finalSubscriptions = await gatherSubscriptions();
+    }
+  }
+
+  if (!finalSubscriptions) {
+    logger.error("Could not extract subscription information from existing config.");
+    logger.info("Please run with --reconfigure to set up from scratch.");
+    process.exit(1);
+  }
+
+  const fullAnswers: InstallAnswers = {
+    subscriptions: finalSubscriptions,
+    models: existingModels || {
+      sisyphus: "",
+      oracle: "",
+      librarian: "",
+    },
+    methodology: existingMethodology || {
+      defaultTrack: "bmad-method",
+      autoStatusUpdate: true,
+    },
+    features: updatedFeatures || {
+      enabledFeatures: [],
+      mcps: [],
+    },
+    advanced: existingAdvanced || {
+      parallelStoryLimit: 3,
+      experimental: [],
+    },
+    installLocation: options.local ? "local" : "global",
+  };
+
+  const merged = mergeConfigs({
+    existingAthena: migrationResult.athenaConfig,
+    existingOmo: migrationResult.omoConfig,
+    fullAnswers,
+  });
+
+  const writeSpinner = ora("Writing configuration...").start();
+  writeMergedConfigs(merged);
+  writeSpinner.succeed("Configuration files updated");
+
+  const fileManager = new FileManager();
+  const commandsSpinner = ora("Updating bridge commands...").start();
+  const copiedCommands = await fileManager.copyCommands();
+  commandsSpinner.succeed(`Updated ${copiedCommands.length} bridge commands`);
+
+  logger.successBanner(`UPGRADED TO OPENCODE ATHENA ${VERSION}!`);
+
+  if (backups.athenaBackup || backups.omoBackup || backups.opencodeBackup) {
+    console.log(chalk.gray("\nBackups saved:"));
+    if (backups.athenaBackup) console.log(chalk.gray(`  • ${backups.athenaBackup}`));
+    if (backups.omoBackup) console.log(chalk.gray(`  • ${backups.omoBackup}`));
+    if (backups.opencodeBackup) console.log(chalk.gray(`  • ${backups.opencodeBackup}`));
+  }
+
+  console.log(chalk.gray("\nRestart OpenCode to use the upgraded configuration."));
+  console.log();
+}
+
 export async function install(options: InstallOptions): Promise<void> {
-  // Display banner
   logger.banner();
 
-  // Step 1: Check prerequisites
   const spinner = ora("Checking prerequisites...").start();
 
   const prereqs = await checkPrerequisites();
@@ -67,16 +276,16 @@ export async function install(options: InstallOptions): Promise<void> {
     spinner.succeed(`OpenCode ${prereqs.opencode.version || ""} detected`);
   }
 
-  // Check for existing installation
-  if (prereqs.athena.installed && !options.yes) {
-    const overwrite = await confirm({
-      message: `OpenCode Athena ${prereqs.athena.version || ""} is already installed. Overwrite configuration?`,
-      default: false,
-    });
-    if (!overwrite) {
-      logger.info("Installation cancelled.");
-      process.exit(0);
-    }
+  const existingConfigs = loadExistingConfigs();
+  const modeResult = detectInstallMode(options, existingConfigs);
+
+  if (modeResult.mode === "upgrade" && modeResult.configs && modeResult.existingVersion) {
+    await runUpgradeFlow(modeResult.configs, modeResult.existingVersion, options);
+    return;
+  }
+
+  if (modeResult.mode === "reconfigure") {
+    logger.info("Reconfiguring from scratch (--reconfigure flag)");
   }
 
   // Step 2: Handle preset loading

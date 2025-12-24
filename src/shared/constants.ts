@@ -1,11 +1,45 @@
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/**
+ * Get version from package.json at runtime.
+ * Handles both bundled (dist/) and development (src/) scenarios.
+ */
+function getPackageVersion(): string {
+  try {
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+
+    // Try multiple paths to find package.json
+    // After tsup bundling: dist/shared/constants.js -> 2 levels up
+    // In development: src/shared/constants.ts -> 2 levels up
+    const possiblePaths = [
+      join(currentDir, "..", "..", "package.json"),
+      join(currentDir, "..", "..", "..", "package.json"),
+    ];
+
+    for (const pkgPath of possiblePaths) {
+      if (!existsSync(pkgPath)) continue;
+
+      const content = readFileSync(pkgPath, "utf-8");
+      try {
+        const pkg = JSON.parse(content);
+        if (pkg.version) return pkg.version;
+      } catch {}
+    }
+
+    return "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
 
 /**
  * Current version of OpenCode Athena
- * Updated during release process
+ * Dynamically read from package.json
  */
-export const VERSION = "0.0.1";
+export const VERSION = getPackageVersion();
 
 /**
  * Package name for CLI display
