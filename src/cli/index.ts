@@ -36,13 +36,21 @@ program
   .option("--global", "Install globally (default)", true)
   .option("--local", "Install to current project only", false)
   .option("--list-presets", "List available presets and exit", false)
+  .option("--reconfigure", "Force full reconfiguration (ignore existing config)", false)
   .action(async (options) => {
-    // Handle --list-presets flag
     if (options.listPresets) {
       displayPresets();
       return;
     }
     await install(options);
+  });
+
+program
+  .command("upgrade")
+  .description("Upgrade OpenCode Athena configuration to latest version")
+  .option("-y, --yes", "Skip confirmation prompts", false)
+  .action(async (options) => {
+    await install({ ...options, preset: undefined, advanced: false, global: true, local: false });
   });
 
 program

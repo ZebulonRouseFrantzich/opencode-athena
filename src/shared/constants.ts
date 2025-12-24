@@ -1,11 +1,43 @@
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/**
+ * Get version from package.json at runtime.
+ * Handles both bundled (dist/) and development (src/) scenarios.
+ */
+function getPackageVersion(): string {
+  try {
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+
+    const possiblePaths = [
+      join(currentDir, "..", "..", "package.json"),
+      join(currentDir, "..", "..", "..", "package.json"),
+    ];
+
+    for (const pkgPath of possiblePaths) {
+      if (!existsSync(pkgPath)) continue;
+
+      const content = readFileSync(pkgPath, "utf-8");
+      const pkg = JSON.parse(content);
+      if (pkg.version) return pkg.version;
+    }
+
+    return "0.0.0";
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      console.error("[opencode-athena] Warning: package.json contains invalid JSON");
+    }
+    return "0.0.0";
+  }
+}
 
 /**
  * Current version of OpenCode Athena
- * Updated during release process
+ * Dynamically read from package.json
  */
-export const VERSION = "0.0.1";
+export const VERSION = getPackageVersion();
 
 /**
  * Package name for CLI display

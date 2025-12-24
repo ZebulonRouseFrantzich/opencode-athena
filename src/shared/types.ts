@@ -15,6 +15,7 @@ export interface InstallOptions {
   advanced: boolean;
   global: boolean;
   local: boolean;
+  reconfigure?: boolean;
 }
 
 /**
