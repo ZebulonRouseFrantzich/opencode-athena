@@ -78,6 +78,17 @@ describe("generateOmoConfig", () => {
       expect(explore.model).toBe("google/gemini-2.5-flash");
     });
 
+    it("should use specified explore model when provided", () => {
+      const answers = createBaseAnswers();
+      answers.models.explore = "anthropic/claude-haiku-4-5";
+
+      const config = generateOmoConfig(answers);
+      const agents = config.agents as Record<string, unknown>;
+      const explore = agents.explore as Record<string, unknown>;
+
+      expect(explore.model).toBe("anthropic/claude-haiku-4-5");
+    });
+
     it("should fallback to sisyphus for frontend if not specified", () => {
       const answers = createBaseAnswers();
       delete answers.models.frontend;

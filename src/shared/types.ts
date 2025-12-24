@@ -142,6 +142,7 @@ export interface ModelAnswers {
   frontend?: string;
   documentWriter?: string;
   multimodalLooker?: string;
+  explore?: string;
   settings?: {
     sisyphus?: AgentSettings;
     oracle?: AgentSettings;

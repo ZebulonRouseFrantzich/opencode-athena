@@ -4,8 +4,8 @@
  * Generates the oh-my-opencode.json configuration file.
  */
 
-import type { AgentRole, AthenaConfig, InstallAnswers } from "../../shared/types.js";
 import { getProviderParams } from "../../plugin/utils/model-params.js";
+import type { AgentRole, AthenaConfig, InstallAnswers } from "../../shared/types.js";
 
 function buildMinimalConfig(answers: InstallAnswers): AthenaConfig {
   const { subscriptions, models, methodology, features, advanced } = answers;
@@ -99,7 +99,7 @@ export function generateOmoConfig(answers: InstallAnswers): Record<string, unkno
       omoName: "multimodal-looker",
       modelId: models.multimodalLooker || models.librarian,
     },
-    { role: "explore", omoName: "explore", modelId: models.librarian },
+    { role: "explore", omoName: "explore", modelId: models.explore || models.librarian },
   ];
 
   omoConfig.agents = {};
