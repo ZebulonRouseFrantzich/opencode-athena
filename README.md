@@ -148,7 +148,7 @@ The `/athena-review-story` command runs a comprehensive "party review" of storie
                     ▼
 ┌─────────────────────────────────────────┐
 │  PHASE 3: Informed Discussion           │
-│  • BMAD *party-mode with pre-context    │
+│  • Athena party discussion orchestration│
 │  • Interactive agent debate             │
 │  • Decisions captured to story files    │
 └─────────────────────────────────────────┘
@@ -178,7 +178,7 @@ Agents are recommended based on finding types:
 ### Quick vs Full Review
 
 - **Quick Review [Q]**: Accept Phase 1 findings, skip discussion. Best for low-severity issues.
-- **Full Discussion [D]**: Run Phases 2-3 with parallel agents and party-mode debate. Best for complex or high-severity findings.
+- **Full Discussion [D]**: Run Phases 2-3 with parallel agents and informed discussion. Best for complex or high-severity findings.
 
 ## Configuration
 

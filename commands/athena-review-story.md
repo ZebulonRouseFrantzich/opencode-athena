@@ -1,5 +1,5 @@
 ---
-description: 3-phase party review of BMAD stories with parallel agent analysis and BMAD party-mode discussion
+description: 3-phase party review of BMAD stories with parallel agent analysis and informed discussion
 ---
 
 # Athena Review Story - Enhanced Party Review (3-Phase)
@@ -9,7 +9,7 @@ Run a comprehensive "party review" on BMAD stories **after story creation but be
 **Architecture:**
 - **Phase 1**: Background agent performs Oracle analysis (saves context)
 - **Phase 2**: Parallel BMAD agents analyze from their perspectives
-- **Phase 3**: BMAD party-mode discussion with pre-informed agents
+- **Phase 3**: Athena-orchestrated informed discussion with pre-informed agents
 
 ---
 
@@ -211,99 +211,120 @@ Combine all agent analyses into a discussion context:
 
 ---
 
-## Phase 3: Informed Discussion (BMAD Party Mode)
+## Phase 3: Informed Discussion (Athena Party Discussion)
 
-### Step 3.1: Prepare Party Mode Context
+### Step 3.1: Start Party Discussion
 
-Create a context document for party mode:
+Initialize the party discussion with Phase 1 and Phase 2 results:
 
-```markdown
-# Party Review Discussion: {identifier}
+```
+athena_party_discussion({
+  action: "start",
+  phase1Result: JSON.stringify(phase1Result),
+  phase2Result: JSON.stringify(phase2Result)
+})
+```
 
-**Date**: {date}
-**Phase 1 Findings**: {total} issues ({high} high, {medium} medium, {low} low)
-**Agents Present**: {list of agents}
+This returns:
+- `sessionId` - Use this for subsequent calls
+- `currentItem` - First agenda item to discuss
+- `currentResponses` - Agent responses for the current item
+- `hasMoreItems` - Whether there are more items to discuss
 
-## Pre-Analysis Summaries
+### Step 3.2: Present Finding and Agent Responses
 
-### Winston (Architect)
-{architect summary}
+For each agenda item, display:
 
-### Amelia (DEV)  
-{dev summary}
+```
+🎉 **Party Discussion: {currentItem.topic}**
 
-### Murat (TEA)
-{tea summary}
-
-### John (PM)
-{pm summary}
-
-## Discussion Agenda
-
-1. **High Severity Issues** ({count})
-   - {list with agent positions}
-
-2. **Disputed Findings** ({count})
-   - {list where agents disagree}
-
-3. **Cross-Story Patterns** ({count})
-   - {patterns identified by agents}
+**Severity**: {currentItem.severity} | **Category**: {currentItem.category}
+**Type**: {currentItem.type}
 
 ---
 
-Agents are pre-informed. Ready for discussion.
-```
+**Agent Perspectives:**
 
-### Step 3.2: Invoke BMAD Party Mode
-
-```
-Tell the user:
-
-"🎉 **Launching BMAD Party Mode**
-
-The following agents have completed their pre-analysis and are ready to discuss:
-- {list agents with their key insights}
-
-I'm now invoking BMAD party mode with this context pre-loaded.
-Each agent will enter the discussion already informed about the findings.
+{For each response in currentResponses:}
+{response.icon} **{response.agentName}**: {response.response}
 
 ---
 
-*party-mode
-
-{Paste the prepared context document}
-
-Let's start with the high severity issues. {Agent with strongest opinion}, what's your view on {first high severity issue}?"
+**Your Decision:**
+[A] Accept - Add to acceptance criteria
+[D] Defer - Move to another story
+[R] Reject - Won't address
+[S] Skip - Discuss later
+[N] Next - Continue to next finding without deciding
 ```
 
-### Step 3.3: Facilitate Discussion
+### Step 3.3: Record User Decision
 
-During party mode:
-- Let agents discuss each finding
-- Capture user decisions (Accept/Defer/Reject)
-- Note action items and assignments
-- Track which findings have been addressed
-
-### Step 3.4: Conclude and Capture Decisions
-
-When discussion ends:
+When user decides:
 
 ```
-📋 **Discussion Summary**
+athena_party_discussion({
+  action: "decide",
+  sessionId: "{sessionId}",
+  findingId: "{currentItem.findingId}",
+  decision: "accept|defer|reject",
+  reason: "{optional reason from user}",
+  deferredTo: "{story ID if deferred}"
+})
+```
+
+If user selects Skip:
+```
+athena_party_discussion({
+  action: "skip",
+  sessionId: "{sessionId}",
+  findingId: "{currentItem.findingId}"
+})
+```
+
+### Step 3.4: Continue or Complete
+
+If `hasMoreItems` is true:
+```
+athena_party_discussion({
+  action: "continue",
+  sessionId: "{sessionId}"
+})
+```
+
+Display the next finding and repeat Step 3.2.
+
+If `hasMoreItems` is false, the tool returns a summary:
+
+```
+📋 **Discussion Complete**
 
 **Decisions Made**:
-- ✅ Accepted: {count} findings
-- ⏸️ Deferred: {count} findings (to {target stories})
-- ❌ Rejected: {count} findings
-
-**Action Items**:
-- {list action items with assignments}
+- ✅ Accepted: {summary.decisions.accepted} findings
+- ⏸️ Deferred: {summary.decisions.deferred} findings
+- ❌ Rejected: {summary.decisions.rejected} findings
+- ⏳ Pending: {summary.decisions.pending} findings
 
 **Stories to Update**:
-- Story {2.1}: Add {count} acceptance criteria
-- Story {2.3}: Modify {count} criteria
+{For each in summary.storyUpdatesNeeded:}
+- Story {storyId}: {additions.length} items to add
 
 Would you like me to update the story files now? [Y/N]
+```
+
+### Step 3.5: Apply Story Updates
+
+If user confirms, the story files will be updated with:
+- New acceptance criteria for accepted findings
+- Implementation notes for all decisions
+- Updated review document with decision log
+
+End the session:
+```
+athena_party_discussion({
+  action: "end",
+  sessionId: "{sessionId}"
+})
 ```
 
 ---
