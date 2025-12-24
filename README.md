@@ -315,11 +315,14 @@ Set `features.autoGitOperations: true` in `athena.json`:
 Or during installation, check the "Auto Git Operations" feature.
 
 **Covered operations:**
-- `git commit`, `git push`
-- `git checkout -b`, `git branch` (creating branches)
-- `git merge`, `git rebase`, `git cherry-pick`
-- `gh pr create`, `gh pr merge` (GitHub CLI)
-- Other git write operations
+- **Git commits & pushes:** `git commit`, `git push`
+- **Branch operations:** `git checkout -b`, `git branch`, `git switch -c`, `git switch --create`
+- **Merging & rebasing:** `git merge`, `git rebase`, `git cherry-pick`
+- **Stashing & tags:** `git stash`, `git tag`
+- **Reset operations:** `git reset` (all variants: --soft, --mixed, --hard)
+- **GitHub PR operations:** `gh pr create`, `gh pr edit`, `gh pr merge`, `gh pr close`, `gh pr review`
+- **GitHub issue operations:** `gh issue create`, `gh issue edit`, `gh issue close`
+- **GitHub release operations:** `gh release create`, `gh release edit`, `gh release delete`
 
 **Why this is the default:**
 

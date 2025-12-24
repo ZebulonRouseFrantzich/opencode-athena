@@ -138,6 +138,253 @@ describe("tool-hooks", () => {
 
       expect(output.output).not.toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
     });
+
+    it("should NOT inject warning for echo with git command in string", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "echoed text",
+        metadata: { command: "echo 'git commit example'" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).not.toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should NOT inject warning for grep with git command pattern", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "grep results",
+        metadata: { command: "grep 'git push' logfile.txt" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).not.toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should inject warning for command chaining with &&", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "tests passed, committed",
+        metadata: { command: "npm test && git commit -m 'passing tests'" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should inject warning for command chaining with semicolon", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "changed dir and pushed",
+        metadata: { command: "cd repo; git push origin main" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should inject warning for command chaining with pipe", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "piped output",
+        metadata: { command: "echo 'test' | git commit -F -" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should handle different casing (Git Commit)", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "committed",
+        metadata: { command: "Git Commit -m 'test'" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should handle uppercase (GIT PUSH)", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "pushed",
+        metadata: { command: "GIT PUSH origin main" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should handle leading whitespace", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "committed",
+        metadata: { command: "   git commit -m 'test'" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should handle trailing whitespace", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "pushed",
+        metadata: { command: "git push   " },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should handle newlines in command", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "committed",
+        metadata: { command: "\ngit commit -m 'test'\n" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should handle null metadata", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "output",
+        metadata: null,
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).not.toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should handle undefined metadata", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "output",
+        metadata: undefined,
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).not.toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should handle non-object metadata", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "output",
+        metadata: "not an object",
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).not.toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should handle non-string command in metadata", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "output",
+        metadata: { command: 123 },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).not.toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should inject warning for git switch -c", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "switched to new branch",
+        metadata: { command: "git switch -c feature-branch" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should inject warning for git tag", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "tag created",
+        metadata: { command: "git tag v1.0.0" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should inject warning for git reset", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "reset complete",
+        metadata: { command: "git reset --hard HEAD~1" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should inject warning for gh issue edit", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "issue updated",
+        metadata: { command: "gh issue edit 123 --title 'New title'" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
+
+    it("should inject warning for gh release delete", async () => {
+      const hooks = createToolHooks(mockTracker, config);
+      const output = {
+        title: "bash",
+        output: "release deleted",
+        metadata: { command: "gh release delete v1.0.0" },
+      };
+
+      await hooks.after({ tool: "bash", sessionID: "test", callID: "1" }, output);
+
+      expect(output.output).toContain("⚠️ ATHENA GIT OPERATIONS POLICY REMINDER");
+    });
   });
 
   describe("before hook", () => {
