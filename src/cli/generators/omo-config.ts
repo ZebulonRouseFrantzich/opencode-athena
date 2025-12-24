@@ -4,50 +4,116 @@
  * Generates the oh-my-opencode.json configuration file.
  */
 
-import type { InstallAnswers } from "../../shared/types.js";
+import { getProviderParams } from "../../plugin/utils/model-params.js";
+import type { AgentRole, AthenaConfig, InstallAnswers } from "../../shared/types.js";
+
+function buildMinimalConfig(answers: InstallAnswers): AthenaConfig {
+  const { subscriptions, models, methodology, features, advanced } = answers;
+
+  return {
+    version: "0.4.0",
+    subscriptions: {
+      claude: {
+        enabled: subscriptions.hasClaude,
+        tier: subscriptions.claudeTier || "none",
+      },
+      openai: {
+        enabled: subscriptions.hasOpenAI,
+      },
+      google: {
+        enabled: subscriptions.hasGoogle,
+        authMethod: subscriptions.googleAuth || "none",
+      },
+      githubCopilot: {
+        enabled: subscriptions.hasGitHubCopilot,
+        plan: subscriptions.copilotPlan,
+        enabledModels: subscriptions.copilotEnabledModels,
+      },
+    },
+    models: {
+      sisyphus: models.sisyphus,
+      oracle: models.oracle,
+      librarian: models.librarian,
+      frontend: models.frontend,
+      documentWriter: models.documentWriter,
+      multimodalLooker: models.multimodalLooker,
+      settings: models.settings,
+      custom: models.custom,
+    },
+    bmad: {
+      defaultTrack: methodology.defaultTrack,
+      autoStatusUpdate: methodology.autoStatusUpdate,
+      parallelStoryLimit: advanced.parallelStoryLimit || 3,
+    },
+    features: {
+      bmadBridge: true,
+      autoStatus: features.enabledFeatures.includes("auto-status"),
+      parallelExecution: features.enabledFeatures.includes("parallel"),
+      notifications: features.enabledFeatures.includes("notifications"),
+      contextMonitor: features.enabledFeatures.includes("context-monitor"),
+      commentChecker: features.enabledFeatures.includes("comment-checker"),
+      lspTools: features.enabledFeatures.includes("lsp-tools"),
+      autoGitOperations: false,
+    },
+    mcps: {
+      context7: features.mcps.includes("context7"),
+      exa: features.mcps.includes("exa"),
+      grepApp: features.mcps.includes("grep_app"),
+    },
+  };
+}
 
 /**
  * Generate oh-my-opencode.json configuration
  */
 export function generateOmoConfig(answers: InstallAnswers): Record<string, unknown> {
   const { subscriptions, models, features, advanced } = answers;
+  const config: AthenaConfig = buildMinimalConfig(answers);
 
-  const config: Record<string, unknown> = {
+  const omoConfig: Record<string, unknown> = {
     $schema:
       "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
   };
 
   // Google auth toggle - if using antigravity, disable built-in auth
   if (subscriptions.hasGoogle && subscriptions.googleAuth === "antigravity") {
-    config.google_auth = false;
+    omoConfig.google_auth = false;
   }
 
-  // Agent model configuration
-  config.agents = {
-    // Main orchestrator
-    Sisyphus: {
-      model: models.sisyphus,
+  const agentConfigs: Array<{ role: AgentRole; omoName: string; modelId: string }> = [
+    { role: "sisyphus", omoName: "Sisyphus", modelId: models.sisyphus },
+    { role: "oracle", omoName: "oracle", modelId: models.oracle },
+    { role: "librarian", omoName: "librarian", modelId: models.librarian },
+    {
+      role: "frontend",
+      omoName: "frontend-ui-ux-engineer",
+      modelId: models.frontend || models.sisyphus,
     },
-    // Debugging/reasoning agent
-    oracle: {
-      model: models.oracle,
+    {
+      role: "documentWriter",
+      omoName: "document-writer",
+      modelId: models.documentWriter || models.librarian,
     },
-    // Research agent
-    librarian: {
-      model: models.librarian,
+    {
+      role: "multimodalLooker",
+      omoName: "multimodal-looker",
+      modelId: models.multimodalLooker || models.librarian,
     },
-    // UI/UX agent
-    "frontend-ui-ux-engineer": {
-      model: models.frontend || models.sisyphus,
-    },
-    // Documentation agent
-    "document-writer": {
-      model: models.documentWriter || models.librarian,
-    },
-    // Image analysis agent
-    "multimodal-looker": {
-      model: models.multimodalLooker || models.librarian,
-    },
+    { role: "explore", omoName: "explore", modelId: models.explore || models.librarian },
+  ];
+
+  omoConfig.agents = {};
+  for (const { role, omoName, modelId } of agentConfigs) {
+    const providerParams = getProviderParams(modelId, role, config);
+    (omoConfig.agents as Record<string, unknown>)[omoName] = {
+      model: modelId,
+      ...providerParams,
+    };
+  }
+
+  (omoConfig.agents as Record<string, unknown>).general = {
+    model: models.oracle,
+    ...getProviderParams(models.oracle, "oracle", config),
   };
 
   // Disabled hooks based on features
@@ -64,7 +130,7 @@ export function generateOmoConfig(answers: InstallAnswers): Record<string, unkno
   }
 
   if (disabledHooks.length > 0) {
-    config.disabled_hooks = disabledHooks;
+    omoConfig.disabled_hooks = disabledHooks;
   }
 
   // Disabled MCPs
@@ -77,20 +143,20 @@ export function generateOmoConfig(answers: InstallAnswers): Record<string, unkno
   const disabledMcps = allMcps.filter((mcp) => !enabledMcpIds.includes(mcp));
 
   if (disabledMcps.length > 0) {
-    config.disabled_mcps = disabledMcps;
+    omoConfig.disabled_mcps = disabledMcps;
   }
 
   // Experimental features
   if (advanced.experimental && advanced.experimental.length > 0) {
-    config.experimental = {};
+    omoConfig.experimental = {};
 
     if (advanced.experimental.includes("aggressive-truncation")) {
-      (config.experimental as Record<string, unknown>).aggressive_truncation = true;
+      (omoConfig.experimental as Record<string, unknown>).aggressive_truncation = true;
     }
     if (advanced.experimental.includes("auto-resume")) {
-      (config.experimental as Record<string, unknown>).auto_resume = true;
+      (omoConfig.experimental as Record<string, unknown>).auto_resume = true;
     }
   }
 
-  return config;
+  return omoConfig;
 }

@@ -14,7 +14,8 @@
     "librarian": "github-copilot/claude-haiku-4.5",
     "frontend": "github-copilot/claude-sonnet-4.5",
     "documentWriter": "github-copilot/gemini-2.5-pro",
-    "multimodalLooker": "github-copilot/gemini-2.5-pro"
+    "multimodalLooker": "github-copilot/gemini-2.5-pro",
+    "explore": "github-copilot/gpt-5-mini"
   },
   "bmad": {
     "defaultTrack": "bmad-method",
@@ -28,7 +29,8 @@
     "notifications": true,
     "contextMonitor": true,
     "commentChecker": true,
-    "lspTools": true
+    "lspTools": true,
+    "autoGitOperations": false
   },
   "mcps": {
     "context7": true,

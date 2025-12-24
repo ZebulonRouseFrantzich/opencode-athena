@@ -55,6 +55,7 @@ const defaultConfig: AthenaConfig = {
     claude: { enabled: true, tier: "max5x" },
     openai: { enabled: true },
     google: { enabled: false, authMethod: "none" },
+    githubCopilot: { enabled: false, plan: "none" },
   },
   models: {
     sisyphus: "anthropic/claude-sonnet-4",
@@ -74,6 +75,7 @@ const defaultConfig: AthenaConfig = {
     contextMonitor: true,
     commentChecker: true,
     lspTools: true,
+    autoGitOperations: false,
   },
   mcps: {
     context7: true,

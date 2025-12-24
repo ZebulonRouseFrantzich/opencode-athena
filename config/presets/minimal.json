@@ -12,10 +12,12 @@
     "sisyphus": "anthropic/claude-sonnet-4-5",
     "oracle": "anthropic/claude-sonnet-4-5",
     "librarian": "anthropic/claude-sonnet-4-5",
+    "explore": "anthropic/claude-sonnet-4-5",
     "settings": {
       "sisyphus": { "temperature": 0.2 },
       "oracle": { "temperature": 0.1 },
-      "librarian": { "temperature": 0.3 }
+      "librarian": { "temperature": 0.3 },
+      "explore": { "temperature": 0.2 }
     }
   },
   "bmad": {
@@ -30,7 +32,8 @@
     "notifications": false,
     "contextMonitor": false,
     "commentChecker": false,
-    "lspTools": true
+    "lspTools": true,
+    "autoGitOperations": false
   },
   "mcps": {
     "context7": true,

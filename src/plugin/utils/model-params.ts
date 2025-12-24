@@ -18,6 +18,7 @@ const ROLE_TEMP_ADJUSTMENTS: Record<AgentRole, number> = {
   frontend: 0.2,
   documentWriter: 0.1,
   multimodalLooker: -0.1,
+  explore: -0.1,
 };
 
 const ROLE_DEFAULT_THINKING: Record<AgentRole, ThinkingLevel> = {
@@ -27,6 +28,7 @@ const ROLE_DEFAULT_THINKING: Record<AgentRole, ThinkingLevel> = {
   frontend: "low",
   documentWriter: "low",
   multimodalLooker: "off",
+  explore: "off",
 };
 
 interface ModelCapabilities {

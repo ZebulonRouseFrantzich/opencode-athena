@@ -116,7 +116,8 @@ export type AgentRole =
   | "librarian"
   | "frontend"
   | "documentWriter"
-  | "multimodalLooker";
+  | "multimodalLooker"
+  | "explore";
 
 /**
  * Thinking level for reasoning-capable models
@@ -141,6 +142,7 @@ export interface ModelAnswers {
   frontend?: string;
   documentWriter?: string;
   multimodalLooker?: string;
+  explore?: string;
   settings?: {
     sisyphus?: AgentSettings;
     oracle?: AgentSettings;
@@ -148,7 +150,8 @@ export interface ModelAnswers {
     frontend?: AgentSettings;
     documentWriter?: AgentSettings;
     multimodalLooker?: AgentSettings;
-    overrides?: Record<string, AgentSettings>; // Per-model overrides
+    explore?: AgentSettings;
+    overrides?: Record<string, AgentSettings>;
   };
   custom?: CustomModelDefinition[];
 }
@@ -216,6 +219,7 @@ export interface AthenaConfig {
       frontend?: AgentSettings;
       documentWriter?: AgentSettings;
       multimodalLooker?: AgentSettings;
+      explore?: AgentSettings;
       overrides?: Record<string, AgentSettings>;
     };
     custom?: CustomModelDefinition[];

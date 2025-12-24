@@ -92,6 +92,10 @@
           "type": "string",
           "description": "Model for image analysis agent"
         },
+        "explore": {
+          "type": "string",
+          "description": "Model for fast codebase exploration agent"
+        },
         "settings": {
           "type": "object",
           "description": "Optional agent-specific settings for temperature and thinking level",
@@ -102,6 +106,7 @@
             "frontend": { "$ref": "#/definitions/agentSettings" },
             "documentWriter": { "$ref": "#/definitions/agentSettings" },
             "multimodalLooker": { "$ref": "#/definitions/agentSettings" },
+            "explore": { "$ref": "#/definitions/agentSettings" },
             "overrides": {
               "type": "object",
               "description": "Per-model overrides (key: model ID, value: settings)",

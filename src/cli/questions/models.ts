@@ -323,8 +323,8 @@ function getSuggestedModel(
 ): string | undefined {
   const suggestions: Record<string, string[]> = {
     sisyphus: [
-      "anthropic/claude-opus-4-5-thinking",
       "anthropic/claude-sonnet-4-5-thinking",
+      "anthropic/claude-opus-4-5-thinking",
       "openai/gpt-5.1-high",
       "google/gemini-2.5-pro",
       "github-copilot/claude-sonnet-4.5",
@@ -367,6 +367,14 @@ function getSuggestedModel(
       "anthropic/claude-sonnet-4-5",
       "github-copilot/gemini-3-flash",
       "github-copilot/gpt-5-mini",
+    ],
+    explore: [
+      "google/gemini-2.5-flash",
+      "anthropic/claude-sonnet-4-5",
+      "openai/gpt-4o",
+      "github-copilot/claude-haiku-4.5",
+      "github-copilot/gpt-5-mini",
+      "github-copilot/gemini-3-flash",
     ],
   };
 
