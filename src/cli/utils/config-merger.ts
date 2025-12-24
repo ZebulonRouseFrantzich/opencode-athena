@@ -22,7 +22,7 @@ export interface BackupResult {
   opencodeBackup: string | null;
 }
 
-function deepMerge(
+export function deepMerge(
   baseObj: Record<string, unknown>,
   newObj: Record<string, unknown>
 ): Record<string, unknown> {
@@ -65,7 +65,11 @@ export function mergeConfigs(options: MergeOptions): MergedConfigs {
 }
 
 export function createBackups(): BackupResult {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[:.TZ]/g, "-")
+    .replace(/--+/g, "-")
+    .replace(/-$/, "");
   const result: BackupResult = {
     athenaBackup: null,
     omoBackup: null,
@@ -99,5 +103,3 @@ export function writeMergedConfigs(configs: MergedConfigs): void {
   writeFileSync(CONFIG_PATHS.globalAthenaConfig, JSON.stringify(configs.athena, null, 2), "utf-8");
   writeFileSync(CONFIG_PATHS.globalOmoConfig, JSON.stringify(configs.omo, null, 2), "utf-8");
 }
-
-export { deepMerge };

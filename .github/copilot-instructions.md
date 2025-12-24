@@ -19,9 +19,9 @@
 
 ✅ **REQUIRED CHECKS:**
 1. Is `package.json` version bumped?
-   - New field added → patch version (0.5.0 → 0.5.1)
-   - Field renamed/removed → minor version (0.5.0 → 0.6.0)
-   - Breaking change → major version (0.5.0 → 1.0.0)
+   - Bug fix (no config changes) → patch version (0.5.0 → 0.5.1)
+   - New field added → minor version (0.5.0 → 0.6.0)
+   - Field renamed/removed/breaking → major version (0.5.0 → 1.0.0)
 
 2. Is there a corresponding migration in `src/cli/utils/migrations/migrations.ts`?
    - Migration must have matching `toVersion` = new package.json version
@@ -88,7 +88,7 @@ export const athenaConfigSchema = z.object({
 **If this is internal-only (no config changes):**
 Add a comment in the PR description explaining why no migration is needed.
 
-📖 See: [MIGRATIONS.md](../MIGRATIONS.md)
+📖 See: [MIGRATIONS.md](/MIGRATIONS.md)
 ```
 
 ### 3. Default Value Changes Without Migration
@@ -224,8 +224,8 @@ When reviewing PRs that touch config-related files, verify:
 ## 🔗 Reference Documentation
 
 For detailed migration guidelines, see:
-- [MIGRATIONS.md](../MIGRATIONS.md) - Complete migration guide
-- [AGENTS.md](../AGENTS.md#adding-a-migration) - Quick reference for AI agents
+- [MIGRATIONS.md](/MIGRATIONS.md) - Complete migration guide
+- [AGENTS.md](/AGENTS.md#adding-a-migration) - Quick reference for AI agents
 
 ---
 

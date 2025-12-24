@@ -1,3 +1,4 @@
+import * as semver from "semver";
 import { describe, expect, it } from "vitest";
 import { MIGRATIONS, migrateConfigs, needsMigration } from "../../src/cli/utils/migrations/index.js";
 import { VERSION } from "../../src/shared/constants.js";
@@ -20,7 +21,9 @@ describe("migrations", () => {
       for (let i = 1; i < MIGRATIONS.length; i++) {
         const prev = MIGRATIONS[i - 1];
         const curr = MIGRATIONS[i];
-        expect(prev.fromVersion <= curr.fromVersion).toBe(true);
+        const prevVersion = semver.coerce(prev.fromVersion) || "0.0.0";
+        const currVersion = semver.coerce(curr.fromVersion) || "0.0.0";
+        expect(semver.lte(prevVersion, currVersion)).toBe(true);
       }
     });
   });
@@ -81,11 +84,11 @@ describe("migrations", () => {
 
     it("skips migrations when already at current version", () => {
       const currentAthena = {
-        version: "0.5.0",
+        version: VERSION,
         features: { autoGitOperations: false },
       };
 
-      const result = migrateConfigs(currentAthena, {}, "0.5.0");
+      const result = migrateConfigs(currentAthena, {}, VERSION);
 
       expect(result.migrationsApplied).toHaveLength(0);
     });

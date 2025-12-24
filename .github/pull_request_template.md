@@ -29,7 +29,7 @@
 **If N/A, explain why no migration is needed:**
 <!-- e.g., "Internal refactoring only, no config schema changes" -->
 
-📖 See: [MIGRATIONS.md](../MIGRATIONS.md) for detailed guide
+📖 See: [MIGRATIONS.md](/MIGRATIONS.md) for detailed guide
 
 ## Testing
 

@@ -19,4 +19,10 @@ export const MIGRATIONS: Migration[] = [
       return { ...config, features };
     },
   },
+  {
+    fromVersion: "0.5.0",
+    toVersion: "0.6.0",
+    description: "Migration system infrastructure (no config changes)",
+    migrateAthena: (config) => config,
+  },
 ];

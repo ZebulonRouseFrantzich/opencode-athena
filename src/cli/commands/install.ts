@@ -168,10 +168,9 @@ async function runUpgradeFlow(
           message: "Enable automatic git operations? (commits, pushes by agents)",
           default: false,
         });
-        if (updatedFeatures) {
-          if (enable) {
-            updatedFeatures.enabledFeatures.push("auto-git");
-          }
+        if (enable) {
+          const migratedFeatures = migrationResult.athenaConfig.features as Record<string, unknown>;
+          migratedFeatures.autoGitOperations = true;
         }
       }
     }

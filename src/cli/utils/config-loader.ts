@@ -147,6 +147,18 @@ export function extractAdvanced(athena: Record<string, unknown>): AdvancedAnswer
   }
 }
 
+/**
+ * Detect features that were added after the user's current version.
+ *
+ * MAINTENANCE NOTE: When adding new features that require user opt-in during upgrade,
+ * add a check here for the feature field being undefined. This function is called
+ * during the upgrade flow to prompt users about new features.
+ *
+ * Example: If adding a new feature "enableAwesomeFeature" in version 0.7.0:
+ *   if (features?.enableAwesomeFeature === undefined) {
+ *     newFeatures.push("enableAwesomeFeature");
+ *   }
+ */
 export function detectNewFeatures(existingAthena: Record<string, unknown>): string[] {
   const newFeatures: string[] = [];
 

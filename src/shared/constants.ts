@@ -11,9 +11,6 @@ function getPackageVersion(): string {
   try {
     const currentDir = dirname(fileURLToPath(import.meta.url));
 
-    // Try multiple paths to find package.json
-    // After tsup bundling: dist/shared/constants.js -> 2 levels up
-    // In development: src/shared/constants.ts -> 2 levels up
     const possiblePaths = [
       join(currentDir, "..", "..", "package.json"),
       join(currentDir, "..", "..", "..", "package.json"),
@@ -23,14 +20,15 @@ function getPackageVersion(): string {
       if (!existsSync(pkgPath)) continue;
 
       const content = readFileSync(pkgPath, "utf-8");
-      try {
-        const pkg = JSON.parse(content);
-        if (pkg.version) return pkg.version;
-      } catch {}
+      const pkg = JSON.parse(content);
+      if (pkg.version) return pkg.version;
     }
 
     return "0.0.0";
-  } catch {
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      console.error("[opencode-athena] Warning: package.json contains invalid JSON");
+    }
     return "0.0.0";
   }
 }

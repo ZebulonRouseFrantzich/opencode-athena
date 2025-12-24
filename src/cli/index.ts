@@ -50,7 +50,7 @@ program
   .description("Upgrade OpenCode Athena configuration to latest version")
   .option("-y, --yes", "Skip confirmation prompts", false)
   .action(async (options) => {
-    await install({ ...options, preset: "none", advanced: false, global: true, local: false });
+    await install({ ...options, preset: undefined, advanced: false, global: true, local: false });
   });
 
 program
