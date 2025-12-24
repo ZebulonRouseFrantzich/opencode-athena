@@ -33,7 +33,7 @@ This review runs in a **separate context** to preserve main session tokens.
 Use background_task to spawn a review agent:
 
 background_task({
-  agent: "general",
+  agent: "oracle",
   description: "Party review of {identifier}",
   prompt: `
 You are performing a party review for Athena.
@@ -134,7 +134,7 @@ For each recommended agent, spawn a background task:
 ```
 # Spawn in parallel - all at once
 background_task({
-  agent: "general",
+  agent: "oracle",
   description: "Architect analysis of {identifier}",
   prompt: `
 You are Winston, the Software Architect from BMAD.

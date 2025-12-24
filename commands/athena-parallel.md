@@ -178,7 +178,7 @@ opencode
 ```
 # Start story 2.1 in background
 background_task({
-  agent: "general",
+  agent: "Sisyphus",
   prompt: "Implement BMAD story 2.1. Load context with athena_get_story({storyId: '2.1'}), implement following /athena-dev workflow, update status when complete.",
   description: "Story 2.1 implementation"
 })
@@ -216,7 +216,7 @@ async function executeParallel(storyIds: string[]) {
   
   // 3. Spawn background agents
   const tasks = storyIds.map(id => ({
-    agent: "general", // or dedicated story-impl agent
+    agent: "Sisyphus",
     prompt: generateStoryPrompt(id),
   }));
   
