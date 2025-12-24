@@ -290,6 +290,50 @@ Custom model fields:
   - `contextWindow`: Context window size in tokens
   - `supportsTemperature`: Whether temperature can be adjusted
 
+### Git Operations Policy
+
+By default, Athena prevents agents from automatically performing git operations (commits, pushes, branch creation). This ensures developers maintain full control over version control.
+
+**Default behavior** (`autoGitOperations: false`):
+- ✅ Agents can read git state (`git status`, `git diff`, `git log`)
+- ❌ Agents cannot automatically commit, push, or create branches
+- ⚠️ If an agent attempts a git write operation, a warning is injected
+- 📝 Agents must ask for explicit user permission before git operations
+
+**Enable automatic git operations:**
+
+Set `features.autoGitOperations: true` in `athena.json`:
+
+```json
+{
+  "features": {
+    "autoGitOperations": true
+  }
+}
+```
+
+Or during installation, check the "Auto Git Operations" feature.
+
+**Covered operations:**
+- **Git commits & pushes:** `git commit`, `git push`
+- **Branch operations:** `git checkout -b`, `git branch`, `git switch -c`, `git switch --create`
+- **Merging & rebasing:** `git merge`, `git rebase`, `git cherry-pick`
+- **Stashing & tags:** `git stash`, `git tag`
+- **Reset operations:** `git reset` (all variants: --soft, --mixed, --hard)
+- **GitHub PR operations:** `gh pr create`, `gh pr edit`, `gh pr merge`, `gh pr close`, `gh pr review`
+- **GitHub issue operations:** `gh issue create`, `gh issue edit`, `gh issue close`
+- **GitHub release operations:** `gh release create`, `gh release edit`, `gh release delete`
+
+**Why this is the default:**
+
+Version control is critical. Automatic commits can:
+- Create unclear commit messages
+- Commit unintended changes
+- Disrupt branch strategies
+- Bypass code review processes
+
+With `autoGitOperations: false`, agents track progress via `athena_update_status()` instead, which updates `sprint-status.yaml` without git operations.
+
 ## GitHub Copilot Support
 
 Athena supports GitHub Copilot as a model provider, allowing you to use Claude, GPT, and Gemini models through your Copilot subscription. This is especially useful for enterprise users who only have access to LLMs through Copilot.

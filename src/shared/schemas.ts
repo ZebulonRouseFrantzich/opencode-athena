@@ -50,6 +50,7 @@ export const FeaturesSchema = z.object({
   contextMonitor: z.boolean(),
   commentChecker: z.boolean(),
   lspTools: z.boolean(),
+  autoGitOperations: z.boolean().default(false),
 });
 
 /**

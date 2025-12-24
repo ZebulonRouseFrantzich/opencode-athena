@@ -1,28 +1,7 @@
 /**
- * Tool execution hooks (STUB)
+ * Tool execution hooks
  *
- * TODO: Potential use cases for tool hooks in Athena:
- *
- * 1. Auto-status on test pass:
- *    - After Bash tool runs tests successfully
- *    - Prompt to mark story as completed
- *
- * 2. Context injection on file read:
- *    - When reading story files
- *    - Inject implementation instructions
- *
- * 3. BMAD file protection:
- *    - Before Write/Edit on docs/ files (BMAD artifacts)
- *    - Warn or block direct modifications
- *
- * 4. Story progress tracking:
- *    - Track which files are modified during story implementation
- *    - Generate change summary for completion
- *
- * See oh-my-opencode for examples:
- * - comment-checker: Checks for excessive comments after Write/Edit
- * - tool-output-truncator: Truncates large outputs
- * - agent-usage-reminder: Reminds to use specialized agents
+ * Implements safety net warnings for git operations.
  */
 
 import type { AthenaConfig } from "../../shared/types.js";
@@ -51,28 +30,90 @@ interface AfterHookOutput {
 }
 
 /**
- * Create tool execution hooks
- *
- * Currently returns stubs. See TODO comments for future implementation ideas.
+ * Git write operations that modify repository state.
+ * These require explicit user permission when autoGitOperations is disabled.
  */
-export function createToolHooks(_tracker: StoryTracker, _config: AthenaConfig) {
+const GIT_WRITE_COMMANDS = [
+  "git commit",
+  "git push",
+  "git checkout -b",
+  "git branch ",
+  "git switch -c",
+  "git switch --create",
+  "git merge",
+  "git rebase",
+  "git cherry-pick",
+  "git stash",
+  "git tag",
+  "git reset",
+  "gh pr create",
+  "gh pr edit",
+  "gh pr merge",
+  "gh pr close",
+  "gh pr review",
+  "gh issue create",
+  "gh issue edit",
+  "gh issue close",
+  "gh release create",
+  "gh release edit",
+  "gh release delete",
+];
+
+function getBashCommand(metadata: unknown): string {
+  if (!metadata || typeof metadata !== "object") {
+    return "";
+  }
+
+  const cmd = (metadata as Record<string, unknown>).command;
+  return typeof cmd === "string" ? cmd : "";
+}
+
+function containsGitWriteCommand(command: string): boolean {
+  const normalized = command.trim().toLowerCase();
+
+  // Split by common shell separators to check each command segment
+  // This prevents false positives from strings like: echo "git commit"
+  const segments = normalized.split(/[;&|]+/).map((s) => s.trim());
+
+  return segments.some((segment) =>
+    GIT_WRITE_COMMANDS.some((gitCmd) => segment.startsWith(gitCmd.toLowerCase()))
+  );
+}
+
+/**
+ * Create tool execution hooks
+ */
+export function createToolHooks(_tracker: StoryTracker, config: AthenaConfig) {
   return {
     /**
      * Called before a tool executes
-     * Can modify args or throw to block execution
      */
     before: async (_input: BeforeHookInput, _output: BeforeHookOutput): Promise<void> => {
-      // TODO: Implement tool.execute.before hooks
-      // Currently a no-op stub
+      return;
     },
 
     /**
      * Called after a tool executes
-     * Can modify output or append messages
      */
-    after: async (_input: AfterHookInput, _output: AfterHookOutput): Promise<void> => {
-      // TODO: Implement tool.execute.after hooks
-      // Currently a no-op stub
+    after: async (input: AfterHookInput, output: AfterHookOutput): Promise<void> => {
+      if (config.features.autoGitOperations) {
+        return;
+      }
+
+      if (input.tool === "bash") {
+        const command = getBashCommand(output.metadata);
+
+        if (containsGitWriteCommand(command)) {
+          output.output +=
+            "\n\n⚠️ ATHENA GIT OPERATIONS POLICY REMINDER:\n" +
+            "Git operations should only be performed when explicitly requested by the user.\n" +
+            "If this command was run automatically (not requested by the user), please:\n" +
+            "1. Ask the user before proceeding with further git operations\n" +
+            "2. Use athena_update_status() to track story progress instead of git commits\n" +
+            "\n" +
+            "To enable automatic git operations, set features.autoGitOperations=true in athena.json";
+        }
+      }
     },
   };
 }

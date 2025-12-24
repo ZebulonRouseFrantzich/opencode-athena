@@ -4,6 +4,23 @@ description: Research patterns, implementations, or documentation using Libraria
 
 # Athena Research - Librarian-Powered Research
 
+## Git Operations Policy
+
+**⚠️ AUTOMATIC GIT OPERATIONS ARE PROHIBITED**
+
+You must NOT perform any git operations automatically:
+- ❌ Do NOT run `git commit` to save changes
+- ❌ Do NOT run `git push` to push to remote
+- ❌ Do NOT run `git checkout -b` or `git branch` to create branches
+- ❌ Do NOT run `git merge`, `git rebase`, or `git cherry-pick`
+- ❌ Do NOT run `gh pr create` or other GitHub CLI operations
+
+**Git operations are ONLY permitted if the user explicitly requests them.**
+
+This command focuses on research and should rarely involve git operations. If you believe git operations are needed, ASK the user first.
+
+---
+
 Use Librarian, the research specialist, to find patterns, examples, and documentation from multiple sources.
 
 **You are Sisyphus, the orchestrator.** You will coordinate Librarian's research capabilities with Explore for comprehensive information gathering.
