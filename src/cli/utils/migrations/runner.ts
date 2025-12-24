@@ -26,10 +26,8 @@ export function migrateConfigs(
   });
 
   for (const migration of sortedMigrations) {
-    const migrationFrom = semver.valid(semver.coerce(migration.fromVersion)) || "0.0.0";
     const migrationTo = semver.valid(semver.coerce(migration.toVersion)) || "0.0.0";
 
-    if (semver.gt(migrationFrom, normalizedFrom)) continue;
     if (semver.lte(migrationTo, normalizedFrom)) continue;
     if (semver.gt(migrationTo, normalizedTarget)) continue;
 
@@ -80,9 +78,8 @@ export function needsMigration(fromVersion: string): boolean {
   }
 
   return MIGRATIONS.some((m: Migration) => {
-    const migrationFrom = semver.valid(semver.coerce(m.fromVersion)) || "0.0.0";
     const migrationTo = semver.valid(semver.coerce(m.toVersion)) || "0.0.0";
 
-    return semver.lte(migrationFrom, normalizedFrom) && semver.gt(migrationTo, normalizedFrom);
+    return semver.gt(migrationTo, normalizedFrom);
   });
 }

@@ -120,4 +120,32 @@ describe("migrations", () => {
       expect(() => needsMigration("")).not.toThrow();
     });
   });
+
+  describe("migrateConfigs (chain migrations)", () => {
+    it("applies all migrations from 0.0.1 to 0.6.0", () => {
+      const oldAthena = {
+        version: "0.0.1",
+        features: {},
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.0.1");
+
+      expect(result.migrationsApplied.length).toBeGreaterThanOrEqual(3);
+      
+      const features = result.athenaConfig.features as Record<string, unknown>;
+      expect(features.autoGitOperations).toBeDefined();
+    });
+
+    it("skips migrations already applied", () => {
+      const athena050 = {
+        version: "0.5.0",
+        features: { autoGitOperations: false },
+      };
+
+      const result = migrateConfigs(athena050, {}, "0.5.0");
+
+      expect(result.migrationsApplied).toHaveLength(1);
+      expect(result.migrationsApplied[0]).toContain("0.5.0 → 0.6.0");
+    });
+  });
 });
