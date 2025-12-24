@@ -211,13 +211,18 @@ export class FileManager {
   async removeConfigFiles(): Promise<string[]> {
     const removedFiles: string[] = [];
 
-    const filesToRemove = [CONFIG_PATHS.globalAthenaConfig, CONFIG_PATHS.stateFile];
+    const filesToRemove = [CONFIG_PATHS.globalAthenaConfig, CONFIG_PATHS.legacyStateFile];
 
     for (const file of filesToRemove) {
       if (existsSync(file)) {
         await rm(file);
         removedFiles.push(file);
       }
+    }
+
+    if (existsSync(CONFIG_PATHS.athenaDir)) {
+      await rm(CONFIG_PATHS.athenaDir, { recursive: true });
+      removedFiles.push(CONFIG_PATHS.athenaDir);
     }
 
     return removedFiles;

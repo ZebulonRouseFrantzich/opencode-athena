@@ -76,8 +76,17 @@ export const CONFIG_PATHS = {
   /** Plugin directory */
   pluginDir: join(homedir(), ".config", "opencode", "plugin"),
 
+  /** Athena internal files directory (state, backups) */
+  athenaDir: join(homedir(), ".config", "opencode", "athena"),
+
+  /** Athena backups directory */
+  backupsDir: join(homedir(), ".config", "opencode", "athena", "backups"),
+
   /** Athena state file (for story tracking) */
-  stateFile: join(homedir(), ".config", "opencode", "athena-state.json"),
+  stateFile: join(homedir(), ".config", "opencode", "athena", "athena-state.json"),
+
+  /** Legacy state file path (for migration) */
+  legacyStateFile: join(homedir(), ".config", "opencode", "athena-state.json"),
 } as const;
 
 /**

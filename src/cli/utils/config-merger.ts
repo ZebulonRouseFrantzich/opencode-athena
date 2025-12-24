@@ -1,5 +1,5 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { CONFIG_PATHS, VERSION } from "../../shared/constants.js";
 import type { InstallAnswers } from "../../shared/types.js";
 import { generateAthenaConfig } from "../generators/athena-config.js";
@@ -76,18 +76,22 @@ export function createBackups(): BackupResult {
     opencodeBackup: null,
   };
 
+  if (!existsSync(CONFIG_PATHS.backupsDir)) {
+    mkdirSync(CONFIG_PATHS.backupsDir, { recursive: true });
+  }
+
   if (existsSync(CONFIG_PATHS.globalAthenaConfig)) {
-    result.athenaBackup = `${CONFIG_PATHS.globalAthenaConfig}.backup-${timestamp}`;
+    result.athenaBackup = join(CONFIG_PATHS.backupsDir, `athena.json.backup-${timestamp}`);
     copyFileSync(CONFIG_PATHS.globalAthenaConfig, result.athenaBackup);
   }
 
   if (existsSync(CONFIG_PATHS.globalOmoConfig)) {
-    result.omoBackup = `${CONFIG_PATHS.globalOmoConfig}.backup-${timestamp}`;
+    result.omoBackup = join(CONFIG_PATHS.backupsDir, `oh-my-opencode.json.backup-${timestamp}`);
     copyFileSync(CONFIG_PATHS.globalOmoConfig, result.omoBackup);
   }
 
   if (existsSync(CONFIG_PATHS.globalOpencodeConfig)) {
-    result.opencodeBackup = `${CONFIG_PATHS.globalOpencodeConfig}.backup-${timestamp}`;
+    result.opencodeBackup = join(CONFIG_PATHS.backupsDir, `opencode.json.backup-${timestamp}`);
     copyFileSync(CONFIG_PATHS.globalOpencodeConfig, result.opencodeBackup);
   }
 

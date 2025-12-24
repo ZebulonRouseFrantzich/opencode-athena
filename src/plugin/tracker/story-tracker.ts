@@ -2,7 +2,7 @@
  * Story Tracker
  *
  * Tracks the current story state and persists it across sessions.
- * State is stored in ~/.config/opencode/athena-state.json
+ * State is stored in ~/.config/opencode/athena/athena-state.json
  */
 
 import { existsSync } from "node:fs";

@@ -32,7 +32,7 @@ import {
 import { createBackups, mergeConfigs, writeMergedConfigs } from "../utils/config-merger.js";
 import { FileManager } from "../utils/file-manager.js";
 import { logger } from "../utils/logger.js";
-import { migrateConfigs } from "../utils/migrations/index.js";
+import { migrateConfigs, migrateLegacyFiles } from "../utils/migrations/index.js";
 import { checkPrerequisites } from "../utils/prerequisites.js";
 import {
   PRESET_NAMES,
@@ -99,6 +99,15 @@ async function runUpgradeFlow(
     Boolean
   ).length;
   spinner.succeed(`Created ${backupCount} backup file(s)`);
+
+  const fileMigrationResult = migrateLegacyFiles();
+  if (fileMigrationResult.stateFileMoved || fileMigrationResult.backupsMoved > 0) {
+    const moved: string[] = [];
+    if (fileMigrationResult.stateFileMoved) moved.push("state file");
+    if (fileMigrationResult.backupsMoved > 0)
+      moved.push(`${fileMigrationResult.backupsMoved} backup(s)`);
+    console.log(chalk.gray(`  Migrated ${moved.join(", ")} to new athena/ directory`));
+  }
 
   const migrationSpinner = ora("Applying migrations...").start();
   const migrationResult = migrateConfigs(athena || {}, omo || {}, existingVersion);

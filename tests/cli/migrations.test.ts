@@ -122,7 +122,7 @@ describe("migrations", () => {
   });
 
   describe("migrateConfigs (chain migrations)", () => {
-    it("applies all migrations from 0.0.1 to 0.6.0", () => {
+    it("applies all migrations from 0.0.1 to current version", () => {
       const oldAthena = {
         version: "0.0.1",
         features: {},
@@ -144,8 +144,9 @@ describe("migrations", () => {
 
       const result = migrateConfigs(athena050, {}, "0.5.0");
 
-      expect(result.migrationsApplied).toHaveLength(1);
+      expect(result.migrationsApplied).toHaveLength(2);
       expect(result.migrationsApplied[0]).toContain("0.5.0 → 0.6.0");
+      expect(result.migrationsApplied[1]).toContain("0.6.0 → 0.7.0");
     });
   });
 });
