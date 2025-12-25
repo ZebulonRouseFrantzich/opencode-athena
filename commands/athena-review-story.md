@@ -111,7 +111,7 @@ background_output({ task_id: "<task_id_from_step_1.2>" })
 
 **Options**:
 [Q] Quick review - Accept/Defer/Reject findings without discussion
-[D] Discuss with team - Launch Phase 2 parallel analysis + Phase 3 party mode
+[D] Discuss with team - Launch Phase 2 parallel analysis + Phase 3 party discussion
 [V] View full report - Open the review document
 [E] Exit - End review session
 ```
@@ -400,6 +400,6 @@ After decisions are captured:
 
 - **Phase 1 runs in background** - Your main session stays responsive
 - **Phase 2 agents run in parallel** - Faster than sequential analysis
-- **Phase 3 uses real BMAD party mode** - Familiar interactive experience
+- **Phase 3 uses Athena's informed discussion** - Agents pre-informed by Phase 2 analysis
 - **Skip to quick review** for simple stories with few findings
 - **Use --thorough** for security-critical or complex stories
