@@ -105,6 +105,86 @@ async function readBmadConfig(bmadDir: string): Promise<BmadConfig | null> {
   }
 }
 
+/**
+ * Check if a directory contains story files.
+ * Looks for files matching story naming patterns: 1-1.md, 2-3.md, story-2-3.md, etc.
+ */
+async function hasStoryFiles(dir: string): Promise<boolean> {
+  if (!existsSync(dir)) return false;
+
+  try {
+    const { readdir } = await import("node:fs/promises");
+    const files = await readdir(dir);
+    // Match story naming: 1-1.md, 2-3.md, story-2-3.md, etc.
+    return files.some((f) => f.endsWith(".md") && /^(\d+-\d+|story-\d+-\d+)/.test(f));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detect stories directory by checking nested vs flat structure.
+ * Tries nested path first (BMAD v6 standard), then flat structure.
+ */
+async function detectStoriesDir(baseDir: string): Promise<string> {
+  // 1. Check nested structure first (BMAD v6 standard: docs/implementation-artifacts/stories/)
+  const nestedPath = join(baseDir, "stories");
+  if (await hasStoryFiles(nestedPath)) {
+    return nestedPath;
+  }
+
+  // 2. Fallback to flat structure (docs/sprint-artifacts/*.md)
+  if (await hasStoryFiles(baseDir)) {
+    return baseDir;
+  }
+
+  // 3. Default to nested (for new projects or when no stories exist yet)
+  return nestedPath;
+}
+
+/**
+ * Generate case variants for a filename.
+ * For example, "PRD.md" → ["PRD.md", "prd.md", "Prd.md"]
+ */
+function getCaseVariants(filename: string): string[] {
+  const variants = new Set<string>();
+  const [name, ext] = filename.split(".");
+
+  variants.add(filename);
+  variants.add(filename.toLowerCase());
+  variants.add(filename.toUpperCase());
+
+  if (name) {
+    const firstCap = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    variants.add(ext ? `${firstCap}.${ext}` : firstCap);
+  }
+
+  return Array.from(variants);
+}
+
+/**
+ * Search for a file with case-insensitive matching.
+ * Tries exact match first, then case variants.
+ */
+function searchForFileWithVariants(
+  projectRoot: string,
+  filename: string,
+  searchPaths: string[]
+): string {
+  const variants = getCaseVariants(filename);
+
+  for (const searchPath of searchPaths) {
+    for (const variant of variants) {
+      const fullPath = join(projectRoot, searchPath, variant);
+      if (existsSync(fullPath)) {
+        return fullPath;
+      }
+    }
+  }
+
+  return join(projectRoot, searchPaths[0], filename);
+}
+
 function searchForFile(projectRoot: string, filename: string, searchPaths: string[]): string {
   for (const searchPath of searchPaths) {
     const fullPath = join(projectRoot, searchPath, filename);
@@ -116,7 +196,20 @@ function searchForFile(projectRoot: string, filename: string, searchPaths: strin
   return join(projectRoot, searchPaths[0], filename);
 }
 
-export async function getBmadPaths(startDir: string): Promise<BmadPaths> {
+export async function getBmadPaths(
+  startDir: string,
+  athenaConfig?: {
+    bmad?: {
+      paths?: {
+        stories?: string | null;
+        sprintStatus?: string | null;
+        prd?: string | null;
+        architecture?: string | null;
+        epics?: string | null;
+      };
+    };
+  }
+): Promise<BmadPaths> {
   const bmadDir = await findBmadDir(startDir);
   const projectRoot = bmadDir ? dirname(bmadDir) : startDir;
 
@@ -133,7 +226,9 @@ export async function getBmadPaths(startDir: string): Promise<BmadPaths> {
     config?.sprint_artifacts ||
     join(projectRoot, BMAD_V6_DEFAULTS.implementationArtifacts);
 
-  const storiesDir = join(implementationDir, "stories");
+  const storiesDir = athenaConfig?.bmad?.paths?.stories
+    ? join(projectRoot, athenaConfig.bmad.paths.stories)
+    : await detectStoriesDir(implementationDir);
 
   const sprintStatusSearchPaths = [
     config?.implementation_artifacts || BMAD_V6_DEFAULTS.implementationArtifacts,
@@ -141,25 +236,33 @@ export async function getBmadPaths(startDir: string): Promise<BmadPaths> {
     LEGACY_PATHS.sprintArtifacts,
     LEGACY_PATHS.docsDir,
   ];
-  const sprintStatus = searchForFile(projectRoot, "sprint-status.yaml", sprintStatusSearchPaths);
+  const sprintStatus = athenaConfig?.bmad?.paths?.sprintStatus
+    ? join(projectRoot, athenaConfig.bmad.paths.sprintStatus)
+    : searchForFileWithVariants(projectRoot, "sprint-status.yaml", sprintStatusSearchPaths);
 
   const architectureSearchPaths = [
     config?.planning_artifacts || BMAD_V6_DEFAULTS.planningArtifacts,
     LEGACY_PATHS.docsDir,
   ];
-  const architecture = searchForFile(projectRoot, "architecture.md", architectureSearchPaths);
+  const architecture = athenaConfig?.bmad?.paths?.architecture
+    ? join(projectRoot, athenaConfig.bmad.paths.architecture)
+    : searchForFileWithVariants(projectRoot, "architecture.md", architectureSearchPaths);
 
   const prdSearchPaths = [
     config?.planning_artifacts || BMAD_V6_DEFAULTS.planningArtifacts,
     LEGACY_PATHS.docsDir,
   ];
-  const prd = searchForFile(projectRoot, "PRD.md", prdSearchPaths);
+  const prd = athenaConfig?.bmad?.paths?.prd
+    ? join(projectRoot, athenaConfig.bmad.paths.prd)
+    : searchForFileWithVariants(projectRoot, "PRD.md", prdSearchPaths);
 
   const epicsSearchPaths = [
     config?.planning_artifacts || BMAD_V6_DEFAULTS.planningArtifacts,
     LEGACY_PATHS.docsDir,
   ];
-  const epics = searchForFile(projectRoot, "epics.md", epicsSearchPaths);
+  const epics = athenaConfig?.bmad?.paths?.epics
+    ? join(projectRoot, athenaConfig.bmad.paths.epics)
+    : searchForFileWithVariants(projectRoot, "epics.md", epicsSearchPaths);
 
   return {
     projectRoot,

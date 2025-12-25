@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { DiscussionRound, PartyDiscussionState } from "../../shared/types.js";
+import type { AthenaConfig, DiscussionRound, PartyDiscussionState } from "../../shared/types.js";
 import { getBmadPaths } from "./bmad-finder.js";
 
 interface StoryUpdate {
@@ -223,9 +223,10 @@ ${findingLines.join("\n\n")}`;
 export async function applyDecisions(
   projectRoot: string,
   state: PartyDiscussionState,
-  reviewDocumentPath?: string
+  reviewDocumentPath?: string,
+  config?: AthenaConfig
 ): Promise<UpdateResult> {
-  const paths = await getBmadPaths(projectRoot);
+  const paths = await getBmadPaths(projectRoot, config);
   const byStory = groupDecisionsByStory(state.completedRounds);
 
   const updatedStories: StoryUpdate[] = [];

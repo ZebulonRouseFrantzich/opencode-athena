@@ -25,7 +25,7 @@ import { readSprintStatus } from "../utils/yaml-handler.js";
 export function createGetStoryTool(
   ctx: PluginInput,
   tracker: StoryTracker,
-  _config: AthenaConfig
+  config: AthenaConfig
 ): ToolDefinition {
   return tool({
     description: `Load the current BMAD story context for implementation.
@@ -48,7 +48,7 @@ Use this tool before starting story implementation to get full context.`,
     },
 
     async execute(args): Promise<string> {
-      const result = await getStoryContext(ctx, tracker, args.storyId);
+      const result = await getStoryContext(ctx, tracker, config, args.storyId);
       return JSON.stringify(result, null, 2);
     },
   });
@@ -60,9 +60,10 @@ Use this tool before starting story implementation to get full context.`,
 async function getStoryContext(
   ctx: PluginInput,
   tracker: StoryTracker,
+  config: AthenaConfig,
   requestedStoryId?: string
 ): Promise<GetStoryResult> {
-  const paths = await getBmadPaths(ctx.directory);
+  const paths = await getBmadPaths(ctx.directory, config);
   if (!paths.bmadDir) {
     return {
       error: "No BMAD directory found",

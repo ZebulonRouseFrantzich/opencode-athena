@@ -84,7 +84,7 @@ async function updateStoryStatus(
     };
   }
 
-  const paths = await getBmadPaths(ctx.directory);
+  const paths = await getBmadPaths(ctx.directory, config);
   if (!paths.bmadDir) {
     return { error: "No BMAD directory found" };
   }

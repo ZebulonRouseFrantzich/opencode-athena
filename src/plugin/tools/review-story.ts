@@ -114,7 +114,7 @@ async function executePartyReview(
   identifier: string,
   forceAdvancedModel?: boolean
 ): Promise<Phase1Context> {
-  const paths = await getBmadPaths(ctx.directory);
+  const paths = await getBmadPaths(ctx.directory, config);
   if (!paths.bmadDir) {
     return {
       success: false,

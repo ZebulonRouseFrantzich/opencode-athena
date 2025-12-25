@@ -230,6 +230,13 @@ export interface AthenaConfig {
     defaultTrack: "quick-flow" | "bmad-method" | "enterprise";
     autoStatusUpdate: boolean;
     parallelStoryLimit: number;
+    paths?: {
+      stories?: string | null;
+      sprintStatus?: string | null;
+      prd?: string | null;
+      architecture?: string | null;
+      epics?: string | null;
+    };
   };
   features: {
     bmadBridge: boolean;

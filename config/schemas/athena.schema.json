@@ -140,6 +140,37 @@
           "default": 3,
           "minimum": 0,
           "maximum": 10
+        },
+        "paths": {
+          "type": "object",
+          "description": "Optional path overrides for BMAD artifacts (null = auto-detect)",
+          "properties": {
+            "stories": {
+              "type": ["string", "null"],
+              "description": "Custom path to stories directory (null = auto-detect nested or flat structure)",
+              "default": null
+            },
+            "sprintStatus": {
+              "type": ["string", "null"],
+              "description": "Custom path to sprint-status.yaml file (null = auto-detect with case-insensitive search)",
+              "default": null
+            },
+            "prd": {
+              "type": ["string", "null"],
+              "description": "Custom path to PRD.md file (null = auto-detect with case-insensitive search)",
+              "default": null
+            },
+            "architecture": {
+              "type": ["string", "null"],
+              "description": "Custom path to architecture.md file (null = auto-detect with case-insensitive search)",
+              "default": null
+            },
+            "epics": {
+              "type": ["string", "null"],
+              "description": "Custom path to epics.md file (null = auto-detect with case-insensitive search)",
+              "default": null
+            }
+          }
         }
       },
       "required": ["defaultTrack", "autoStatusUpdate", "parallelStoryLimit"]
