@@ -1080,7 +1080,7 @@ export interface PartyDiscussionState {
   startedAt: string;
   /** Phase data for context */
   phase1Summary: Phase1Result["findings"];
-  phase2Summary: {
+  phase2Summary?: {
     consensusCount: number;
     disputeCount: number;
   };

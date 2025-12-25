@@ -13,6 +13,8 @@ import { createGetStoryTool } from "./get-story.js";
 import { createParallelTool } from "./parallel.js";
 import { createPartyDiscussionTool } from "./party-discussion.js";
 import { createReviewStoryTool } from "./review-story.js";
+import { createStoryReviewAnalyzeTool } from "./story-review-analyze.js";
+import { createStoryReviewConsultTool } from "./story-review-consult.js";
 import { createUpdateStatusTool } from "./update-status.js";
 
 /**
@@ -35,6 +37,8 @@ export function createTools(
     athena_parallel: createParallelTool(),
     athena_config: createConfigTool(config),
     athena_review_story: createReviewStoryTool(ctx, config),
+    athena_story_review_analyze: createStoryReviewAnalyzeTool(ctx, config),
+    athena_story_review_consult: createStoryReviewConsultTool(ctx, config),
     athena_party_discussion: createPartyDiscussionTool(ctx, config),
   };
 }

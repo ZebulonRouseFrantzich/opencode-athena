@@ -69,12 +69,12 @@ function setSession(state: PartyDiscussionState): void {
   });
 }
 
-function buildAgenda(phase1: Phase1Result, phase2: Phase2Result): DiscussionAgendaItem[] {
+function buildAgenda(phase1: Phase1Result, phase2?: Phase2Result): DiscussionAgendaItem[] {
   const agenda: DiscussionAgendaItem[] = [];
 
   const highSeverityFindings = extractHighSeverityFindings(phase1);
   for (const finding of highSeverityFindings) {
-    const agentPositions = getAgentPositionsForFinding(finding.id, phase2);
+    const agentPositions = phase2 ? getAgentPositionsForFinding(finding.id, phase2) : {};
     agenda.push({
       id: `agenda-${finding.id}`,
       findingId: finding.id,
@@ -88,24 +88,26 @@ function buildAgenda(phase1: Phase1Result, phase2: Phase2Result): DiscussionAgen
     });
   }
 
-  for (const debate of phase2.debatePoints) {
-    const existingItem = agenda.find((a) => a.topic === debate.topic);
-    if (!existingItem) {
-      const positions: Partial<Record<BmadAgentType, string>> = {};
-      for (const pos of debate.positions) {
-        positions[pos.agent] = pos.position;
+  if (phase2) {
+    for (const debate of phase2.debatePoints) {
+      const existingItem = agenda.find((a) => a.topic === debate.topic);
+      if (!existingItem) {
+        const positions: Partial<Record<BmadAgentType, string>> = {};
+        for (const pos of debate.positions) {
+          positions[pos.agent] = pos.position;
+        }
+        agenda.push({
+          id: `agenda-debate-${agenda.length}`,
+          findingId: `debate-${agenda.length}`,
+          topic: debate.topic,
+          type: "disputed",
+          severity: "medium",
+          category: "logic",
+          relevantAgents: debate.positions.map((p) => p.agent),
+          agentPositions: positions,
+          discussed: false,
+        });
       }
-      agenda.push({
-        id: `agenda-debate-${agenda.length}`,
-        findingId: `debate-${agenda.length}`,
-        topic: debate.topic,
-        type: "disputed",
-        severity: "medium",
-        category: "logic",
-        relevantAgents: debate.positions.map((p) => p.agent),
-        agentPositions: positions,
-        discussed: false,
-      });
     }
   }
 
@@ -183,7 +185,7 @@ function getAgentPositionsForFinding(
   return positions;
 }
 
-function initializeSession(phase1: Phase1Result, phase2: Phase2Result): PartyDiscussionState {
+function initializeSession(phase1: Phase1Result, phase2?: Phase2Result): PartyDiscussionState {
   const sessionId = randomUUID();
   const agenda = buildAgenda(phase1, phase2);
 
@@ -204,10 +206,12 @@ function initializeSession(phase1: Phase1Result, phase2: Phase2Result): PartyDis
     activeAgents: Array.from(activeAgents),
     startedAt: new Date().toISOString(),
     phase1Summary: phase1.findings,
-    phase2Summary: {
-      consensusCount: phase2.consensusPoints.length,
-      disputeCount: phase2.debatePoints.length,
-    },
+    phase2Summary: phase2
+      ? {
+          consensusCount: phase2.consensusPoints.length,
+          disputeCount: phase2.debatePoints.length,
+        }
+      : undefined,
   };
 
   setSession(state);
@@ -217,14 +221,14 @@ function initializeSession(phase1: Phase1Result, phase2: Phase2Result): PartyDis
 async function generateAgentResponses(
   item: DiscussionAgendaItem,
   personas: Map<BmadAgentType, BmadAgentFullPersona>,
-  phase2: Phase2Result
+  phase2?: Phase2Result
 ): Promise<AgentDiscussionResponse[]> {
   const responses: AgentDiscussionResponse[] = [];
 
   for (const agentType of item.relevantAgents) {
     const persona = getPersona(personas, agentType);
 
-    const phase2Analysis = phase2.agentAnalyses.find((a) => a.agent === agentType);
+    const phase2Analysis = phase2?.agentAnalyses.find((a) => a.agent === agentType);
     const previousPosition = item.agentPositions[agentType];
 
     const response = generateInCharacterResponse(
@@ -415,10 +419,14 @@ export function createPartyDiscussionTool(ctx: PluginInput, config: AthenaConfig
   return tool({
     description: `Orchestrate Phase 3 party discussion for BMAD story review.
 
-This tool manages an informed discussion where BMAD agents debate findings from Phase 1 (Oracle analysis) and Phase 2 (parallel agent analysis).
+This tool manages an informed discussion where BMAD agents debate findings from Phase 1 (Oracle analysis) and optionally Phase 2 (parallel agent analysis).
+
+Modes:
+- Quick mode: Provide only phase1Result for rapid review of Oracle findings
+- Full mode: Provide both phase1Result and phase2Result for in-depth discussion with agent perspectives
 
 Actions:
-- start: Initialize discussion with Phase 1/2 results
+- start: Initialize discussion with Phase 1 results (Phase 2 optional)
 - continue: Get next agenda item and agent responses
 - decide: Record user decision for a finding (accept/defer/reject)
 - skip: Skip current finding without decision
@@ -441,7 +449,7 @@ The tool maintains session state across calls, enabling multi-turn discussion.`,
       phase2Result: tool.schema
         .string()
         .optional()
-        .describe("Phase 2 result JSON (required for start)"),
+        .describe("Phase 2 result JSON (optional - omit for quick mode)"),
       findingId: tool.schema.string().optional().describe("Finding ID (required for decide)"),
       decision: tool.schema
         .enum(["accept", "defer", "reject"])
@@ -482,21 +490,21 @@ async function executePartyDiscussion(
 
   switch (args.action) {
     case "start": {
-      if (!args.phase1Result || !args.phase2Result) {
+      if (!args.phase1Result) {
         return {
           success: false,
           sessionId: "",
           state: {} as PartyDiscussionState,
           hasMoreItems: false,
-          error: "phase1Result and phase2Result are required for start action",
+          error: "phase1Result is required for start action",
         };
       }
 
       let phase1: Phase1Result;
-      let phase2: Phase2Result;
+      let phase2: Phase2Result | undefined;
       try {
         phase1 = JSON.parse(args.phase1Result);
-        phase2 = JSON.parse(args.phase2Result);
+        phase2 = args.phase2Result ? JSON.parse(args.phase2Result) : undefined;
       } catch {
         return {
           success: false,
