@@ -51,6 +51,7 @@ vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
   writeFile: vi.fn(),
   mkdir: vi.fn(),
+  readdir: vi.fn(),
 }));
 
 vi.mock("../../src/plugin/utils/yaml-handler.js", () => ({
@@ -68,13 +69,14 @@ vi.mock("../../src/plugin/utils/notifications.js", () => ({
 }));
 
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { readSprintStatus, writeSprintStatus } from "../../src/plugin/utils/yaml-handler.js";
 import { findBmadDir, getBmadPaths } from "../../src/plugin/utils/bmad-finder.js";
 import type { SprintStatus, AthenaConfig, TrackedStory } from "../../src/shared/types.js";
 
 const mockExistsSync = vi.mocked(existsSync);
 const mockReadFile = vi.mocked(readFile);
+const mockReaddir = vi.mocked(readdir);
 const mockReadSprintStatus = vi.mocked(readSprintStatus);
 const mockWriteSprintStatus = vi.mocked(writeSprintStatus);
 const mockFindBmadDir = vi.mocked(findBmadDir);
@@ -218,8 +220,10 @@ describe("athena_get_story tool", () => {
     mockReadSprintStatus.mockResolvedValue(sprint);
     mockExistsSync.mockImplementation((path) => {
       if (typeof path === "string" && path.includes("story-2-2.md")) return true;
+      if (typeof path === "string" && path.includes("stories")) return true;
       return false;
     });
+    mockReaddir.mockResolvedValue(["story-2-2.md"] as never);
     mockReadFile.mockResolvedValue("# Story 2.2\n\nImplement feature X");
 
     const { createGetStoryTool } = await import("../../src/plugin/tools/get-story.js");

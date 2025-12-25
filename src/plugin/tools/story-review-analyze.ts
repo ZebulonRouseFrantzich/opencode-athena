@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
@@ -15,6 +15,7 @@ import {
   countFindings,
   parseOracleResponse,
 } from "../utils/oracle-parser.js";
+import { findStoriesForEpic, loadStoryContent, normalizeStoryId } from "../utils/story-loader.js";
 
 export interface Phase1AnalyzeResult {
   success: boolean;
@@ -164,38 +165,26 @@ async function loadEpicStories(
   storiesDir: string,
   epicId: string
 ): Promise<Array<{ id: string; content: string | null }>> {
-  const epicNumber = epicId.replace(/^epic-/, "");
+  const stories = await findStoriesForEpic(storiesDir, epicId);
+  const results: Array<{ id: string; content: string | null }> = [];
 
-  if (!existsSync(storiesDir)) return [];
-
-  const files = await readdir(storiesDir);
-  const storyPattern = new RegExp(`^story-${epicNumber}-(\\d+)\\.md$`);
-  const stories: Array<{ id: string; content: string | null }> = [];
-
-  for (const file of files) {
-    const match = file.match(storyPattern);
-    if (match) {
-      const storyId = `${epicNumber}.${match[1]}`;
-      const content = await loadFile(join(storiesDir, file));
-      stories.push({ id: storyId, content });
-    }
+  for (const story of stories) {
+    const content = await loadFile(story.path);
+    results.push({ id: story.id, content });
   }
 
-  return stories.sort((a, b) => a.id.localeCompare(b.id));
+  return results;
 }
 
 async function loadSingleStory(
   storiesDir: string,
   storyId: string
 ): Promise<Array<{ id: string; content: string | null }>> {
-  const normalizedId = storyId.replace(/^story-/, "").replace("-", ".");
-  const filename = `story-${normalizedId.replace(".", "-")}.md`;
-  const filePath = join(storiesDir, filename);
+  const result = await loadStoryContent(storiesDir, storyId);
+  if (!result) return [];
 
-  if (!existsSync(filePath)) return [];
-
-  const content = await loadFile(filePath);
-  return [{ id: normalizedId, content }];
+  const id = normalizeStoryId(storyId);
+  return [{ id, content: result.content }];
 }
 
 async function loadFile(filePath: string): Promise<string | null> {

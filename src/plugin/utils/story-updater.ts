@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { AthenaConfig, DiscussionRound, PartyDiscussionState } from "../../shared/types.js";
 import { getBmadPaths } from "./bmad-finder.js";
+import { findStoryFile } from "./story-loader.js";
 
 interface StoryUpdate {
   storyId: string;
@@ -237,7 +237,10 @@ export async function applyDecisions(
   for (const [storyId, rounds] of byStory) {
     if (storyId === "unknown") continue;
 
-    const storyFile = join(paths.storiesDir, `story-${storyId.replace(".", "-")}.md`);
+    const storyFileResult = await findStoryFile(paths.storiesDir, storyId);
+    if (!storyFileResult) {
+      continue;
+    }
 
     const accepted = rounds.filter((r) => r.decision === "accept");
     const deferred = rounds.filter((r) => r.decision === "defer");
@@ -248,7 +251,7 @@ export async function applyDecisions(
     totalRejected += rejected.length;
 
     if (accepted.length > 0 || deferred.length > 0) {
-      const update = await updateStoryFile(storyFile, accepted, deferred);
+      const update = await updateStoryFile(storyFileResult.path, accepted, deferred);
       updatedStories.push(update);
     }
   }

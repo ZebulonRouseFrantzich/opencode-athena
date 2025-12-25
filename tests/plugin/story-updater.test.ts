@@ -7,6 +7,7 @@ vi.mock("node:fs", () => ({
 vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
   writeFile: vi.fn(),
+  readdir: vi.fn(),
 }));
 
 vi.mock("../../src/plugin/utils/bmad-finder.js", () => ({
@@ -14,13 +15,14 @@ vi.mock("../../src/plugin/utils/bmad-finder.js", () => ({
 }));
 
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { getBmadPaths } from "../../src/plugin/utils/bmad-finder.js";
 import type { PartyDiscussionState, DiscussionRound } from "../../src/shared/types.js";
 
 const mockExistsSync = vi.mocked(existsSync);
 const mockReadFile = vi.mocked(readFile);
 const mockWriteFile = vi.mocked(writeFile);
+const mockReaddir = vi.mocked(readdir);
 const mockGetBmadPaths = vi.mocked(getBmadPaths);
 
 const createMockState = (completedRounds: DiscussionRound[]): PartyDiscussionState => ({
@@ -63,6 +65,8 @@ describe("story-updater", () => {
       prd: "/test/project/docs/project-planning-artifacts/PRD.md",
       epics: "/test/project/docs/project-planning-artifacts/epics.md",
     });
+
+    mockReaddir.mockResolvedValue(["story-2-3.md"] as never);
   });
 
   describe("applyDecisions", () => {

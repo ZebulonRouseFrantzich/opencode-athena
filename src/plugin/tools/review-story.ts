@@ -16,6 +16,12 @@ import type {
   StoryFindings,
 } from "../../shared/types.js";
 import { getBmadPaths } from "../utils/bmad-finder.js";
+import {
+  findStoriesForEpic as findStoriesForEpicShared,
+  getStoryFilenamePatterns,
+  loadStoryContent,
+  normalizeStoryId as normalizeStoryIdShared,
+} from "../utils/story-loader.js";
 
 interface BmadPaths {
   projectRoot: string;
@@ -167,12 +173,13 @@ async function executeEpicReview(
 
   const stories = await findStoriesInEpic(paths.storiesDir, epicNumber);
   if (stories.length === 0) {
+    const patterns = getStoryFilenamePatterns(`${epicNumber}.1`);
     return {
       success: false,
       scope: "epic",
       identifier,
       error: `No stories found for Epic ${epicNumber}`,
-      suggestion: `Check that story files exist in ${paths.storiesDir} with format story-${epicNumber}-*.md`,
+      suggestion: `Check that story files exist in ${paths.storiesDir} matching: ${patterns.join(", ")}`,
     };
   }
 
@@ -213,12 +220,13 @@ async function executeStoryReview(
 
   const storyContent = await loadStoryFile(paths.storiesDir, storyId);
   if (!storyContent) {
+    const patterns = getStoryFilenamePatterns(storyId);
     return {
       success: false,
       scope: "story",
       identifier: storyId,
       error: `Story ${storyId} not found`,
-      suggestion: `Check that the story file exists at ${paths.storiesDir}/story-${storyId.replace(".", "-")}.md`,
+      suggestion: `Check that the story file exists in ${paths.storiesDir} matching: ${patterns.join(", ")}`,
     };
   }
 
@@ -254,35 +262,13 @@ async function executeStoryReview(
 }
 
 async function findStoriesInEpic(storiesDir: string, epicNumber: string): Promise<string[]> {
-  if (!existsSync(storiesDir)) {
-    return [];
-  }
-
-  const files = await readdir(storiesDir);
-
-  const storyPattern = new RegExp(`^story-${epicNumber}-(\\d+)\\.md$`);
-  const stories: string[] = [];
-
-  for (const file of files) {
-    const match = file.match(storyPattern);
-    if (match) {
-      const storyNumber = match[1];
-      stories.push(`${epicNumber}.${storyNumber}`);
-    }
-  }
-
-  return stories.sort();
+  const stories = await findStoriesForEpicShared(storiesDir, epicNumber);
+  return stories.map((s) => s.id);
 }
 
 async function loadStoryFile(storiesDir: string, storyId: string): Promise<string | null> {
-  const filename = `story-${storyId.replace(".", "-")}.md`;
-  const filePath = join(storiesDir, filename);
-
-  if (!existsSync(filePath)) {
-    return null;
-  }
-
-  return await readFile(filePath, "utf-8");
+  const result = await loadStoryContent(storiesDir, storyId);
+  return result?.content ?? null;
 }
 
 async function loadArchitecture(architectureFile: string): Promise<string> {
@@ -293,15 +279,7 @@ async function loadArchitecture(architectureFile: string): Promise<string> {
 }
 
 function normalizeStoryId(identifier: string): string {
-  if (identifier.includes("/")) {
-    const filename = identifier.split("/").pop() || "";
-    const match = filename.match(/story-(\d+)-(\d+)\.md/);
-    if (match) {
-      return `${match[1]}.${match[2]}`;
-    }
-  }
-
-  return identifier.replace(/^story-/, "").replace("-", ".");
+  return normalizeStoryIdShared(identifier);
 }
 
 async function findExistingReviews(
