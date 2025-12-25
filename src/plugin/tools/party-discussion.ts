@@ -18,7 +18,56 @@ import type {
 } from "../../shared/types.js";
 import { getPersona, loadPersonas, selectAgentsForFinding } from "../utils/persona-loader.js";
 
-const activeSessions = new Map<string, PartyDiscussionState>();
+const SESSION_TTL_MS = 30 * 60 * 1000;
+const MAX_SESSIONS = 10;
+
+interface SessionWithMeta {
+  state: PartyDiscussionState;
+  lastAccessedAt: number;
+}
+
+const activeSessions = new Map<string, SessionWithMeta>();
+
+function cleanupStaleSessions(): void {
+  const now = Date.now();
+  const sessionsToDelete: string[] = [];
+
+  for (const [id, session] of activeSessions) {
+    if (now - session.lastAccessedAt > SESSION_TTL_MS) {
+      sessionsToDelete.push(id);
+    }
+  }
+
+  for (const id of sessionsToDelete) {
+    activeSessions.delete(id);
+  }
+
+  if (activeSessions.size > MAX_SESSIONS) {
+    const sortedSessions = Array.from(activeSessions.entries()).sort(
+      (a, b) => a[1].lastAccessedAt - b[1].lastAccessedAt
+    );
+
+    const toRemove = sortedSessions.slice(0, activeSessions.size - MAX_SESSIONS);
+    for (const [id] of toRemove) {
+      activeSessions.delete(id);
+    }
+  }
+}
+
+function getSession(sessionId: string): PartyDiscussionState | null {
+  const session = activeSessions.get(sessionId);
+  if (!session) return null;
+
+  session.lastAccessedAt = Date.now();
+  return session.state;
+}
+
+function setSession(state: PartyDiscussionState): void {
+  activeSessions.set(state.sessionId, {
+    state,
+    lastAccessedAt: Date.now(),
+  });
+}
 
 function buildAgenda(phase1: Phase1Result, phase2: Phase2Result): DiscussionAgendaItem[] {
   const agenda: DiscussionAgendaItem[] = [];
@@ -161,7 +210,7 @@ function initializeSession(phase1: Phase1Result, phase2: Phase2Result): PartyDis
     },
   };
 
-  activeSessions.set(sessionId, state);
+  setSession(state);
   return state;
 }
 
@@ -236,13 +285,17 @@ function getDefaultPosition(_persona: BmadAgentFullPersona, item: DiscussionAgen
 }
 
 function generateCrossTalk(
-  _persona: BmadAgentFullPersona,
+  persona: BmadAgentFullPersona,
   previousResponses?: AgentDiscussionResponse[]
 ): string {
   if (!previousResponses || previousResponses.length === 0) return "";
 
-  const lastResponse = previousResponses[previousResponses.length - 1];
-  if (Math.random() > 0.5) {
+  const collaborativeTypes: BmadAgentType[] = ["architect", "pm", "analyst"];
+  const shouldCrossTalk =
+    previousResponses.length >= 1 && collaborativeTypes.includes(persona.type);
+
+  if (shouldCrossTalk) {
+    const lastResponse = previousResponses[previousResponses.length - 1];
     return ` Building on ${lastResponse.agentName}'s point, I'd add that we should prioritize this appropriately.`;
   }
   return "";
@@ -424,6 +477,7 @@ async function executePartyDiscussion(
   _config: AthenaConfig,
   args: ToolArgs
 ): Promise<PartyDiscussionResult> {
+  cleanupStaleSessions();
   const personas = await loadPersonas(ctx.directory);
 
   switch (args.action) {
@@ -480,7 +534,7 @@ async function executePartyDiscussion(
         };
       }
 
-      const state = activeSessions.get(args.sessionId);
+      const state = getSession(args.sessionId);
       if (!state) {
         return {
           success: false,
@@ -539,7 +593,7 @@ async function executePartyDiscussion(
         };
       }
 
-      const state = activeSessions.get(args.sessionId);
+      const state = getSession(args.sessionId);
       if (!state) {
         return {
           success: false,
@@ -580,7 +634,7 @@ async function executePartyDiscussion(
         };
       }
 
-      const state = activeSessions.get(args.sessionId);
+      const state = getSession(args.sessionId);
       if (!state) {
         return {
           success: false,
@@ -616,7 +670,7 @@ async function executePartyDiscussion(
         };
       }
 
-      const state = activeSessions.get(args.sessionId);
+      const state = getSession(args.sessionId);
       if (!state) {
         return {
           success: false,
@@ -659,4 +713,9 @@ export const _testExports = {
   recordDecision,
   calculateSummary,
   activeSessions,
+  cleanupStaleSessions,
+  getSession,
+  setSession,
+  SESSION_TTL_MS,
+  MAX_SESSIONS,
 };

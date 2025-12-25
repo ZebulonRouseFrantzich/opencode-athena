@@ -1,9 +1,38 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { fdir } from "fdir";
 import { parse as parseYaml } from "yaml";
 
 const BMAD_DIR_NAMES = ["docs", ".bmad", "bmad"] as const;
+
+const KNOWN_MANIFEST_PATHS = [
+  ".bmad/_cfg/agent-manifest.csv",
+  ".bmad/config/agent-manifest.csv",
+  "bmad/_cfg/agent-manifest.csv",
+  "_bmad/_config/agent-manifest.csv",
+] as const;
+
+const KNOWN_AGENT_DIRS = [
+  "_bmad/bmm/agents",
+  "src/modules/bmm/agents",
+  ".bmad/bmm/agents",
+  "bmad/bmm/agents",
+] as const;
+
+const MANIFEST_SEARCH_EXCLUDE_DIRS = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  ".next",
+  "coverage",
+  ".cache",
+  ".turbo",
+]);
+
+const manifestCache = new Map<string, string | null>();
+const agentFilesCache = new Map<string, string[]>();
 
 const BMAD_V6_DEFAULTS = {
   planningArtifacts: "docs/project-planning-artifacts",
@@ -143,4 +172,105 @@ export async function getBmadPaths(startDir: string): Promise<BmadPaths> {
     prd,
     epics,
   };
+}
+
+export async function findManifest(projectRoot: string): Promise<string | null> {
+  const cached = manifestCache.get(projectRoot);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  for (const knownPath of KNOWN_MANIFEST_PATHS) {
+    const fullPath = join(projectRoot, knownPath);
+    if (existsSync(fullPath)) {
+      manifestCache.set(projectRoot, fullPath);
+      return fullPath;
+    }
+  }
+
+  const bmadDir = await findBmadDir(projectRoot);
+  if (bmadDir) {
+    const files = await new fdir()
+      .withMaxDepth(3)
+      .withBasePath()
+      .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
+      .filter((path) => path.endsWith("agent-manifest.csv"))
+      .crawl(bmadDir)
+      .withPromise();
+
+    if (files.length > 0) {
+      manifestCache.set(projectRoot, files[0]);
+      return files[0];
+    }
+  }
+
+  const projectFiles = await new fdir()
+    .withMaxDepth(5)
+    .withBasePath()
+    .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
+    .filter((path) => path.endsWith("agent-manifest.csv"))
+    .crawl(projectRoot)
+    .withPromise();
+
+  const result = projectFiles.length > 0 ? projectFiles[0] : null;
+  manifestCache.set(projectRoot, result);
+  return result;
+}
+
+export function clearManifestCache(): void {
+  manifestCache.clear();
+}
+
+export async function findAgentFiles(projectRoot: string): Promise<string[]> {
+  const cached = agentFilesCache.get(projectRoot);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  for (const knownDir of KNOWN_AGENT_DIRS) {
+    const fullPath = join(projectRoot, knownDir);
+    if (existsSync(fullPath)) {
+      const files = await new fdir()
+        .withBasePath()
+        .filter((path) => path.endsWith(".agent.yaml"))
+        .crawl(fullPath)
+        .withPromise();
+
+      if (files.length > 0) {
+        agentFilesCache.set(projectRoot, files);
+        return files;
+      }
+    }
+  }
+
+  const bmadDir = await findBmadDir(projectRoot);
+  if (bmadDir) {
+    const files = await new fdir()
+      .withMaxDepth(5)
+      .withBasePath()
+      .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
+      .filter((path) => path.endsWith(".agent.yaml"))
+      .crawl(bmadDir)
+      .withPromise();
+
+    if (files.length > 0) {
+      agentFilesCache.set(projectRoot, files);
+      return files;
+    }
+  }
+
+  const projectFiles = await new fdir()
+    .withMaxDepth(6)
+    .withBasePath()
+    .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
+    .filter((path) => path.endsWith(".agent.yaml") && path.includes("/agents/"))
+    .crawl(projectRoot)
+    .withPromise();
+
+  agentFilesCache.set(projectRoot, projectFiles);
+  return projectFiles;
+}
+
+export function clearAgentFilesCache(): void {
+  agentFilesCache.clear();
 }

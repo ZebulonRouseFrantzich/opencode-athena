@@ -1,105 +1,109 @@
-import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename } from "node:path";
+import { parse as parseYaml } from "yaml";
 import type { BmadAgentFullPersona, BmadAgentType } from "../../shared/types.js";
 import { BMAD_AGENT_FULL_PERSONAS } from "../../shared/types.js";
+import { findAgentFiles } from "./bmad-finder.js";
 
-const MANIFEST_PATH = "_bmad/_config/agent-manifest.csv";
-
-interface ParsedManifestAgent {
-  id: string;
-  name: string;
-  title: string;
-  icon: string;
-  role: string;
-  identity: string;
-  communicationStyle: string;
-  principles: string;
-  module?: string;
-}
-
-function parseXmlValue(content: string, tag: string): string {
-  const regex = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i");
-  const match = content.match(regex);
-  return match ? match[1].trim() : "";
-}
-
-function parseAgentFromXml(agentBlock: string): ParsedManifestAgent | null {
-  const idMatch = agentBlock.match(/id="([^"]+)"/);
-  const nameMatch = agentBlock.match(/name="([^"]+)"/);
-  const titleMatch = agentBlock.match(/title="([^"]+)"/);
-  const iconMatch = agentBlock.match(/icon="([^"]+)"/);
-
-  if (!idMatch || !nameMatch) return null;
-
-  const personaBlock = agentBlock.match(/<persona>([\s\S]*?)<\/persona>/i);
-  const personaContent = personaBlock ? personaBlock[1] : "";
-
-  return {
-    id: idMatch[1],
-    name: nameMatch[1],
-    title: titleMatch?.[1] || "",
-    icon: iconMatch?.[1] || "",
-    role: parseXmlValue(personaContent, "role"),
-    identity: parseXmlValue(personaContent, "identity"),
-    communicationStyle: parseXmlValue(personaContent, "communication_style"),
-    principles: parseXmlValue(personaContent, "principles"),
-    module: agentBlock.match(/module="([^"]+)"/)?.[1],
+interface BmadAgentYaml {
+  agent: {
+    metadata: {
+      id: string;
+      name: string;
+      title: string;
+      icon: string;
+      module?: string;
+    };
+    persona: {
+      role: string;
+      identity: string;
+      communication_style: string;
+      principles: string;
+    };
   };
 }
 
-function mapAgentIdToType(id: string): BmadAgentType | null {
-  const idLower = id.toLowerCase();
+function filenameToAgentType(filename: string): BmadAgentType | null {
+  const base = basename(filename, ".agent.yaml");
 
-  if (idLower.includes("architect")) return "architect";
-  if (idLower.includes("dev") || idLower.includes("developer")) return "dev";
-  if (idLower.includes("tea") || idLower.includes("test")) return "tea";
-  if (idLower.includes("pm") || idLower.includes("product")) return "pm";
-  if (idLower.includes("analyst")) return "analyst";
-  if (idLower.includes("ux") || idLower.includes("designer")) return "ux-designer";
-  if (idLower.includes("tech-writer") || idLower.includes("writer")) return "tech-writer";
-  if (idLower.includes("sm") || idLower.includes("scrum")) return "sm";
-
-  return null;
-}
-
-function convertToFullPersona(parsed: ParsedManifestAgent): BmadAgentFullPersona | null {
-  const agentType = mapAgentIdToType(parsed.id);
-  if (!agentType) return null;
-
-  const fallback = BMAD_AGENT_FULL_PERSONAS[agentType];
-
-  return {
-    type: agentType,
-    name: parsed.name || fallback.name,
-    title: parsed.title || fallback.title,
-    icon: parsed.icon || fallback.icon,
-    expertise: fallback.expertise,
-    perspective: fallback.perspective,
-    identity: parsed.identity || fallback.identity,
-    communicationStyle: parsed.communicationStyle || fallback.communicationStyle,
-    principles: parsed.principles
-      ? parsed.principles
-          .split("\n")
-          .map((p) => p.trim())
-          .filter(Boolean)
-      : fallback.principles,
-    module: parsed.module,
+  const typeMap: Record<string, BmadAgentType> = {
+    analyst: "analyst",
+    architect: "architect",
+    dev: "dev",
+    pm: "pm",
+    sm: "sm",
+    tea: "tea",
+    "tech-writer": "tech-writer",
+    "ux-designer": "ux-designer",
   };
+
+  return typeMap[base] || null;
 }
 
-async function parseManifest(content: string): Promise<Map<BmadAgentType, BmadAgentFullPersona>> {
+function parsePrinciples(principlesText: string): string[] {
+  const lines = principlesText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines
+    .filter((line) => line.startsWith("-"))
+    .map((line) => line.substring(1).trim())
+    .filter(Boolean);
+}
+
+async function parseAgentYaml(
+  filePath: string
+): Promise<{ type: BmadAgentType; persona: BmadAgentFullPersona } | null> {
+  const agentType = filenameToAgentType(filePath);
+  if (!agentType) {
+    return null;
+  }
+
+  try {
+    const content = await readFile(filePath, "utf-8");
+    const data = parseYaml(content) as BmadAgentYaml;
+
+    if (!data?.agent?.metadata || !data?.agent?.persona) {
+      return null;
+    }
+
+    const { metadata, persona: personaData } = data.agent;
+    const fallback = BMAD_AGENT_FULL_PERSONAS[agentType];
+
+    const principles = personaData.principles
+      ? parsePrinciples(personaData.principles)
+      : fallback.principles;
+
+    const persona: BmadAgentFullPersona = {
+      type: agentType,
+      name: metadata.name || fallback.name,
+      title: metadata.title || fallback.title,
+      icon: metadata.icon || fallback.icon,
+      expertise: fallback.expertise,
+      perspective: personaData.role || fallback.perspective,
+      identity: personaData.identity || fallback.identity,
+      communicationStyle: personaData.communication_style || fallback.communicationStyle,
+      principles,
+    };
+
+    return { type: agentType, persona };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.warn(`[Athena] Failed to parse agent YAML at ${filePath}: ${errorMessage}`);
+    return null;
+  }
+}
+
+async function loadFromYamlFiles(
+  agentFiles: string[]
+): Promise<Map<BmadAgentType, BmadAgentFullPersona>> {
   const personas = new Map<BmadAgentType, BmadAgentFullPersona>();
 
-  const agentBlocks = content.match(/<agent[^>]*>[\s\S]*?<\/agent>/gi) || [];
-
-  for (const block of agentBlocks) {
-    const parsed = parseAgentFromXml(block);
-    if (parsed) {
-      const persona = convertToFullPersona(parsed);
-      if (persona) {
-        personas.set(persona.type, persona);
-      }
+  for (const filePath of agentFiles) {
+    const result = await parseAgentYaml(filePath);
+    if (result) {
+      personas.set(result.type, result.persona);
     }
   }
 
@@ -109,27 +113,24 @@ async function parseManifest(content: string): Promise<Map<BmadAgentType, BmadAg
 export async function loadPersonas(
   projectRoot: string
 ): Promise<Map<BmadAgentType, BmadAgentFullPersona>> {
-  const manifestPath = join(projectRoot, MANIFEST_PATH);
+  const agentFiles = await findAgentFiles(projectRoot);
 
-  if (existsSync(manifestPath)) {
-    try {
-      const content = await readFile(manifestPath, "utf-8");
-      const manifestPersonas = await parseManifest(content);
+  if (agentFiles.length > 0) {
+    const yamlPersonas = await loadFromYamlFiles(agentFiles);
 
-      if (manifestPersonas.size > 0) {
-        const merged = new Map<BmadAgentType, BmadAgentFullPersona>();
+    if (yamlPersonas.size > 0) {
+      const merged = new Map<BmadAgentType, BmadAgentFullPersona>();
 
-        for (const [type, persona] of Object.entries(BMAD_AGENT_FULL_PERSONAS)) {
-          merged.set(type as BmadAgentType, persona);
-        }
-
-        for (const [type, persona] of manifestPersonas) {
-          merged.set(type, persona);
-        }
-
-        return merged;
+      for (const [type, persona] of Object.entries(BMAD_AGENT_FULL_PERSONAS)) {
+        merged.set(type as BmadAgentType, persona);
       }
-    } catch {}
+
+      for (const [type, persona] of yamlPersonas) {
+        merged.set(type, persona);
+      }
+
+      return merged;
+    }
   }
 
   return new Map(
@@ -210,3 +211,10 @@ Use your previous analysis to inform this discussion. You already have context o
 
   return prompt;
 }
+
+export const _testExports = {
+  filenameToAgentType,
+  parsePrinciples,
+  parseAgentYaml,
+  loadFromYamlFiles,
+};

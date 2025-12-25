@@ -101,7 +101,7 @@ async function updateStoryFile(
     const addedNotes: string[] = [];
 
     if (acceptedRounds.length > 0) {
-      const acSection = content.match(/## Acceptance Criteria[\s\S]*?(?=\n##|\n---|\Z)/);
+      const acSection = content.match(/## Acceptance Criteria[\s\S]*?(?=\n##|\n---|$)/);
 
       if (acSection && acSection.index !== undefined) {
         const newCriteria = acceptedRounds.map(generateAcceptanceCriteria);
