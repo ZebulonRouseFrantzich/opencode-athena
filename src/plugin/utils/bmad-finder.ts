@@ -185,17 +185,6 @@ function searchForFileWithVariants(
   return join(projectRoot, searchPaths[0], filename);
 }
 
-function searchForFile(projectRoot: string, filename: string, searchPaths: string[]): string {
-  for (const searchPath of searchPaths) {
-    const fullPath = join(projectRoot, searchPath, filename);
-    if (existsSync(fullPath)) {
-      return fullPath;
-    }
-  }
-
-  return join(projectRoot, searchPaths[0], filename);
-}
-
 export async function getBmadPaths(
   startDir: string,
   athenaConfig?: {
