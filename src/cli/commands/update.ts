@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { confirm } from "@inquirer/prompts";
 import chalk from "chalk";
 import ora from "ora";
+import semver from "semver";
 import { VERSION } from "../../shared/constants.js";
 import type { UpdateOptions } from "../../shared/types.js";
 import { FileManager } from "../utils/file-manager.js";
@@ -24,12 +25,23 @@ interface PackageUpdate {
   updateAvailable: boolean;
 }
 
+type ReleaseChannel = "latest" | "beta" | "alpha";
+
+function detectReleaseChannel(version: string): ReleaseChannel {
+  if (version.includes("-beta")) return "beta";
+  if (version.includes("-alpha")) return "alpha";
+  return "latest";
+}
+
 /**
  * Check npm registry for latest version of a package
  */
-async function getLatestVersion(packageName: string): Promise<string | null> {
+async function getLatestVersion(
+  packageName: string,
+  tag: ReleaseChannel = "latest"
+): Promise<string | null> {
   try {
-    const { stdout } = await execAsync(`npm view ${packageName} version`);
+    const { stdout } = await execAsync(`npm view ${packageName}@${tag} version`);
     return stdout.trim();
   } catch {
     return null;
@@ -41,11 +53,15 @@ async function getLatestVersion(packageName: string): Promise<string | null> {
  */
 async function checkPackageUpdate(name: string, currentVersion: string): Promise<PackageUpdate> {
   const latest = await getLatestVersion(name);
+  const hasUpdate =
+    latest !== null && semver.valid(latest) && semver.valid(currentVersion)
+      ? semver.gt(latest, currentVersion)
+      : latest !== null && latest !== currentVersion;
   return {
     name,
     current: currentVersion,
     latest: latest || currentVersion,
-    updateAvailable: latest !== null && latest !== currentVersion,
+    updateAvailable: hasUpdate,
   };
 }
 
@@ -70,14 +86,18 @@ export async function update(options: UpdateOptions): Promise<void> {
 
   const updates: PackageUpdate[] = [];
 
-  // Check opencode-athena itself
-  const athenaLatest = await getLatestVersion("opencode-athena");
+  const athenaChannel = detectReleaseChannel(VERSION);
+  const athenaLatest = await getLatestVersion("opencode-athena", athenaChannel);
   if (athenaLatest) {
+    const athenaHasUpdate =
+      semver.valid(athenaLatest) && semver.valid(VERSION)
+        ? semver.gt(athenaLatest, VERSION)
+        : athenaLatest !== VERSION;
     updates.push({
       name: "opencode-athena",
       current: VERSION,
       latest: athenaLatest,
-      updateAvailable: athenaLatest !== VERSION,
+      updateAvailable: athenaHasUpdate,
     });
   }
 
@@ -136,12 +156,12 @@ export async function update(options: UpdateOptions): Promise<void> {
 
   const fileManager = new FileManager();
 
-  // Update opencode-athena if needed
   const athenaUpdate = updatesAvailable.find((u) => u.name === "opencode-athena");
   if (athenaUpdate) {
     const athenaSpinner = ora("Updating opencode-athena...").start();
     try {
-      await execAsync("npm install -g opencode-athena@latest");
+      const channel = detectReleaseChannel(VERSION);
+      await fileManager.installDependencies([`opencode-athena@${channel}`]);
       athenaSpinner.succeed(`opencode-athena updated to ${athenaUpdate.latest}`);
     } catch (err) {
       athenaSpinner.fail("Failed to update opencode-athena");
