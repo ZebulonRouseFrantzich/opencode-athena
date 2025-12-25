@@ -19,10 +19,11 @@ export interface InstallOptions {
 }
 
 /**
- * Options passed to the update command
+ * Options passed to the upgrade command
  */
-export interface UpdateOptions {
+export interface UpgradeOptions {
   check: boolean;
+  yes: boolean;
 }
 
 /**

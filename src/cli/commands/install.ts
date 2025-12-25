@@ -238,6 +238,15 @@ async function runUpgradeFlow(
   writeSpinner.succeed("Configuration files updated");
 
   const fileManager = new FileManager();
+
+  const generator = new ConfigGenerator(fullAnswers);
+  const packages = generator.getRequiredPackages();
+  if (packages.length > 0) {
+    const installSpinner = ora(`Installing packages: ${packages.join(", ")}...`).start();
+    await fileManager.installDependencies(packages);
+    installSpinner.succeed(`Installed ${packages.length} package(s)`);
+  }
+
   const commandsSpinner = ora("Updating bridge commands...").start();
   const copiedCommands = await fileManager.copyCommands();
   commandsSpinner.succeed(`Updated ${copiedCommands.length} bridge commands`);

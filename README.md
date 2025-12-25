@@ -393,7 +393,7 @@ For full model capabilities, use direct provider subscriptions when possible.
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                         CLI Installer                                │   │
 │  │   npx opencode-athena install    npx opencode-athena doctor         │   │
-│  │   npx opencode-athena update     npx opencode-athena uninstall      │   │
+│  │   npx opencode-athena upgrade    npx opencode-athena uninstall      │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
