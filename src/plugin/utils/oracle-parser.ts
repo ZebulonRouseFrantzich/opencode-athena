@@ -49,7 +49,11 @@ export interface ParsedOracleResponse {
   crossStoryIssues?: CrossStoryIssue[];
 }
 
-export function parseOracleResponse(response: string): ParsedOracleResponse {
+export function parseOracleResponse(response: string | null | undefined): ParsedOracleResponse {
+  if (!response || typeof response !== "string") {
+    return createEmptyResponse("No response provided");
+  }
+
   try {
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {

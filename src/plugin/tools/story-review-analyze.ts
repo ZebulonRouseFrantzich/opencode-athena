@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
-import type { AthenaConfig, ReviewScope } from "../../shared/types.js";
+import type { AthenaConfig, Phase1Result, ReviewScope } from "../../shared/types.js";
 import {
   type AgentRecommendation,
   type FindingCounts,
@@ -16,21 +16,6 @@ import {
   parseOracleResponse,
 } from "../utils/oracle-parser.js";
 import { findStoriesForEpic, loadStoryContent, normalizeStoryId } from "../utils/story-loader.js";
-
-export interface Phase1AnalyzeResult {
-  success: boolean;
-  scope: ReviewScope;
-  identifier: string;
-  error?: string;
-  suggestion?: string;
-
-  findings?: FindingCounts;
-  recommendedAgents?: AgentRecommendation[];
-  reviewDocPath?: string;
-  oracleAnalysis?: string;
-  storiesContent?: Array<{ id: string; content: string | null }>;
-  summary?: string;
-}
 
 export function createStoryReviewAnalyzeTool(
   ctx: PluginInput,
@@ -72,7 +57,7 @@ async function executePhase1Analysis(
   config: AthenaConfig,
   identifier: string,
   forceAdvancedModel?: boolean
-): Promise<Phase1AnalyzeResult> {
+): Promise<Phase1Result> {
   const paths = await getBmadPaths(ctx.directory, config);
   if (!paths.bmadDir) {
     return {

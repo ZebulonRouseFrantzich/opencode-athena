@@ -1,6 +1,6 @@
 import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
-import type { AthenaConfig, BmadAgentType } from "../../shared/types.js";
+import type { AthenaConfig, BmadAgentType, Phase1Result } from "../../shared/types.js";
 import { getRecommendedAgentTypes } from "../utils/agent-selector.js";
 import { getPersona, loadPersonas } from "../utils/persona-loader.js";
 import {
@@ -9,7 +9,6 @@ import {
   parseAgentResponse,
   synthesizeAgentResponses,
 } from "../utils/response-synthesizer.js";
-import type { Phase1AnalyzeResult } from "./story-review-analyze.js";
 
 export interface Phase2ConsultResult {
   success: boolean;
@@ -63,7 +62,7 @@ async function executePhase2Consultation(
   phase1Json: string,
   overrideAgents?: string[]
 ): Promise<Phase2ConsultResult> {
-  let phase1: Phase1AnalyzeResult;
+  let phase1: Phase1Result;
   try {
     phase1 = JSON.parse(phase1Json);
   } catch {
@@ -135,7 +134,7 @@ async function spawnAgentAndWait(
   ctx: PluginInput,
   config: AthenaConfig,
   agentType: BmadAgentType,
-  phase1: Phase1AnalyzeResult,
+  phase1: Phase1Result,
   personas: Map<BmadAgentType, import("../../shared/types.js").BmadAgentFullPersona>
 ): Promise<AgentAnalysis | null> {
   try {
@@ -191,10 +190,13 @@ async function spawnAgentAndWait(
 
 function buildAgentPrompt(
   persona: import("../../shared/types.js").BmadAgentFullPersona,
-  phase1: Phase1AnalyzeResult
+  phase1: Phase1Result
 ): string {
   const storiesContext = phase1.storiesContent
-    ?.map((s) => `Story ${s.id}:\n${s.content?.substring(0, 500) || "(empty)"}...`)
+    ?.map(
+      (s: { id: string; content: string | null }) =>
+        `Story ${s.id}:\n${s.content?.substring(0, 500) || "(empty)"}...`
+    )
     .join("\n\n");
 
   return `You are ${persona.name}, the ${persona.title} from the BMAD team.

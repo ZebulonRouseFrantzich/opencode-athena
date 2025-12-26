@@ -16,8 +16,11 @@ import type {
   Phase2Result,
   ReviewDecision,
 } from "../../shared/types.js";
+import { extractAllFindings, parseOracleResponse } from "../utils/oracle-parser.js";
 import { getPersona, loadPersonas, selectAgentsForFinding } from "../utils/persona-loader.js";
+import { createPluginLogger } from "../utils/plugin-logger.js";
 
+const log = createPluginLogger("party-discussion");
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const MAX_SESSIONS = 10;
 
@@ -122,33 +125,47 @@ interface FindingInfo {
 }
 
 function extractHighSeverityFindings(phase1: Phase1Result): FindingInfo[] {
-  const findings: FindingInfo[] = [];
-  const analysis = phase1.oracleAnalysis;
+  const highCount = phase1.findings?.high ?? 0;
 
-  const highMatches = analysis.match(/\[HIGH\][^\n]+/gi) || [];
-  for (let i = 0; i < highMatches.length; i++) {
-    const match = highMatches[i];
-    const title = match.replace(/\[HIGH\]\s*/i, "").trim();
-    findings.push({
-      id: `high-${i + 1}`,
-      title,
-      severity: "high",
-      category: inferCategory(title),
-    });
-  }
-
-  if (findings.length === 0 && phase1.findings.high > 0) {
-    for (let i = 0; i < phase1.findings.high; i++) {
-      findings.push({
+  // Handle missing oracleAnalysis gracefully
+  if (!phase1.oracleAnalysis) {
+    // Fallback to placeholder findings based on count
+    if (highCount > 0) {
+      return Array.from({ length: highCount }, (_, i) => ({
         id: `high-${i + 1}`,
         title: `High severity finding ${i + 1}`,
-        severity: "high",
-        category: "logic",
-      });
+        severity: "high" as const,
+        category: "logic" as FindingCategory,
+      }));
     }
+    return [];
   }
 
-  return findings;
+  // Use proper JSON parsing from oracle-parser
+  const parsed = parseOracleResponse(phase1.oracleAnalysis);
+  const allFindings = extractAllFindings(parsed);
+  const highFindings = allFindings.filter((f) => f.severity === "high");
+
+  if (highFindings.length > 0) {
+    return highFindings.map((f, i) => ({
+      id: f.id || `high-${i + 1}`,
+      title: f.title,
+      severity: "high" as const,
+      category: f.category,
+    }));
+  }
+
+  // Fallback if parsing didn't find high findings but count says otherwise
+  if (highCount > 0) {
+    return Array.from({ length: highCount }, (_, i) => ({
+      id: `high-${i + 1}`,
+      title: `High severity finding ${i + 1}`,
+      severity: "high" as const,
+      category: "logic" as FindingCategory,
+    }));
+  }
+
+  return [];
 }
 
 function inferCategory(title: string): FindingCategory {
@@ -205,7 +222,13 @@ function initializeSession(phase1: Phase1Result, phase2?: Phase2Result): PartyDi
     completedRounds: [],
     activeAgents: Array.from(activeAgents),
     startedAt: new Date().toISOString(),
-    phase1Summary: phase1.findings,
+    phase1Summary: phase1.findings ?? {
+      total: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      byCategory: {} as Record<FindingCategory, number>,
+    },
     phase2Summary: phase2
       ? {
           consensusCount: phase2.consensusPoints.length,
@@ -491,6 +514,7 @@ async function executePartyDiscussion(
   switch (args.action) {
     case "start": {
       if (!args.phase1Result) {
+        log.warn("start called without phase1Result");
         return {
           success: false,
           sessionId: "",
@@ -505,17 +529,47 @@ async function executePartyDiscussion(
       try {
         phase1 = JSON.parse(args.phase1Result);
         phase2 = args.phase2Result ? JSON.parse(args.phase2Result) : undefined;
-      } catch {
+      } catch (e) {
+        log.error("Failed to parse phase1/phase2 JSON", {
+          error: e instanceof Error ? e.message : String(e),
+          phase1Length: args.phase1Result?.length,
+        });
         return {
           success: false,
           sessionId: "",
           state: {} as PartyDiscussionState,
           hasMoreItems: false,
-          error: "Invalid JSON in phase1Result or phase2Result",
+          error: `Invalid JSON in phase1Result or phase2Result: ${e instanceof Error ? e.message : String(e)}`,
+          suggestion: "Ensure you pass the raw JSON string from athena_story_review_analyze",
         };
       }
 
+      if (!phase1.findings) {
+        return {
+          success: false,
+          sessionId: "",
+          state: {} as PartyDiscussionState,
+          hasMoreItems: false,
+          error: "phase1Result missing required 'findings' field",
+          suggestion: "Pass the complete result from athena_story_review_analyze, not a subset",
+        };
+      }
+
+      if (!phase1.oracleAnalysis && phase1.findings.high > 0) {
+        console.warn(
+          "[Athena] phase1Result missing oracleAnalysis field - using placeholder findings for",
+          phase1.identifier
+        );
+      }
+
       const state = initializeSession(phase1, phase2);
+      log.info("Session started", {
+        sessionId: state.sessionId,
+        identifier: state.identifier,
+        agendaItems: state.agenda.length,
+        hasPhase2: !!phase2,
+      });
+
       const currentItem = state.agenda[0];
       const responses = currentItem
         ? await generateAgentResponses(currentItem, personas, phase2)
@@ -619,6 +673,11 @@ async function executePartyDiscussion(
         args.reason,
         args.deferredTo
       );
+      log.debug("Decision recorded", {
+        sessionId: args.sessionId,
+        findingId: args.findingId,
+        decision: args.decision,
+      });
 
       const hasMore = updatedState.currentItemIndex < updatedState.agenda.length;
 
@@ -690,13 +749,19 @@ async function executePartyDiscussion(
       }
 
       activeSessions.delete(args.sessionId);
+      const endSummary = calculateSummary(state);
+      log.info("Session ended", {
+        sessionId: args.sessionId,
+        totalDiscussed: endSummary?.totalDiscussed ?? 0,
+        decisions: endSummary?.decisions,
+      });
 
       return {
         success: true,
         sessionId: state.sessionId,
         state,
         hasMoreItems: false,
-        summary: calculateSummary(state),
+        summary: endSummary,
       };
     }
 

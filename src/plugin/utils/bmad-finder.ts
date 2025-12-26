@@ -234,15 +234,17 @@ export async function getBmadPaths(
     config = await readBmadConfig(bmadDir);
   }
 
-  const planningDir = config?.planning_artifacts
-    ? join(projectRoot, expandBmadPlaceholder(config.planning_artifacts)!)
-    : join(projectRoot, BMAD_V6_DEFAULTS.planningArtifacts);
+  const planningDir = join(
+    projectRoot,
+    expandBmadPlaceholder(config?.planning_artifacts) ?? BMAD_V6_DEFAULTS.planningArtifacts
+  );
 
-  const implementationDir = config?.implementation_artifacts
-    ? join(projectRoot, expandBmadPlaceholder(config.implementation_artifacts)!)
-    : config?.sprint_artifacts
-      ? join(projectRoot, expandBmadPlaceholder(config.sprint_artifacts)!)
-      : join(projectRoot, BMAD_V6_DEFAULTS.implementationArtifacts);
+  const implementationDir = join(
+    projectRoot,
+    expandBmadPlaceholder(config?.implementation_artifacts) ??
+      expandBmadPlaceholder(config?.sprint_artifacts) ??
+      BMAD_V6_DEFAULTS.implementationArtifacts
+  );
 
   const storiesDir = athenaConfig?.bmad?.paths?.stories
     ? join(projectRoot, athenaConfig.bmad.paths.stories)

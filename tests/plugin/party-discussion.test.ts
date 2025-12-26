@@ -39,14 +39,54 @@ const mockLoadPersonas = vi.mocked(loadPersonas);
 const mockGetPersona = vi.mocked(getPersona);
 const mockSelectAgentsForFinding = vi.mocked(selectAgentsForFinding);
 
+const createMockOracleJson = () => JSON.stringify({
+  summary: {
+    totalIssues: 3,
+    highSeverity: 2,
+    mediumSeverity: 1,
+    lowSeverity: 0,
+    recommendation: "Address security issues before proceeding",
+  },
+  storyFindings: [
+    {
+      storyId: "2.3",
+      title: "Widget Configuration",
+      findings: {
+        security: [
+          {
+            id: "S2.3-SEC-1",
+            severity: "high",
+            title: "Missing input validation on configuration endpoint",
+            description: "The endpoint accepts configuration without proper validation",
+            impact: "Could lead to injection attacks",
+            suggestion: "Add schema validation",
+          },
+        ],
+        logic: [
+          {
+            id: "S2.3-LOG-1",
+            severity: "high",
+            title: "Race condition in concurrent updates",
+            description: "Multiple users updating simultaneously may cause data loss",
+            impact: "Data integrity issues",
+            suggestion: "Implement optimistic locking",
+          },
+        ],
+        bestPractices: [],
+        performance: [],
+      },
+    },
+  ],
+});
+
 const createMockPhase1 = (): Phase1Result => ({
   success: true,
   scope: "story",
   identifier: "2.3",
-  reviewDocumentPath: "/path/to/review.md",
+  reviewDocPath: "/path/to/review.md",
   storiesContent: [{ id: "2.3", title: "Test Story", content: "Story content" }],
   architectureContent: "Architecture content",
-  oracleAnalysis: "[HIGH] Security issue with auth\n[HIGH] Missing error handling",
+  oracleAnalysis: createMockOracleJson(),
   findings: {
     total: 3,
     high: 2,
@@ -134,7 +174,7 @@ describe("party-discussion", () => {
   });
 
   describe("extractHighSeverityFindings", () => {
-    it("should extract findings marked with [HIGH]", async () => {
+    it("should extract findings from Oracle JSON response", async () => {
       const { _testExports } = await import("../../src/plugin/tools/party-discussion.js");
       const phase1 = createMockPhase1();
 
@@ -142,14 +182,68 @@ describe("party-discussion", () => {
 
       expect(findings.length).toBe(2);
       expect(findings[0].severity).toBe("high");
-      expect(findings[0].title).toContain("Security issue");
+      expect(findings[0].title).toContain("Missing input validation");
     });
 
-    it("should create placeholder findings when count mismatch", async () => {
+    it("should handle missing oracleAnalysis gracefully", async () => {
       const { _testExports } = await import("../../src/plugin/tools/party-discussion.js");
       const phase1: Phase1Result = {
         ...createMockPhase1(),
-        oracleAnalysis: "No markers in this analysis text",
+        oracleAnalysis: undefined,
+      };
+
+      const findings = _testExports.extractHighSeverityFindings(phase1);
+
+      expect(findings.length).toBe(2);
+      expect(findings[0].title).toContain("High severity finding");
+      expect(findings[0].severity).toBe("high");
+    });
+
+    it("should handle null oracleAnalysis", async () => {
+      const { _testExports } = await import("../../src/plugin/tools/party-discussion.js");
+      const phase1 = {
+        ...createMockPhase1(),
+        oracleAnalysis: null,
+      } as unknown as Phase1Result;
+
+      const findings = _testExports.extractHighSeverityFindings(phase1);
+
+      expect(findings.length).toBe(2);
+      expect(findings[0].title).toContain("High severity finding");
+    });
+
+    it("should handle empty oracleAnalysis string", async () => {
+      const { _testExports } = await import("../../src/plugin/tools/party-discussion.js");
+      const phase1: Phase1Result = {
+        ...createMockPhase1(),
+        oracleAnalysis: "",
+      };
+
+      const findings = _testExports.extractHighSeverityFindings(phase1);
+
+      expect(findings.length).toBe(2);
+      expect(findings[0].title).toContain("High severity finding");
+    });
+
+    it("should handle invalid JSON in oracleAnalysis", async () => {
+      const { _testExports } = await import("../../src/plugin/tools/party-discussion.js");
+      const phase1: Phase1Result = {
+        ...createMockPhase1(),
+        oracleAnalysis: "This is not valid JSON {broken",
+      };
+
+      const findings = _testExports.extractHighSeverityFindings(phase1);
+
+      expect(findings.length).toBe(2);
+      expect(findings[0].title).toContain("High severity finding");
+    });
+
+    it("should handle missing findings count with placeholder", async () => {
+      const { _testExports } = await import("../../src/plugin/tools/party-discussion.js");
+      const phase1: Phase1Result = {
+        success: true,
+        scope: "story",
+        identifier: "2.3",
         findings: {
           total: 2,
           high: 2,
@@ -163,6 +257,26 @@ describe("party-discussion", () => {
 
       expect(findings.length).toBe(2);
       expect(findings[0].title).toContain("High severity finding 1");
+    });
+
+    it("should return empty array when no high findings and no oracleAnalysis", async () => {
+      const { _testExports } = await import("../../src/plugin/tools/party-discussion.js");
+      const phase1: Phase1Result = {
+        success: true,
+        scope: "story",
+        identifier: "2.3",
+        findings: {
+          total: 1,
+          high: 0,
+          medium: 1,
+          low: 0,
+          byCategory: { security: 0, logic: 1, performance: 0, bestPractices: 0 },
+        },
+      };
+
+      const findings = _testExports.extractHighSeverityFindings(phase1);
+
+      expect(findings.length).toBe(0);
     });
   });
 

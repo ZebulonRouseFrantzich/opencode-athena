@@ -736,25 +736,27 @@ export interface Phase1ContextError {
 
 /**
  * Phase 1 result: Complete result after Oracle analysis with agent recommendations
+ * Fields are optional to allow graceful handling of partial data from tool chains
  */
 export interface Phase1Result {
   success: boolean;
   scope: ReviewScope;
   identifier: string;
-  reviewDocumentPath: string;
-  storiesContent: Array<{ id: string; title: string; content: string }>;
-  architectureContent: string;
-  findings: {
+  error?: string;
+  suggestion?: string;
+  reviewDocPath?: string;
+  storiesContent?: Array<{ id: string; title?: string; content: string | null }>;
+  architectureContent?: string;
+  findings?: {
     total: number;
     high: number;
     medium: number;
     low: number;
     byCategory: Record<FindingCategory, number>;
   };
-  recommendedAgents: AgentRecommendation[];
-  oracleAnalysis: string;
-  error?: string;
-  suggestion?: string;
+  recommendedAgents?: AgentRecommendation[];
+  oracleAnalysis?: string;
+  summary?: string;
 }
 
 /**
@@ -1125,6 +1127,8 @@ export interface PartyDiscussionResult {
   hasMoreItems: boolean;
   /** Error if failed */
   error?: string;
+  /** Suggestion for resolving error */
+  suggestion?: string;
 }
 
 /**

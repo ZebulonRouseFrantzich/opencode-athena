@@ -231,7 +231,11 @@ function normalizeForComparison(text: string): string {
     .join(" ");
 }
 
-export function parseAgentResponse(responseText: string): AgentAnalysis | null {
+export function parseAgentResponse(responseText: string | null | undefined): AgentAnalysis | null {
+  if (!responseText || typeof responseText !== "string") {
+    return null;
+  }
+
   try {
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
