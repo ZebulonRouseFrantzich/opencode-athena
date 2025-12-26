@@ -8,8 +8,11 @@ import {
   extractRelevantPRD,
   generateImplementationInstructions,
 } from "../utils/context-builder.js";
+import { createPluginLogger } from "../utils/plugin-logger.js";
 import { loadStoryContent } from "../utils/story-loader.js";
 import { readSprintStatus } from "../utils/yaml-handler.js";
+
+const log = createPluginLogger("get-story");
 
 /**
  * Create the athena_get_story tool
@@ -55,8 +58,11 @@ async function getStoryContext(
   config: AthenaConfig,
   requestedStoryId?: string
 ): Promise<GetStoryResult> {
+  log.debug("Getting story context", { requestedStoryId, directory: ctx.directory });
+
   const paths = await getBmadPaths(ctx.directory, config);
   if (!paths.bmadDir) {
+    log.warn("BMAD directory not found", { directory: ctx.directory });
     return {
       error: "No BMAD directory found",
       suggestion: "Run 'npx bmad-method@alpha install' to set up BMAD in this project.",
@@ -64,8 +70,10 @@ async function getStoryContext(
   }
 
   // Read sprint status
+  log.debug("Reading sprint status", { sprintStatusPath: paths.sprintStatus });
   const sprint = await readSprintStatus(paths.sprintStatus);
   if (!sprint) {
+    log.warn("Sprint status file not found", { sprintStatusPath: paths.sprintStatus });
     return {
       error: "No sprint-status.yaml found",
       suggestion: "Run the sprint-planning workflow with BMAD's SM agent first.",
@@ -75,6 +83,11 @@ async function getStoryContext(
   // Determine which story to load
   const storyId = requestedStoryId || findNextPendingStory(sprint);
   if (!storyId) {
+    log.info("No pending stories found", {
+      completed: sprint.completed_stories.length,
+      pending: sprint.pending_stories.length,
+      inProgress: sprint.in_progress_stories.length,
+    });
     return {
       error: "No pending stories found",
       sprintProgress: {
@@ -88,9 +101,12 @@ async function getStoryContext(
     };
   }
 
+  log.debug("Loading story file", { storyId, storiesDir: paths.storiesDir });
+
   // Load story file
   const storyContent = await loadStoryFile(paths.storiesDir, storyId);
   if (!storyContent) {
+    log.error("Story file not found", { storyId, storiesDir: paths.storiesDir });
     return {
       error: `Story file not found for ${storyId}`,
       suggestion: "Run 'create-story' workflow with BMAD's SM agent.",
@@ -98,17 +114,33 @@ async function getStoryContext(
   }
 
   // Load architecture context
+  log.debug("Extracting relevant architecture sections", {
+    architecturePath: paths.architecture,
+  });
   const archContent = await extractRelevantArchitecture(paths.architecture, storyContent);
 
   // Load PRD context
+  log.debug("Extracting relevant PRD sections", { prdPath: paths.prd });
   const prdContent = await extractRelevantPRD(paths.prd, storyContent);
 
   // Update tracker with "loading" transitional state
   // The story will be promoted to "in_progress" when athena_update_status is called
+  log.debug("Updating story tracker", { storyId, status: "loading" });
   await tracker.setCurrentStory(storyId, {
     content: storyContent,
     status: "loading",
     startedAt: new Date().toISOString(),
+  });
+
+  log.info("Story context loaded successfully", {
+    storyId,
+    hasArchitecture: !!archContent,
+    hasPRD: !!prdContent,
+    sprintProgress: {
+      completed: sprint.completed_stories.length,
+      pending: sprint.pending_stories.length,
+      blocked: sprint.blocked_stories.length,
+    },
   });
 
   return {

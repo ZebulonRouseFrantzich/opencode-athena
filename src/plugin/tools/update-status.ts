@@ -11,7 +11,10 @@ import type { AthenaConfig, StoryStatus, UpdateStatusResult } from "../../shared
 import type { StoryTracker } from "../tracker/story-tracker.js";
 import { getBmadPaths } from "../utils/bmad-finder.js";
 import { sendNotification } from "../utils/notifications.js";
+import { createPluginLogger } from "../utils/plugin-logger.js";
 import { readSprintStatus, writeSprintStatus } from "../utils/yaml-handler.js";
+
+const log = createPluginLogger("update-status");
 
 /**
  * Create the athena_update_status tool
@@ -72,13 +75,22 @@ async function updateStoryStatus(
 ): Promise<UpdateStatusResult> {
   const { storyId, status, notes, completionSummary } = args;
 
+  log.debug("Updating story status", {
+    storyId,
+    status,
+    hasNotes: !!notes,
+    hasSummary: !!completionSummary,
+  });
+
   // Validation
   if (status === "completed" && !completionSummary) {
+    log.warn("Validation failed: completionSummary required for completed status", { storyId });
     return {
       error: "completionSummary is required when marking a story completed",
     };
   }
   if (status === "blocked" && !notes) {
+    log.warn("Validation failed: notes required for blocked status", { storyId });
     return {
       error: "notes are required when blocking a story (explain the blocker)",
     };
@@ -86,24 +98,30 @@ async function updateStoryStatus(
 
   const paths = await getBmadPaths(ctx.directory, config);
   if (!paths.bmadDir) {
+    log.warn("BMAD directory not found", { directory: ctx.directory });
     return { error: "No BMAD directory found" };
   }
 
   if (!existsSync(paths.sprintStatus)) {
+    log.error("Sprint status file not found", { sprintStatusPath: paths.sprintStatus });
     return { error: "No sprint-status.yaml found" };
   }
 
+  log.debug("Reading sprint status", { sprintStatusPath: paths.sprintStatus });
   const sprint = await readSprintStatus(paths.sprintStatus);
   if (!sprint) {
+    log.error("Failed to read sprint status file", { sprintStatusPath: paths.sprintStatus });
     return { error: "Failed to read sprint-status.yaml" };
   }
 
   const now = new Date().toISOString();
 
   // Remove story from all status arrays
+  log.debug("Removing story from all status arrays", { storyId });
   removeFromAllArrays(sprint, storyId);
 
   // Add to appropriate array based on new status (with deduplication)
+  log.debug("Adding story to new status array", { storyId, status });
   switch (status) {
     case "in_progress":
       addToArrayIfNotPresent(sprint.in_progress_stories, storyId);
@@ -132,13 +150,16 @@ async function updateStoryStatus(
   }
 
   // Write updated sprint status
+  log.debug("Writing updated sprint status", { sprintStatusPath: paths.sprintStatus });
   await writeSprintStatus(paths.sprintStatus, sprint);
 
   // Update tracker
+  log.debug("Updating story tracker", { storyId, status });
   await tracker.updateStoryStatus(storyId, status as StoryStatus);
 
   // Send notification if enabled and story completed
   if (config.features?.notifications && status === "completed") {
+    log.debug("Sending completion notification", { storyId });
     await sendNotification(`Story ${storyId} completed!`, "OpenCode Athena", ctx.$);
   }
 
@@ -151,6 +172,19 @@ async function updateStoryStatus(
 
   const percentComplete =
     totalStories > 0 ? Math.round((sprint.completed_stories.length / totalStories) * 100) : 0;
+
+  log.info("Story status updated successfully", {
+    storyId,
+    status,
+    sprintProgress: {
+      completed: sprint.completed_stories.length,
+      inProgress: sprint.in_progress_stories.length,
+      pending: sprint.pending_stories.length,
+      blocked: sprint.blocked_stories.length,
+      total: totalStories,
+      percentComplete,
+    },
+  });
 
   return {
     success: true,

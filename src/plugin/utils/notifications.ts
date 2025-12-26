@@ -6,8 +6,11 @@
 
 import { platform } from "node:os";
 import type { PluginInput } from "@opencode-ai/plugin";
+import { createPluginLogger } from "./plugin-logger.js";
 
 type ShellExecutor = PluginInput["$"];
+
+const log = createPluginLogger("notifications");
 
 /**
  * Send a desktop notification
@@ -53,8 +56,8 @@ function escapeAppleScript(str: string): string {
 }
 
 /**
- * Log notification to console as fallback
+ * Log notification to log file as fallback
  */
 function logNotification(title: string, message: string): void {
-  console.log(`[${title}] ${message}`);
+  log.info("Desktop notification fallback", { title, message });
 }

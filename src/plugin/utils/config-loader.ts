@@ -12,6 +12,9 @@ import { join } from "node:path";
 import { CONFIG_PATHS, DEFAULTS } from "../../shared/constants.js";
 import { AthenaConfigSchema } from "../../shared/schemas.js";
 import type { AthenaConfig } from "../../shared/types.js";
+import { createPluginLogger } from "./plugin-logger.js";
+
+const log = createPluginLogger("config-loader");
 
 /**
  * Load Athena configuration from available config files.
@@ -56,9 +59,9 @@ async function loadConfigFile(filePath: string): Promise<Partial<AthenaConfig> |
     return validatePartialConfig(parsed, filePath);
   } catch (error) {
     if (error instanceof SyntaxError) {
-      console.warn(`[Athena] Invalid JSON in config file ${filePath}:`, error.message);
+      log.warn("Invalid JSON in config file", { filePath, message: error.message });
     } else {
-      console.warn(`[Athena] Failed to load config from ${filePath}:`, error);
+      log.warn("Failed to load config file", { filePath, error });
     }
     return null;
   }
@@ -69,7 +72,7 @@ async function loadConfigFile(filePath: string): Promise<Partial<AthenaConfig> |
  */
 function validatePartialConfig(config: unknown, filePath: string): Partial<AthenaConfig> | null {
   if (typeof config !== "object" || config === null) {
-    console.warn(`[Athena] Config file ${filePath} must be an object`);
+    log.warn("Config file must be an object", { filePath });
     return null;
   }
 
@@ -386,10 +389,12 @@ function validateConfig(config: AthenaConfig): AthenaConfig {
 
   if (!result.success) {
     // Log validation errors but don't fail - use defaults for invalid fields
-    console.warn("[Athena] Configuration validation warnings:");
-    for (const error of result.error.errors) {
-      console.warn(`  - ${error.path.join(".")}: ${error.message}`);
-    }
+    log.warn("Configuration validation warnings", {
+      errors: result.error.errors.map((e) => ({
+        path: e.path.join("."),
+        message: e.message,
+      })),
+    });
 
     // Return the original config since we already have defaults
     // The individual fields will be used even if some are invalid

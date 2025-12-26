@@ -4,6 +4,9 @@ import { parse as parseYaml } from "yaml";
 import type { BmadAgentFullPersona, BmadAgentType } from "../../shared/types.js";
 import { BMAD_AGENT_FULL_PERSONAS } from "../../shared/types.js";
 import { findAgentFiles } from "./bmad-finder.js";
+import { createPluginLogger } from "./plugin-logger.js";
+
+const log = createPluginLogger("persona-loader");
 
 interface BmadAgentYaml {
   agent: {
@@ -98,8 +101,10 @@ async function parseAgentYaml(
 
     return { type: agentType, persona };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.warn(`[Athena] Failed to parse agent YAML at ${filePath}: ${errorMessage}`);
+    log.warn("Failed to parse agent YAML file", {
+      filePath,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
     return null;
   }
 }

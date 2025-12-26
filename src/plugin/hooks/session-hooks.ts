@@ -8,6 +8,9 @@ import type { PluginInput } from "@opencode-ai/plugin";
 import type { AthenaConfig } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
 import { sendNotification } from "../utils/notifications.js";
+import { createPluginLogger } from "../utils/plugin-logger.js";
+
+const log = createPluginLogger("session-hooks");
 
 /**
  * Generic event type for session events
@@ -79,7 +82,10 @@ function handleSessionCreated(tracker: StoryTracker): void {
   const currentStory = tracker.getCurrentStory();
 
   if (currentStory) {
-    console.log(`[Athena] Resuming with Story ${currentStory.id} (${currentStory.status})`);
+    log.info("Session created - resuming with story", {
+      storyId: currentStory.id,
+      status: currentStory.status,
+    });
   }
 }
 
@@ -92,6 +98,9 @@ function handleSessionError(event: SessionEvent, tracker: StoryTracker): void {
   const currentStory = tracker.getCurrentStory();
 
   if (currentStory && event.error) {
-    console.error(`[Athena] Error during Story ${currentStory.id}:`, event.error);
+    log.error("Session error during story implementation", {
+      storyId: currentStory.id,
+      error: event.error,
+    });
   }
 }

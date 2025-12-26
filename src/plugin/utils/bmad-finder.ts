@@ -3,6 +3,9 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fdir } from "fdir";
 import { parse as parseYaml } from "yaml";
+import { createPluginLogger } from "./plugin-logger.js";
+
+const log = createPluginLogger("bmad-finder");
 
 const BMAD_DIR_NAMES = ["docs", ".bmad", "bmad"] as const;
 
@@ -328,10 +331,10 @@ export async function findManifest(projectRoot: string): Promise<string | null> 
         return files[0];
       }
     } catch (error) {
-      console.warn(
-        `[Athena] Failed to search for manifest in ${bmadDir}:`,
-        error instanceof Error ? error.message : String(error)
-      );
+      log.warn("Failed to search for manifest in BMAD directory", {
+        bmadDir,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -348,10 +351,10 @@ export async function findManifest(projectRoot: string): Promise<string | null> 
     manifestCache.set(projectRoot, result);
     return result;
   } catch (error) {
-    console.warn(
-      `[Athena] Failed to search for manifest in ${projectRoot}:`,
-      error instanceof Error ? error.message : String(error)
-    );
+    log.warn("Failed to search for manifest in project root", {
+      projectRoot,
+      error: error instanceof Error ? error.message : String(error),
+    });
     manifestCache.set(projectRoot, null);
     return null;
   }
@@ -382,10 +385,10 @@ export async function findAgentFiles(projectRoot: string): Promise<string[]> {
           return files;
         }
       } catch (error) {
-        console.warn(
-          `[Athena] Failed to search for agent files in ${fullPath}:`,
-          error instanceof Error ? error.message : String(error)
-        );
+        log.warn("Failed to search for agent files in known directory", {
+          directory: fullPath,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
   }
@@ -406,10 +409,10 @@ export async function findAgentFiles(projectRoot: string): Promise<string[]> {
         return files;
       }
     } catch (error) {
-      console.warn(
-        `[Athena] Failed to search for agent files in ${bmadDir}:`,
-        error instanceof Error ? error.message : String(error)
-      );
+      log.warn("Failed to search for agent files in BMAD directory", {
+        bmadDir,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -425,10 +428,10 @@ export async function findAgentFiles(projectRoot: string): Promise<string[]> {
     agentFilesCache.set(projectRoot, projectFiles);
     return projectFiles;
   } catch (error) {
-    console.warn(
-      `[Athena] Failed to search for agent files in ${projectRoot}:`,
-      error instanceof Error ? error.message : String(error)
-    );
+    log.warn("Failed to search for agent files in project root", {
+      projectRoot,
+      error: error instanceof Error ? error.message : String(error),
+    });
     agentFilesCache.set(projectRoot, []);
     return [];
   }

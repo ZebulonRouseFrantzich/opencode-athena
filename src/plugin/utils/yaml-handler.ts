@@ -10,6 +10,9 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import type { SprintStatus } from "../../shared/types.js";
+import { createPluginLogger } from "./plugin-logger.js";
+
+const log = createPluginLogger("yaml-handler");
 
 /**
  * Lock file extension
@@ -129,7 +132,7 @@ export async function readYamlFile<T = unknown>(filePath: string): Promise<T | n
     const content = await readFile(filePath, "utf-8");
     return parseYaml(content) as T;
   } catch (error) {
-    console.warn(`[Athena] Failed to parse YAML file ${filePath}:`, error);
+    log.warn("Failed to parse YAML file", { filePath, error });
     return null;
   }
 }

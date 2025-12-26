@@ -10,6 +10,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { CONFIG_PATHS } from "../../shared/constants.js";
 import type { TrackedStory, TrackerState, TrackerStatus } from "../../shared/types.js";
+import { createPluginLogger } from "../utils/plugin-logger.js";
+
+const log = createPluginLogger("story-tracker");
 
 /**
  * Story tracker that persists state across sessions.
@@ -163,7 +166,7 @@ ${recentHistory}
       }
       await writeFile(this.stateFilePath, JSON.stringify(this.state, null, 2), "utf-8");
     } catch (error) {
-      console.warn("[Athena] Failed to save tracker state:", error);
+      log.warn("Failed to save tracker state", { error });
     }
   }
 }
