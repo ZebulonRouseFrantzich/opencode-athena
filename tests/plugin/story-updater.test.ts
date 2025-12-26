@@ -129,7 +129,7 @@ Some notes here.`);
       const result = await applyDecisions("/test/project", state);
 
       expect(result.success).toBe(true);
-      const successfulUpdates = result.updatedStories.filter((u) => u.success);
+      const successfulUpdates = result.storiesUpdated.filter((u) => u.success);
       expect(successfulUpdates.length).toBe(0);
     });
 
@@ -144,7 +144,7 @@ Some notes here.`);
       const result = await applyDecisions("/test/project", state);
 
       expect(result.success).toBe(true);
-      expect(result.updatedStories.length).toBe(0);
+      expect(result.storiesUpdated.length).toBe(0);
     });
   });
 
@@ -154,21 +154,26 @@ Some notes here.`);
 
       const result = {
         success: true,
-        updatedStories: [
+        storiesUpdated: [
           {
             storyId: "2.3",
             filePath: "/test/project/docs/stories/story-2-3.md",
+            action: "updated" as const,
             addedCriteria: ["- [ ] [Security]: Fix auth issue"],
             addedNotes: ["### Security fix note"],
             success: true,
           },
         ],
-        reviewDocumentPath: "/test/project/docs/reviews/review-2.3.md",
+        storiesCreated: [],
+        storiesAppended: [],
+        reviewDocumentUpdated: true,
+        decisionsAppliedDocument: "/test/project/docs/reviews/decisions-applied.md",
         summary: {
           accepted: 2,
           deferred: 1,
           rejected: 1,
-          storiesUpdated: 1,
+          storiesModified: 1,
+          storiesCreated: 0,
         },
       };
 
@@ -177,7 +182,7 @@ Some notes here.`);
       expect(formatted).toContain("Accepted findings: 2");
       expect(formatted).toContain("Deferred findings: 1");
       expect(formatted).toContain("Rejected findings: 1");
-      expect(formatted).toContain("Stories updated: 1");
+      expect(formatted).toContain("Stories modified: 1");
       expect(formatted).toContain("story-2-3.md");
     });
 
@@ -186,21 +191,26 @@ Some notes here.`);
 
       const result = {
         success: true,
-        updatedStories: [
+        storiesUpdated: [
           {
             storyId: "2.3",
             filePath: "/test/project/docs/stories/story-2-3.md",
+            action: "updated" as const,
             addedCriteria: [],
             addedNotes: [],
             success: false,
             error: "Permission denied",
           },
         ],
+        storiesCreated: [],
+        storiesAppended: [],
+        reviewDocumentUpdated: false,
         summary: {
           accepted: 1,
           deferred: 0,
           rejected: 0,
-          storiesUpdated: 0,
+          storiesModified: 0,
+          storiesCreated: 0,
         },
       };
 

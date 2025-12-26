@@ -91,15 +91,30 @@ Call `athena_party_discussion` to start interactive discussion:
 For each agenda item:
 1. Present the finding with agent perspectives
 2. Ask user: [A]ccept / [D]efer / [R]eject / [S]kip
-3. Call `athena_party_discussion` with action "decide" or "skip"
-4. Call `athena_party_discussion` with action "continue" to get next item
+3. If [D]efer, ask for defer target:
+   - Exact story ID (e.g., "4.5") - creates/appends to that story
+   - "new story" - creates story at end of epic
+   - "new story after X" (e.g., "new story after 4.2") - creates 4.2a
+   - Existing story ID - appends to that story's Implementation Notes
+4. Call `athena_party_discussion` with action "decide" (include `deferredTo` for defers) or "skip"
+5. Call `athena_party_discussion` with action "continue" to get next item
 
-When `hasMoreItems` is false, display final summary:
-- Decisions made (accepted, deferred, rejected, skipped)
-- Stories that need updates
+When `hasMoreItems` is false, call `athena_party_discussion` with action "end" to finalize.
 
-Call `athena_party_discussion` with action "end" to finalize.
+**The "end" action automatically applies all decisions:**
+- Updates existing stories with accepted findings (adds acceptance criteria)
+- Creates new stories for deferred findings (BMAD-compliant format)
+- Appends to existing stories when deferring to them
+- Updates sprint-status.yaml with new stories in correct order
+- Generates decisions-applied.md summary document
 
 ## Done
 
-Review complete! Stories are ready for development.
+Display the `appliedUpdates` from the "end" action result:
+- Stories updated (count and paths)
+- Stories created (count and paths)
+- Stories appended to (count and paths)
+- Any warnings (e.g., vague defer targets)
+- Path to decisions-applied.md document
+
+**Review complete!** All decisions have been applied to story files.

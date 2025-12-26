@@ -83,7 +83,7 @@ const createMockPhase1 = (): Phase1Result => ({
   success: true,
   scope: "story",
   identifier: "2.3",
-  reviewDocPath: "/path/to/review.md",
+  reviewFolderPath: "/path/to/review-folder",
   storiesContent: [{ id: "2.3", title: "Test Story", content: "Story content" }],
   architectureContent: "Architecture content",
   oracleAnalysis: createMockOracleJson(),

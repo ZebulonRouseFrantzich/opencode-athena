@@ -22,6 +22,7 @@ import type {
 import { extractAllFindings, parseOracleResponse } from "../utils/oracle-parser.js";
 import { getPersona, loadPersonas, selectAgentsForFinding } from "../utils/persona-loader.js";
 import { createPluginLogger } from "../utils/plugin-logger.js";
+import { applyDecisions } from "../utils/story-updater.js";
 
 const log = createPluginLogger("party-discussion");
 const SESSION_TTL_MS = 30 * 60 * 1000;
@@ -30,6 +31,7 @@ const MAX_SESSIONS = 10;
 interface SessionWithMeta {
   state: PartyDiscussionState;
   lastAccessedAt: number;
+  reviewFolderPath?: string;
 }
 
 const activeSessions = new Map<string, SessionWithMeta>();
@@ -68,10 +70,19 @@ function getSession(sessionId: string): PartyDiscussionState | null {
   return session.state;
 }
 
-function setSession(state: PartyDiscussionState): void {
+function getSessionWithMeta(sessionId: string): SessionWithMeta | null {
+  const session = activeSessions.get(sessionId);
+  if (!session) return null;
+
+  session.lastAccessedAt = Date.now();
+  return session;
+}
+
+function setSession(state: PartyDiscussionState, reviewFolderPath?: string): void {
   activeSessions.set(state.sessionId, {
     state,
     lastAccessedAt: Date.now(),
+    reviewFolderPath,
   });
 }
 
@@ -205,7 +216,11 @@ function getAgentPositionsForFinding(
   return positions;
 }
 
-function initializeSession(phase1: Phase1FullData, phase2?: Phase2Result): PartyDiscussionState {
+function initializeSession(
+  phase1: Phase1FullData,
+  phase2?: Phase2Result,
+  reviewFolderPath?: string
+): PartyDiscussionState {
   const sessionId = randomUUID();
   const agenda = buildAgenda(phase1, phase2);
 
@@ -240,7 +255,7 @@ function initializeSession(phase1: Phase1FullData, phase2?: Phase2Result): Party
       : undefined,
   };
 
-  setSession(state);
+  setSession(state, reviewFolderPath);
   return state;
 }
 
@@ -503,7 +518,7 @@ interface ToolArgs {
 
 async function executePartyDiscussion(
   ctx: PluginInput,
-  _config: AthenaConfig,
+  config: AthenaConfig,
   args: ToolArgs
 ): Promise<PartyDiscussionResult> {
   cleanupStaleSessions();
@@ -580,7 +595,7 @@ async function executePartyDiscussion(
         );
       }
 
-      const state = initializeSession(phase1, phase2);
+      const state = initializeSession(phase1, phase2, args.reviewFolderPath);
       log.info("Session started", {
         sessionId: state.sessionId,
         identifier: state.identifier,
@@ -755,8 +770,8 @@ async function executePartyDiscussion(
         };
       }
 
-      const state = getSession(args.sessionId);
-      if (!state) {
+      const sessionMeta = getSessionWithMeta(args.sessionId);
+      if (!sessionMeta) {
         return {
           success: false,
           sessionId: args.sessionId,
@@ -766,12 +781,21 @@ async function executePartyDiscussion(
         };
       }
 
+      const state = sessionMeta.state;
+      const reviewFolderPath = sessionMeta.reviewFolderPath;
+
       activeSessions.delete(args.sessionId);
       const endSummary = calculateSummary(state);
-      log.info("Session ended", {
+
+      const reviewDocPath = reviewFolderPath ? join(reviewFolderPath, "review.md") : undefined;
+      const appliedUpdates = await applyDecisions(ctx.directory, state, reviewDocPath, config);
+
+      log.info("Session ended with decisions applied", {
         sessionId: args.sessionId,
         totalDiscussed: endSummary?.totalDiscussed ?? 0,
         decisions: endSummary?.decisions,
+        storiesModified: appliedUpdates.summary.storiesModified,
+        storiesCreated: appliedUpdates.summary.storiesCreated,
       });
 
       return {
@@ -780,6 +804,7 @@ async function executePartyDiscussion(
         state,
         hasMoreItems: false,
         summary: endSummary,
+        appliedUpdates,
       };
     }
 
@@ -806,6 +831,7 @@ export const _testExports = {
   activeSessions,
   cleanupStaleSessions,
   getSession,
+  getSessionWithMeta,
   setSession,
   SESSION_TTL_MS,
   MAX_SESSIONS,

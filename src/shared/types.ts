@@ -574,6 +574,77 @@ export interface ApplyReviewDecisionsResult {
   error?: string;
 }
 
+/**
+ * Action taken on a story during decision application
+ */
+export type StoryUpdateAction = "updated" | "created" | "appended";
+
+/**
+ * Parsed defer target from user input
+ */
+export interface ParsedDeferTarget {
+  /** The target type */
+  type: "exact" | "new-end" | "new-after" | "new-before" | "append-existing";
+  /** The story ID (existing or to be created) */
+  storyId: string;
+  /** For sub-numbering: the reference story ID */
+  referenceStoryId?: string;
+  /** Original user input */
+  originalInput: string;
+}
+
+/**
+ * Result of applying updates to a single story
+ */
+export interface AppliedStoryUpdate {
+  /** Story ID (e.g., "4.1" or "4.2a") */
+  storyId: string;
+  /** Full path to the story file */
+  filePath: string;
+  /** What action was taken */
+  action: StoryUpdateAction;
+  /** Acceptance criteria added (for created/updated) */
+  addedCriteria: string[];
+  /** Implementation notes added */
+  addedNotes: string[];
+  /** Whether the operation succeeded */
+  success: boolean;
+  /** Error message if failed */
+  error?: string;
+  /** For created stories: the defer target that triggered creation */
+  deferTarget?: ParsedDeferTarget;
+}
+
+/**
+ * Complete result from applying all decisions
+ */
+export interface ApplyDecisionsResult {
+  /** Overall success (true even if some individual updates failed) */
+  success: boolean;
+  /** Stories that were updated with new criteria/notes */
+  storiesUpdated: AppliedStoryUpdate[];
+  /** New stories that were created for deferred findings */
+  storiesCreated: AppliedStoryUpdate[];
+  /** Existing stories that had findings appended */
+  storiesAppended: AppliedStoryUpdate[];
+  /** Whether the review document was updated */
+  reviewDocumentUpdated: boolean;
+  /** Path to the decisions-applied.md summary document */
+  decisionsAppliedDocument?: string;
+  /** Summary counts */
+  summary: {
+    accepted: number;
+    deferred: number;
+    rejected: number;
+    storiesModified: number;
+    storiesCreated: number;
+  };
+  /** Warnings (e.g., vague defer targets) */
+  warnings?: string[];
+  /** Error if complete failure */
+  error?: string;
+}
+
 // ============================================================================
 // Enhanced Party Review Types (3-Phase Architecture)
 // ============================================================================
@@ -1130,11 +1201,14 @@ export interface PartyDiscussionResult {
       rejected: number;
       pending: number;
     };
+    /** @deprecated Use appliedUpdates instead - updates are now applied automatically */
     storyUpdatesNeeded: Array<{
       storyId: string;
       additions: string[];
     }>;
   };
+  /** Result of automatically applying decisions to stories (on "end" action) */
+  appliedUpdates?: ApplyDecisionsResult;
   /** Whether more items remain */
   hasMoreItems: boolean;
   /** Error if failed */
