@@ -34,6 +34,30 @@ export const MIGRATIONS: Migration[] = [
     description: "Reorganize athena files into dedicated directory",
     migrateAthena: (config) => config,
   },
+  {
+    fromVersion: "0.7.0",
+    toVersion: "0.8.0",
+    description: "Add BMAD path overrides: sprintStatus, prd, architecture, epics",
+    migrateAthena: (config) => {
+      const bmad = (config.bmad as Record<string, unknown>) || {};
+      const paths = (bmad.paths as Record<string, unknown>) || {};
+
+      if (paths.sprintStatus === undefined) {
+        paths.sprintStatus = null;
+      }
+      if (paths.prd === undefined) {
+        paths.prd = null;
+      }
+      if (paths.architecture === undefined) {
+        paths.architecture = null;
+      }
+      if (paths.epics === undefined) {
+        paths.epics = null;
+      }
+
+      return { ...config, bmad: { ...bmad, paths } };
+    },
+  },
 ];
 
 export interface FileMigrationResult {

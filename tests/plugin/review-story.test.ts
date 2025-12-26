@@ -327,7 +327,7 @@ describe("findStoriesInEpic", () => {
 
     const result = await findStoriesInEpic("/test/stories", "2");
 
-    expect(result).toEqual(["2.1", "2.10", "2.2"]);
+    expect(result).toEqual(["2.1", "2.2", "2.10"]);
   });
 
   it("should ignore non-story files", async () => {
@@ -364,6 +364,7 @@ describe("loadStoryFile", () => {
 
   it("should load story content", async () => {
     mockExistsSync.mockReturnValue(true);
+    mockReaddir.mockResolvedValue(["story-2-3.md"] as never);
     mockReadFile.mockResolvedValue("# Story 2.3\n\nContent here");
 
     const result = await loadStoryFile("/test/stories", "2.3");

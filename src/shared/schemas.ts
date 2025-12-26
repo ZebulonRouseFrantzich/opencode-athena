@@ -37,6 +37,35 @@ export const BmadConfigSchema = z.object({
   defaultTrack: z.enum(["quick-flow", "bmad-method", "enterprise"]),
   autoStatusUpdate: z.boolean(),
   parallelStoryLimit: z.number().int().min(0).max(10),
+  paths: z
+    .object({
+      stories: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Custom path to stories directory (null = auto-detect)"),
+      sprintStatus: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Custom path to sprint-status.yaml file (null = auto-detect)"),
+      prd: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Custom path to PRD.md file (null = auto-detect)"),
+      architecture: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Custom path to architecture.md file (null = auto-detect)"),
+      epics: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Custom path to epics.md file (null = auto-detect)"),
+    })
+    .optional(),
 });
 
 /**

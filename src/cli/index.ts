@@ -11,7 +11,7 @@ import { doctor } from "./commands/doctor.js";
 import { info } from "./commands/info.js";
 import { install } from "./commands/install.js";
 import { uninstall } from "./commands/uninstall.js";
-import { update } from "./commands/update.js";
+import { upgrade } from "./commands/upgrade.js";
 import { listPresets } from "./utils/preset-loader.js";
 
 const program = new Command();
@@ -47,17 +47,10 @@ program
 
 program
   .command("upgrade")
-  .description("Upgrade OpenCode Athena configuration to latest version")
-  .option("-y, --yes", "Skip confirmation prompts", false)
-  .action(async (options) => {
-    await install({ ...options, preset: undefined, advanced: false, global: true, local: false });
-  });
-
-program
-  .command("update")
-  .description("Update OpenCode Athena to latest version")
+  .description("Upgrade OpenCode Athena to latest version")
   .option("--check", "Check for updates without installing", false)
-  .action(update);
+  .option("-y, --yes", "Skip confirmation prompts", false)
+  .action(upgrade);
 
 program
   .command("doctor")

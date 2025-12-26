@@ -47,6 +47,13 @@ export function generateAthenaConfig(answers: InstallAnswers): Record<string, un
       defaultTrack: methodology.defaultTrack,
       autoStatusUpdate: methodology.autoStatusUpdate,
       parallelStoryLimit: advanced.parallelStoryLimit ?? 3,
+      paths: {
+        stories: null,
+        sprintStatus: null,
+        prd: null,
+        architecture: null,
+        epics: null,
+      },
     },
     features: featuresToFlags(features.enabledFeatures),
     mcps: mcpsToFlags(features.mcps),

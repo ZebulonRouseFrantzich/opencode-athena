@@ -70,6 +70,54 @@ describe("migrations", () => {
       expect(features.autoGitOperations).toBe(true);
     });
 
+    it("adds bmad.paths fields when migrating from 0.7.0 to 0.8.0", () => {
+      const oldAthena = {
+        version: "0.7.0",
+        bmad: {
+          defaultTrack: "bmad-method",
+          autoStatusUpdate: true,
+          parallelStoryLimit: 3,
+          paths: {
+            stories: null,
+          },
+        },
+        features: { autoGitOperations: false },
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.7.0");
+
+      const bmad = result.athenaConfig.bmad as Record<string, unknown>;
+      const paths = bmad.paths as Record<string, unknown>;
+      expect(paths.stories).toBe(null);
+      expect(paths.sprintStatus).toBe(null);
+      expect(paths.prd).toBe(null);
+      expect(paths.architecture).toBe(null);
+      expect(paths.epics).toBe(null);
+    });
+
+    it("preserves existing bmad.paths values during migration", () => {
+      const athenaWithCustomPaths = {
+        version: "0.7.0",
+        bmad: {
+          paths: {
+            stories: "custom/stories",
+            prd: "custom/prd.md",
+          },
+        },
+        features: { autoGitOperations: false },
+      };
+
+      const result = migrateConfigs(athenaWithCustomPaths, {}, "0.7.0");
+
+      const bmad = result.athenaConfig.bmad as Record<string, unknown>;
+      const paths = bmad.paths as Record<string, unknown>;
+      expect(paths.stories).toBe("custom/stories");
+      expect(paths.prd).toBe("custom/prd.md");
+      expect(paths.sprintStatus).toBe(null);
+      expect(paths.architecture).toBe(null);
+      expect(paths.epics).toBe(null);
+    });
+
     it("tracks which migrations were applied", () => {
       const oldAthena = {
         version: "0.0.1",
@@ -130,10 +178,17 @@ describe("migrations", () => {
 
       const result = migrateConfigs(oldAthena, {}, "0.0.1");
 
-      expect(result.migrationsApplied.length).toBeGreaterThanOrEqual(3);
-      
+      expect(result.migrationsApplied.length).toBeGreaterThanOrEqual(4);
+
       const features = result.athenaConfig.features as Record<string, unknown>;
       expect(features.autoGitOperations).toBeDefined();
+
+      const bmad = result.athenaConfig.bmad as Record<string, unknown>;
+      const paths = bmad.paths as Record<string, unknown>;
+      expect(paths.sprintStatus).toBe(null);
+      expect(paths.prd).toBe(null);
+      expect(paths.architecture).toBe(null);
+      expect(paths.epics).toBe(null);
     });
 
     it("skips migrations already applied", () => {
@@ -144,9 +199,10 @@ describe("migrations", () => {
 
       const result = migrateConfigs(athena050, {}, "0.5.0");
 
-      expect(result.migrationsApplied).toHaveLength(2);
+      expect(result.migrationsApplied).toHaveLength(3);
       expect(result.migrationsApplied[0]).toContain("0.5.0 → 0.6.0");
       expect(result.migrationsApplied[1]).toContain("0.6.0 → 0.7.0");
+      expect(result.migrationsApplied[2]).toContain("0.7.0 → 0.8.0");
     });
   });
 });

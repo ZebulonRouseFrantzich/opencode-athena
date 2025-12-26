@@ -200,6 +200,35 @@ The plugin receives a `PluginContext` with:
 - All migrations create automatic backups before running
 - Migration chain supports ALL versions (from 0.0.1 to current)
 
+### Upgrade Command Architecture
+
+The `upgrade` command consolidates version checking and config migrations:
+
+**Command structure**:
+```bash
+npx opencode-athena upgrade           # Full upgrade with prompts
+npx opencode-athena upgrade --check   # Check for updates without installing
+npx opencode-athena upgrade --yes     # Skip confirmation prompts
+```
+
+**What it does**:
+1. **Version checking**: Queries npm registry for latest versions (respects release channels)
+2. **Comparison display**: Shows `current -> latest` for each package
+3. **Config migrations**: Applies necessary schema transformations
+4. **Package installation**: Installs from npm with correct version tags
+5. **Bridge commands**: Updates command files to latest
+
+**Release channel handling**:
+- Beta versions (e.g., `0.8.1-beta.2`) → checks `@beta` tag
+- Alpha versions (e.g., `0.8.1-alpha.1`) → checks `@alpha` tag
+- Stable versions (e.g., `0.8.1`) → checks `@latest` tag
+
+**Migration behavior**:
+- Migrations tied to release versions only (not beta/alpha)
+- `semver.coerce()` normalizes pre-release tags for migration logic
+- Beta-to-beta upgrades skip migrations (same base version)
+- Beta-to-release upgrades run migrations for that release
+
 ## Testing Locally
 
 ```bash

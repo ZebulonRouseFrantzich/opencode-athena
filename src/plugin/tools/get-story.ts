@@ -1,12 +1,3 @@
-/**
- * athena_get_story tool
- *
- * Loads the current BMAD story context for implementation.
- */
-
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
 import type { AthenaConfig, GetStoryResult, SprintStatus } from "../../shared/types.js";
@@ -17,6 +8,7 @@ import {
   extractRelevantPRD,
   generateImplementationInstructions,
 } from "../utils/context-builder.js";
+import { loadStoryContent } from "../utils/story-loader.js";
 import { readSprintStatus } from "../utils/yaml-handler.js";
 
 /**
@@ -25,7 +17,7 @@ import { readSprintStatus } from "../utils/yaml-handler.js";
 export function createGetStoryTool(
   ctx: PluginInput,
   tracker: StoryTracker,
-  _config: AthenaConfig
+  config: AthenaConfig
 ): ToolDefinition {
   return tool({
     description: `Load the current BMAD story context for implementation.
@@ -48,7 +40,7 @@ Use this tool before starting story implementation to get full context.`,
     },
 
     async execute(args): Promise<string> {
-      const result = await getStoryContext(ctx, tracker, args.storyId);
+      const result = await getStoryContext(ctx, tracker, config, args.storyId);
       return JSON.stringify(result, null, 2);
     },
   });
@@ -60,9 +52,10 @@ Use this tool before starting story implementation to get full context.`,
 async function getStoryContext(
   ctx: PluginInput,
   tracker: StoryTracker,
+  config: AthenaConfig,
   requestedStoryId?: string
 ): Promise<GetStoryResult> {
-  const paths = await getBmadPaths(ctx.directory);
+  const paths = await getBmadPaths(ctx.directory, config);
   if (!paths.bmadDir) {
     return {
       error: "No BMAD directory found",
@@ -155,31 +148,7 @@ function findNextPendingStory(sprint: SprintStatus): string | null {
   return null;
 }
 
-/**
- * Load story file content
- * Tries multiple naming conventions:
- * - story-{epic}-{number}.md (e.g., story-2-3.md)
- * - story-{id}.md (e.g., story-2.3.md)
- * - {id}.md (e.g., 2.3.md)
- */
 async function loadStoryFile(storiesDir: string, storyId: string): Promise<string | null> {
-  // Generate possible file names
-  const possibleNames = [
-    `story-${storyId.replace(".", "-")}.md`, // story-2-3.md
-    `story-${storyId}.md`, // story-2.3.md
-    `${storyId}.md`, // 2.3.md
-  ];
-
-  for (const fileName of possibleNames) {
-    const filePath = join(storiesDir, fileName);
-    if (existsSync(filePath)) {
-      try {
-        return await readFile(filePath, "utf-8");
-      } catch {
-        // File not readable, try next path
-      }
-    }
-  }
-
-  return null;
+  const result = await loadStoryContent(storiesDir, storyId);
+  return result?.content ?? null;
 }

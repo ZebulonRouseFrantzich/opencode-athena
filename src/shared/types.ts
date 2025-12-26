@@ -19,10 +19,11 @@ export interface InstallOptions {
 }
 
 /**
- * Options passed to the update command
+ * Options passed to the upgrade command
  */
-export interface UpdateOptions {
+export interface UpgradeOptions {
   check: boolean;
+  yes: boolean;
 }
 
 /**
@@ -229,6 +230,13 @@ export interface AthenaConfig {
     defaultTrack: "quick-flow" | "bmad-method" | "enterprise";
     autoStatusUpdate: boolean;
     parallelStoryLimit: number;
+    paths?: {
+      stories?: string | null;
+      sprintStatus?: string | null;
+      prd?: string | null;
+      architecture?: string | null;
+      epics?: string | null;
+    };
   };
   features: {
     bmadBridge: boolean;
@@ -566,6 +574,77 @@ export interface ApplyReviewDecisionsResult {
   error?: string;
 }
 
+/**
+ * Action taken on a story during decision application
+ */
+export type StoryUpdateAction = "updated" | "created" | "appended";
+
+/**
+ * Parsed defer target from user input
+ */
+export interface ParsedDeferTarget {
+  /** The target type */
+  type: "exact" | "new-end" | "new-after" | "new-before" | "append-existing";
+  /** The story ID (existing or to be created) */
+  storyId: string;
+  /** For sub-numbering: the reference story ID */
+  referenceStoryId?: string;
+  /** Original user input */
+  originalInput: string;
+}
+
+/**
+ * Result of applying updates to a single story
+ */
+export interface AppliedStoryUpdate {
+  /** Story ID (e.g., "4.1" or "4.2a") */
+  storyId: string;
+  /** Full path to the story file */
+  filePath: string;
+  /** What action was taken */
+  action: StoryUpdateAction;
+  /** Acceptance criteria added (for created/updated) */
+  addedCriteria: string[];
+  /** Implementation notes added */
+  addedNotes: string[];
+  /** Whether the operation succeeded */
+  success: boolean;
+  /** Error message if failed */
+  error?: string;
+  /** For created stories: the defer target that triggered creation */
+  deferTarget?: ParsedDeferTarget;
+}
+
+/**
+ * Complete result from applying all decisions
+ */
+export interface ApplyDecisionsResult {
+  /** Overall success (true even if some individual updates failed) */
+  success: boolean;
+  /** Stories that were updated with new criteria/notes */
+  storiesUpdated: AppliedStoryUpdate[];
+  /** New stories that were created for deferred findings */
+  storiesCreated: AppliedStoryUpdate[];
+  /** Existing stories that had findings appended */
+  storiesAppended: AppliedStoryUpdate[];
+  /** Whether the review document was updated */
+  reviewDocumentUpdated: boolean;
+  /** Path to the decisions-applied.md summary document */
+  decisionsAppliedDocument?: string;
+  /** Summary counts */
+  summary: {
+    accepted: number;
+    deferred: number;
+    rejected: number;
+    storiesModified: number;
+    storiesCreated: number;
+  };
+  /** Warnings (e.g., vague defer targets) */
+  warnings?: string[];
+  /** Error if complete failure */
+  error?: string;
+}
+
 // ============================================================================
 // Enhanced Party Review Types (3-Phase Architecture)
 // ============================================================================
@@ -727,27 +806,41 @@ export interface Phase1ContextError {
 }
 
 /**
- * Phase 1 result: Complete result after Oracle analysis with agent recommendations
+ * Phase 1 summary: Minimal result returned to agent after Oracle analysis.
+ * Large data (oracleAnalysis, storiesContent) is saved to file, not passed between tools.
  */
-export interface Phase1Result {
+export interface Phase1Summary {
   success: boolean;
   scope: ReviewScope;
   identifier: string;
-  reviewDocumentPath: string;
-  storiesContent: Array<{ id: string; title: string; content: string }>;
-  architectureContent: string;
-  findings: {
+  error?: string;
+  suggestion?: string;
+  reviewFolderPath?: string;
+  findings?: {
     total: number;
     high: number;
     medium: number;
     low: number;
     byCategory: Record<FindingCategory, number>;
   };
-  recommendedAgents: AgentRecommendation[];
-  oracleAnalysis: string;
-  error?: string;
-  suggestion?: string;
+  recommendedAgents?: AgentRecommendation[];
+  summary?: string;
 }
+
+/**
+ * Phase 1 full data: Complete data saved to analysis.json file.
+ * Includes large fields that should not be passed between tool calls.
+ */
+export interface Phase1FullData extends Phase1Summary {
+  storiesContent?: Array<{ id: string; title?: string; content: string | null }>;
+  architectureContent?: string;
+  oracleAnalysis?: string;
+}
+
+/**
+ * @deprecated Use Phase1Summary for tool returns, Phase1FullData for file storage
+ */
+export type Phase1Result = Phase1FullData;
 
 /**
  * Phase 2 result: Aggregated agent analyses
@@ -821,3 +914,322 @@ export interface ReviewSessionResult {
   }>;
   sessionNotes: string;
 }
+
+// ============================================================================
+// Phase 3: Party Discussion Types
+// ============================================================================
+
+/**
+ * Extended BMAD agent persona with full details from manifest
+ */
+export interface BmadAgentFullPersona extends BmadAgentPersona {
+  icon: string;
+  identity: string;
+  communicationStyle: string;
+  principles: string[];
+  module?: string;
+}
+
+/**
+ * Default full personas (fallback when BMAD manifest not available)
+ */
+export const BMAD_AGENT_FULL_PERSONAS: Record<BmadAgentType, BmadAgentFullPersona> = {
+  architect: {
+    type: "architect",
+    name: "Winston",
+    title: "Software Architect",
+    icon: "🏗️",
+    expertise: ["system design", "security architecture", "scalability", "technical debt"],
+    perspective: "architecture and system design",
+    identity:
+      "Senior architect with expertise in distributed systems, cloud infrastructure, and API design. Specializes in scalable patterns and technology selection.",
+    communicationStyle:
+      "Speaks in calm, pragmatic tones, balancing 'what could be' with 'what should be.' Champions boring technology that actually works.",
+    principles: [
+      "User journeys drive technical decisions",
+      "Embrace boring technology for stability",
+      "Design simple solutions that scale when needed",
+      "Developer productivity is architecture",
+    ],
+  },
+  dev: {
+    type: "dev",
+    name: "Amelia",
+    title: "Senior Developer",
+    icon: "💻",
+    expertise: ["implementation", "code quality", "debugging", "performance optimization"],
+    perspective: "implementation feasibility and code quality",
+    identity:
+      "Elite developer who thrives on clean implementations. Lives for readable code, sensible abstractions, and solutions that actually work in production.",
+    communicationStyle:
+      "Ultra-succinct. Speaks in file paths and AC IDs - every statement citable. No fluff, all precision.",
+    principles: [
+      "Code should be readable by humans first",
+      "Ship incrementally, validate continuously",
+      "Tests are documentation",
+      "Complexity is the enemy",
+    ],
+  },
+  tea: {
+    type: "tea",
+    name: "Murat",
+    title: "Test Engineer Advocate",
+    icon: "🧪",
+    expertise: ["testing strategy", "edge cases", "test automation", "quality assurance"],
+    perspective: "testability and quality assurance",
+    identity:
+      "Master test architect who sees quality as everyone's responsibility. Blends data with gut instinct to find bugs before they find users.",
+    communicationStyle:
+      "Blends data with gut instinct. 'Strong opinions, weakly held' is their mantra. Speaks in risk calculations and impact assessments.",
+    principles: [
+      "Test the behavior, not the implementation",
+      "Edge cases reveal system character",
+      "Automation enables confidence",
+      "Quality is prevention, not detection",
+    ],
+  },
+  pm: {
+    type: "pm",
+    name: "John",
+    title: "Product Manager",
+    icon: "📋",
+    expertise: ["requirements", "stakeholder needs", "prioritization", "business value"],
+    perspective: "business impact and stakeholder value",
+    identity:
+      "Investigative product strategist who asks 'WHY?' relentlessly. Connects every feature to user value and business outcomes.",
+    communicationStyle:
+      "Asks 'WHY?' relentlessly like a detective on a case. Direct and data-sharp, cuts through fluff to what actually matters.",
+    principles: [
+      "User problems drive solutions",
+      "Data informs, intuition guides",
+      "MVP means minimum VIABLE",
+      "Say no to protect yes",
+    ],
+  },
+  analyst: {
+    type: "analyst",
+    name: "Mary",
+    title: "Business Analyst",
+    icon: "📊",
+    expertise: ["requirements analysis", "user stories", "acceptance criteria", "edge cases"],
+    perspective: "requirements completeness and clarity",
+    identity:
+      "Strategic analyst who treats requirements like treasure hunts. Excited by patterns, thrilled when ambiguity becomes clarity.",
+    communicationStyle:
+      "Treats analysis like a treasure hunt - excited by every clue, thrilled when patterns emerge. Asks questions that spark 'aha!' moments.",
+    principles: [
+      "Ambiguity is the enemy of delivery",
+      "Edge cases reveal true requirements",
+      "Stakeholders often know what they need, not what they want",
+      "Document decisions, not just outcomes",
+    ],
+  },
+  "ux-designer": {
+    type: "ux-designer",
+    name: "Sally",
+    title: "UX Designer",
+    icon: "🎨",
+    expertise: ["user experience", "accessibility", "usability", "user flows"],
+    perspective: "user experience and accessibility",
+    identity:
+      "User advocate who designs experiences, not just interfaces. Champions accessibility and believes good UX is invisible.",
+    communicationStyle:
+      "Empathetic and user-focused. Uses stories and scenarios to illustrate points. Gentle but firm on accessibility.",
+    principles: [
+      "Design for the edges, the middle takes care of itself",
+      "Accessibility is not optional",
+      "Users don't read, they scan",
+      "Friction is the enemy of conversion",
+    ],
+  },
+  "tech-writer": {
+    type: "tech-writer",
+    name: "Paige",
+    title: "Technical Writer",
+    icon: "📚",
+    expertise: ["documentation", "API docs", "user guides", "clarity"],
+    perspective: "documentation and clarity",
+    identity:
+      "Knowledge curator who makes complex simple. Believes documentation is a product feature, not an afterthought.",
+    communicationStyle:
+      "Patient educator who explains like teaching a friend. Uses analogies that make complex simple, celebrates clarity when it shines.",
+    principles: [
+      "If it's not documented, it doesn't exist",
+      "Good docs prevent support tickets",
+      "Examples are worth a thousand words",
+      "Write for the reader, not the writer",
+    ],
+  },
+  sm: {
+    type: "sm",
+    name: "Bob",
+    title: "Scrum Master",
+    icon: "🎯",
+    expertise: ["process", "team dynamics", "sprint planning", "blockers"],
+    perspective: "process and team coordination",
+    identity:
+      "Servant leader who removes blockers and protects team focus. Facilitates rather than dictates.",
+    communicationStyle:
+      "Facilitative and inclusive. Asks powerful questions rather than giving answers. Celebrates team wins.",
+    principles: [
+      "The team knows best",
+      "Process serves people, not vice versa",
+      "Blockers are opportunities for improvement",
+      "Sustainable pace enables sustainable delivery",
+    ],
+  },
+};
+
+/**
+ * Input for the party discussion tool
+ */
+export interface PartyDiscussionInput {
+  /** Phase 1 results with Oracle findings */
+  phase1Result: Phase1Result;
+  /** Phase 2 agent analyses */
+  phase2Result: Phase2Result;
+  /** Stories content for context */
+  storiesContent: Array<{ id: string; content: string }>;
+  /** Optional: specific findings to discuss (defaults to all high severity + disputed) */
+  findingsToDiscuss?: string[];
+}
+
+/**
+ * A single agent's response in a discussion round
+ */
+export interface AgentDiscussionResponse {
+  agent: BmadAgentType;
+  agentName: string;
+  icon: string;
+  response: string;
+  /** References to other agents in cross-talk */
+  references?: Array<{
+    agent: BmadAgentType;
+    type: "agrees" | "disagrees" | "builds-on" | "questions";
+  }>;
+  /** Key points extracted from response */
+  keyPoints: string[];
+}
+
+/**
+ * A complete discussion round for a single finding
+ */
+export interface DiscussionRound {
+  findingId: string;
+  findingTitle: string;
+  findingSeverity: FindingSeverity;
+  findingCategory: FindingCategory;
+  /** Agents who participated in this round */
+  participants: BmadAgentType[];
+  /** Agent responses in order */
+  responses: AgentDiscussionResponse[];
+  /** User's decision for this finding */
+  decision?: ReviewDecision;
+  /** User's reasoning for the decision */
+  decisionReason?: string;
+  /** If deferred, where to */
+  deferredTo?: string;
+}
+
+/**
+ * Discussion agenda item
+ */
+export interface DiscussionAgendaItem {
+  id: string;
+  findingId: string;
+  topic: string;
+  type: "high-severity" | "disputed" | "cross-story" | "consensus";
+  severity: FindingSeverity;
+  category: FindingCategory;
+  /** Agents relevant to this topic */
+  relevantAgents: BmadAgentType[];
+  /** Pre-existing agent positions from Phase 2 */
+  agentPositions: Partial<Record<BmadAgentType, string>>;
+  /** Whether this item has been discussed */
+  discussed: boolean;
+  /** The discussion round if discussed */
+  round?: DiscussionRound;
+}
+
+/**
+ * Current state of the party discussion
+ */
+export interface PartyDiscussionState {
+  /** Unique session ID */
+  sessionId: string;
+  /** Review scope */
+  scope: ReviewScope;
+  /** Epic or story identifier */
+  identifier: string;
+  /** Current agenda items */
+  agenda: DiscussionAgendaItem[];
+  /** Index of current agenda item */
+  currentItemIndex: number;
+  /** Completed discussion rounds */
+  completedRounds: DiscussionRound[];
+  /** Participating agents for this session */
+  activeAgents: BmadAgentType[];
+  /** When the discussion started */
+  startedAt: string;
+  /** Phase data for context */
+  phase1Summary: Phase1Result["findings"];
+  phase2Summary?: {
+    consensusCount: number;
+    disputeCount: number;
+  };
+}
+
+/**
+ * Result from the party discussion tool
+ */
+export interface PartyDiscussionResult {
+  success: boolean;
+  /** Session ID for continuation */
+  sessionId: string;
+  /** Current state of the discussion */
+  state: PartyDiscussionState;
+  /** Current agenda item to display */
+  currentItem?: DiscussionAgendaItem;
+  /** Agent responses for current item (if generating discussion) */
+  currentResponses?: AgentDiscussionResponse[];
+  /** Summary when discussion is complete */
+  summary?: {
+    totalDiscussed: number;
+    decisions: {
+      accepted: number;
+      deferred: number;
+      rejected: number;
+      pending: number;
+    };
+    /** @deprecated Use appliedUpdates instead - updates are now applied automatically */
+    storyUpdatesNeeded: Array<{
+      storyId: string;
+      additions: string[];
+    }>;
+  };
+  /** Result of automatically applying decisions to stories (on "end" action) */
+  appliedUpdates?: ApplyDecisionsResult;
+  /** Whether more items remain */
+  hasMoreItems: boolean;
+  /** Error if failed */
+  error?: string;
+  /** Suggestion for resolving error */
+  suggestion?: string;
+}
+
+/**
+ * Action to take in party discussion
+ */
+export type PartyDiscussionAction =
+  | { type: "start"; input: PartyDiscussionInput }
+  | { type: "continue"; sessionId: string }
+  | {
+      type: "decide";
+      sessionId: string;
+      findingId: string;
+      decision: ReviewDecision;
+      reason?: string;
+      deferredTo?: string;
+    }
+  | { type: "skip"; sessionId: string; findingId: string }
+  | { type: "end"; sessionId: string };

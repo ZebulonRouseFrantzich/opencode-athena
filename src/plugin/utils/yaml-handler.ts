@@ -217,16 +217,84 @@ export async function writeSprintStatus(filePath: string, status: SprintStatus):
   }
 }
 
-/**
- * Merge two sprint status objects when concurrent modification is detected
- *
- * This function intelligently merges changes from both versions,
- * preferring the newer status for each story.
- *
- * @param current - The current state from disk
- * @param incoming - The state we're trying to write
- * @returns Merged sprint status
- */
+function parseStoryIdForSort(storyId: string): { epic: number; num: number; suffix: string } {
+  const match = storyId.match(/^(\d+)[.-](\d+)([a-z]*)$/i);
+  if (!match) {
+    return { epic: 0, num: 0, suffix: "" };
+  }
+  return {
+    epic: Number.parseInt(match[1], 10),
+    num: Number.parseInt(match[2], 10),
+    suffix: match[3].toLowerCase(),
+  };
+}
+
+function compareStoryIds(a: string, b: string): number {
+  const parsedA = parseStoryIdForSort(a);
+  const parsedB = parseStoryIdForSort(b);
+
+  if (parsedA.epic !== parsedB.epic) {
+    return parsedA.epic - parsedB.epic;
+  }
+
+  if (parsedA.num !== parsedB.num) {
+    return parsedA.num - parsedB.num;
+  }
+
+  return parsedA.suffix.localeCompare(parsedB.suffix);
+}
+
+export function insertStoryInOrder(stories: string[], newStoryId: string): string[] {
+  const normalizedId = newStoryId.replace(".", "-");
+
+  if (stories.includes(normalizedId)) {
+    return stories;
+  }
+
+  const result = [...stories, normalizedId];
+  result.sort(compareStoryIds);
+  return result;
+}
+
+export async function addStoryToSprintStatus(
+  filePath: string,
+  storyId: string,
+  status: "pending" | "backlog" = "backlog"
+): Promise<void> {
+  const currentStatus = await readSprintStatus(filePath);
+  if (!currentStatus) {
+    return;
+  }
+
+  const normalizedId = storyId.replace(".", "-");
+
+  const isInAnyArray =
+    currentStatus.completed_stories?.includes(normalizedId) ||
+    currentStatus.pending_stories?.includes(normalizedId) ||
+    currentStatus.in_progress_stories?.includes(normalizedId) ||
+    currentStatus.blocked_stories?.includes(normalizedId);
+
+  if (isInAnyArray) {
+    return;
+  }
+
+  currentStatus.pending_stories = insertStoryInOrder(
+    currentStatus.pending_stories || [],
+    normalizedId
+  );
+
+  if (!currentStatus.story_updates) {
+    currentStatus.story_updates = {};
+  }
+  currentStatus.story_updates[normalizedId] = {
+    status: status === "backlog" ? "pending" : "pending",
+    updated_at: new Date().toISOString(),
+    notes: "Added from party review deferred findings",
+  };
+
+  await writeSprintStatus(filePath, currentStatus);
+}
+
 function mergeSprintStatus(current: SprintStatus, incoming: SprintStatus): SprintStatus {
   // Start with current state
   const merged: SprintStatus = { ...current };

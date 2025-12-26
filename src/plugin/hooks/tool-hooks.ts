@@ -6,6 +6,9 @@
 
 import type { AthenaConfig } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
+import { createPluginLogger } from "../utils/plugin-logger.js";
+
+const log = createPluginLogger("tool-hooks");
 
 interface BeforeHookInput {
   tool: string;
@@ -104,6 +107,7 @@ export function createToolHooks(_tracker: StoryTracker, config: AthenaConfig) {
         const command = getBashCommand(output.metadata);
 
         if (containsGitWriteCommand(command)) {
+          log.warn("Git write operation detected", { command: command.slice(0, 100) });
           output.output +=
             "\n\n⚠️ ATHENA GIT OPERATIONS POLICY REMINDER:\n" +
             "Git operations should only be performed when explicitly requested by the user.\n" +

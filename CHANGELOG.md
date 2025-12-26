@@ -40,6 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Upgrade Command Consolidation**
+  - Consolidated and removed `update` command - use `upgrade` instead
+  - `upgrade` now checks npm registry for latest versions before upgrading
+  - Added `--check` flag to `upgrade` for dry-run version checking
+  - `upgrade` shows current → latest version comparison for all packages
+  - Respects release channels (beta/alpha/latest) when checking for updates
+  - Automatically installs correct package versions from npm registry
+  - Fixed critical bug where upgrade didn't install npm packages
+
 - Updated all presets with `githubCopilot` subscription support
 - Updated JSON schema with `agentSettings` and `customModel` definitions
 - Config loader now provides backwards compatibility for missing `githubCopilot` config

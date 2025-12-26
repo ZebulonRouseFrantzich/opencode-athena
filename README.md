@@ -148,7 +148,7 @@ The `/athena-review-story` command runs a comprehensive "party review" of storie
                     ▼
 ┌─────────────────────────────────────────┐
 │  PHASE 3: Informed Discussion           │
-│  • BMAD *party-mode with pre-context    │
+│  • Athena party discussion orchestration│
 │  • Interactive agent debate             │
 │  • Decisions captured to story files    │
 └─────────────────────────────────────────┘
@@ -178,7 +178,7 @@ Agents are recommended based on finding types:
 ### Quick vs Full Review
 
 - **Quick Review [Q]**: Accept Phase 1 findings, skip discussion. Best for low-severity issues.
-- **Full Discussion [D]**: Run Phases 2-3 with parallel agents and party-mode debate. Best for complex or high-severity findings.
+- **Full Discussion [D]**: Run Phases 2-3 with parallel agents and informed discussion. Best for complex or high-severity findings.
 
 ## Configuration
 
@@ -334,6 +334,75 @@ Version control is critical. Automatic commits can:
 
 With `autoGitOperations: false`, agents track progress via `athena_update_status()` instead, which updates `sprint-status.yaml` without git operations.
 
+### BMAD Path Overrides
+
+By default, Athena auto-detects BMAD file locations using BMAD METHOD v6 conventions. However, you can override any file path if your project uses non-standard locations or naming conventions.
+
+**Automatic detection features:**
+- ✅ Case-insensitive search (finds `prd.md`, `PRD.md`, `Prd.md`)
+- ✅ Multiple search paths (planning-artifacts, docs, sprint-artifacts)
+- ✅ Nested vs flat story structures
+
+**Override paths when needed:**
+
+```json
+{
+  "bmad": {
+    "paths": {
+      "stories": "custom/stories",
+      "sprintStatus": "custom/sprint.yaml",
+      "prd": "planning/requirements.md",
+      "architecture": "design/system-arch.md",
+      "epics": "backlog/epic-list.md"
+    }
+  }
+}
+```
+
+**Available path overrides:**
+
+| Field | Default Detection | Example Override |
+|-------|-------------------|------------------|
+| `stories` | `docs/implementation-artifacts/stories/` or `docs/sprint-artifacts/` (flat structure) | `"dev/user-stories"` |
+| `sprintStatus` | `sprint-status.yaml` in implementation or sprint artifacts | `"status/current-sprint.yaml"` |
+| `prd` | `PRD.md` (case-insensitive) in planning artifacts or docs | `"planning/product-requirements.md"` |
+| `architecture` | `architecture.md` (case-insensitive) in planning artifacts or docs | `"docs/system-design.md"` |
+| `epics` | `epics.md` (case-insensitive) in planning artifacts or docs | `"backlog/epic-definitions.md"` |
+
+**Path format:**
+- All paths are relative to project root
+- Use forward slashes (`/`) even on Windows
+- Set to `null` to use automatic detection (default)
+
+**Use case example:**
+
+If your project has a non-standard structure:
+```
+my-project/
+├── planning/
+│   ├── requirements.md       # Instead of PRD.md
+│   └── system-design.md      # Instead of architecture.md
+└── dev/
+    ├── sprint-status.yaml
+    └── stories/
+        ├── story-1-1.md
+        └── story-1-2.md
+```
+
+Configure overrides:
+```json
+{
+  "bmad": {
+    "paths": {
+      "stories": "dev/stories",
+      "sprintStatus": "dev/sprint-status.yaml",
+      "prd": "planning/requirements.md",
+      "architecture": "planning/system-design.md"
+    }
+  }
+}
+```
+
 ## GitHub Copilot Support
 
 Athena supports GitHub Copilot as a model provider, allowing you to use Claude, GPT, and Gemini models through your Copilot subscription. This is especially useful for enterprise users who only have access to LLMs through Copilot.
@@ -393,7 +462,7 @@ For full model capabilities, use direct provider subscriptions when possible.
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                         CLI Installer                                │   │
 │  │   npx opencode-athena install    npx opencode-athena doctor         │   │
-│  │   npx opencode-athena update     npx opencode-athena uninstall      │   │
+│  │   npx opencode-athena upgrade    npx opencode-athena uninstall      │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
