@@ -282,4 +282,115 @@ describe("persona-loader", () => {
       expect(agents.length).toBeLessThanOrEqual(3);
     });
   });
+
+  describe("error handling", () => {
+    it("should handle file read errors gracefully", async () => {
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { _testExports } = await import("../../src/plugin/utils/persona-loader.js");
+      const nonexistentPath = "/nonexistent/path/dev.agent.yaml";
+
+      const result = await _testExports.parseAgentYaml(nonexistentPath);
+
+      expect(result).toBeNull();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`Failed to parse agent YAML at ${nonexistentPath}`)
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it("should handle malformed YAML gracefully", async () => {
+      vi.doMock("node:fs/promises", async () => {
+        const actual = await vi.importActual<typeof import("node:fs/promises")>(
+          "node:fs/promises"
+        );
+        return {
+          ...actual,
+          readFile: vi.fn().mockResolvedValue("invalid: yaml: content: [unclosed"),
+        };
+      });
+
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      vi.resetModules();
+      const { _testExports } = await import("../../src/plugin/utils/persona-loader.js");
+
+      const result = await _testExports.parseAgentYaml(
+        join(FIXTURES_DIR, "dev.agent.yaml")
+      );
+
+      expect(result).toBeNull();
+      expect(consoleWarnSpy).toHaveBeenCalled();
+
+      consoleWarnSpy.mockRestore();
+      vi.doUnmock("node:fs/promises");
+      vi.resetModules();
+    });
+
+    it("should handle empty YAML files gracefully", async () => {
+      vi.doMock("node:fs/promises", async () => {
+        const actual = await vi.importActual<typeof import("node:fs/promises")>(
+          "node:fs/promises"
+        );
+        return {
+          ...actual,
+          readFile: vi.fn().mockResolvedValue(""),
+        };
+      });
+
+      vi.resetModules();
+      const { _testExports } = await import("../../src/plugin/utils/persona-loader.js");
+
+      const result = await _testExports.parseAgentYaml(
+        join(FIXTURES_DIR, "dev.agent.yaml")
+      );
+
+      expect(result).toBeNull();
+
+      vi.doUnmock("node:fs/promises");
+      vi.resetModules();
+    });
+
+    it("should handle YAML missing required fields", async () => {
+      vi.doMock("node:fs/promises", async () => {
+        const actual = await vi.importActual<typeof import("node:fs/promises")>(
+          "node:fs/promises"
+        );
+        return {
+          ...actual,
+          readFile: vi.fn().mockResolvedValue("agent:\n  metadata:\n    id: test"),
+        };
+      });
+
+      vi.resetModules();
+      const { _testExports } = await import("../../src/plugin/utils/persona-loader.js");
+
+      const result = await _testExports.parseAgentYaml(
+        join(FIXTURES_DIR, "dev.agent.yaml")
+      );
+
+      expect(result).toBeNull();
+
+      vi.doUnmock("node:fs/promises");
+      vi.resetModules();
+    });
+
+    it("should fall back to built-in personas when all agent files fail to parse", async () => {
+      mockFindAgentFiles.mockResolvedValue([
+        join(FIXTURES_DIR, "nonexistent1.agent.yaml"),
+        join(FIXTURES_DIR, "nonexistent2.agent.yaml"),
+      ]);
+
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const { loadPersonas } = await import("../../src/plugin/utils/persona-loader.js");
+      const result = await loadPersonas("/test/project");
+
+      expect(result.size).toBeGreaterThan(0);
+      expect(result.get("architect")).toBeDefined();
+      expect(result.get("dev")).toBeDefined();
+
+      consoleWarnSpy.mockRestore();
+    });
+  });
 });

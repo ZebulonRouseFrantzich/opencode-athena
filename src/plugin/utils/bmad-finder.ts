@@ -314,31 +314,47 @@ export async function findManifest(projectRoot: string): Promise<string | null> 
 
   const bmadDir = await findBmadDir(projectRoot);
   if (bmadDir) {
-    const files = await new fdir()
-      .withMaxDepth(3)
-      .withBasePath()
-      .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
-      .filter((path) => path.endsWith("agent-manifest.csv"))
-      .crawl(bmadDir)
-      .withPromise();
+    try {
+      const files = await new fdir()
+        .withMaxDepth(3)
+        .withBasePath()
+        .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
+        .filter((path) => path.endsWith("agent-manifest.csv"))
+        .crawl(bmadDir)
+        .withPromise();
 
-    if (files.length > 0) {
-      manifestCache.set(projectRoot, files[0]);
-      return files[0];
+      if (files.length > 0) {
+        manifestCache.set(projectRoot, files[0]);
+        return files[0];
+      }
+    } catch (error) {
+      console.warn(
+        `[Athena] Failed to search for manifest in ${bmadDir}:`,
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 
-  const projectFiles = await new fdir()
-    .withMaxDepth(5)
-    .withBasePath()
-    .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
-    .filter((path) => path.endsWith("agent-manifest.csv"))
-    .crawl(projectRoot)
-    .withPromise();
+  try {
+    const projectFiles = await new fdir()
+      .withMaxDepth(5)
+      .withBasePath()
+      .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
+      .filter((path) => path.endsWith("agent-manifest.csv"))
+      .crawl(projectRoot)
+      .withPromise();
 
-  const result = projectFiles.length > 0 ? projectFiles[0] : null;
-  manifestCache.set(projectRoot, result);
-  return result;
+    const result = projectFiles.length > 0 ? projectFiles[0] : null;
+    manifestCache.set(projectRoot, result);
+    return result;
+  } catch (error) {
+    console.warn(
+      `[Athena] Failed to search for manifest in ${projectRoot}:`,
+      error instanceof Error ? error.message : String(error)
+    );
+    manifestCache.set(projectRoot, null);
+    return null;
+  }
 }
 
 export function clearManifestCache(): void {
@@ -354,45 +370,68 @@ export async function findAgentFiles(projectRoot: string): Promise<string[]> {
   for (const knownDir of KNOWN_AGENT_DIRS) {
     const fullPath = join(projectRoot, knownDir);
     if (existsSync(fullPath)) {
-      const files = await new fdir()
-        .withBasePath()
-        .filter((path) => path.endsWith(".agent.yaml"))
-        .crawl(fullPath)
-        .withPromise();
+      try {
+        const files = await new fdir()
+          .withBasePath()
+          .filter((path) => path.endsWith(".agent.yaml"))
+          .crawl(fullPath)
+          .withPromise();
 
-      if (files.length > 0) {
-        agentFilesCache.set(projectRoot, files);
-        return files;
+        if (files.length > 0) {
+          agentFilesCache.set(projectRoot, files);
+          return files;
+        }
+      } catch (error) {
+        console.warn(
+          `[Athena] Failed to search for agent files in ${fullPath}:`,
+          error instanceof Error ? error.message : String(error)
+        );
       }
     }
   }
 
   const bmadDir = await findBmadDir(projectRoot);
   if (bmadDir) {
-    const files = await new fdir()
-      .withMaxDepth(5)
-      .withBasePath()
-      .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
-      .filter((path) => path.endsWith(".agent.yaml"))
-      .crawl(bmadDir)
-      .withPromise();
+    try {
+      const files = await new fdir()
+        .withMaxDepth(5)
+        .withBasePath()
+        .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
+        .filter((path) => path.endsWith(".agent.yaml"))
+        .crawl(bmadDir)
+        .withPromise();
 
-    if (files.length > 0) {
-      agentFilesCache.set(projectRoot, files);
-      return files;
+      if (files.length > 0) {
+        agentFilesCache.set(projectRoot, files);
+        return files;
+      }
+    } catch (error) {
+      console.warn(
+        `[Athena] Failed to search for agent files in ${bmadDir}:`,
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 
-  const projectFiles = await new fdir()
-    .withMaxDepth(6)
-    .withBasePath()
-    .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
-    .filter((path) => path.endsWith(".agent.yaml") && path.includes("/agents/"))
-    .crawl(projectRoot)
-    .withPromise();
+  try {
+    const projectFiles = await new fdir()
+      .withMaxDepth(6)
+      .withBasePath()
+      .exclude((dirName) => MANIFEST_SEARCH_EXCLUDE_DIRS.has(dirName))
+      .filter((path) => path.endsWith(".agent.yaml") && path.includes("/agents/"))
+      .crawl(projectRoot)
+      .withPromise();
 
-  agentFilesCache.set(projectRoot, projectFiles);
-  return projectFiles;
+    agentFilesCache.set(projectRoot, projectFiles);
+    return projectFiles;
+  } catch (error) {
+    console.warn(
+      `[Athena] Failed to search for agent files in ${projectRoot}:`,
+      error instanceof Error ? error.message : String(error)
+    );
+    agentFilesCache.set(projectRoot, []);
+    return [];
+  }
 }
 
 export function clearAgentFilesCache(): void {

@@ -62,6 +62,12 @@ export function synthesizeAgentResponses(analyses: AgentAnalysis[]): Synthesized
   };
 }
 
+function calculateConsensusThreshold(totalAgents: number): number {
+  const minimumAgents = 2;
+  const proportionalThreshold = Math.ceil(totalAgents * 0.5);
+  return Math.max(minimumAgents, proportionalThreshold);
+}
+
 function findConsensusPoints(analyses: AgentAnalysis[]): ConsensusPoint[] {
   const concernMap = new Map<string, { agents: BmadAgentType[]; positions: string[] }>();
 
@@ -83,9 +89,11 @@ function findConsensusPoints(analyses: AgentAnalysis[]): ConsensusPoint[] {
     }
   }
 
+  const consensusThreshold = calculateConsensusThreshold(analyses.length);
   const consensusPoints: ConsensusPoint[] = [];
+
   for (const [_, data] of concernMap) {
-    if (data.agents.length >= 2) {
+    if (data.agents.length >= consensusThreshold) {
       consensusPoints.push({
         topic: data.positions[0],
         agents: data.agents,

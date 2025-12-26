@@ -1,4 +1,4 @@
-import type { BmadAgentType, FindingCategory, FindingSeverity } from "../../shared/types.js";
+import type { BmadAgentType, FindingCategory } from "../../shared/types.js";
 
 export interface FindingCounts {
   total: number;
@@ -25,36 +25,6 @@ const AGENT_EXPERTISE: Record<BmadAgentType, FindingCategory[]> = {
   "tech-writer": ["bestPractices"],
   sm: ["bestPractices"],
 };
-
-export function selectAgentsForFinding(
-  category: FindingCategory,
-  severity: FindingSeverity
-): BmadAgentType[] {
-  const agents: BmadAgentType[] = [];
-
-  switch (category) {
-    case "security":
-      agents.push("architect", "dev", "tea");
-      break;
-    case "logic":
-      agents.push("dev", "tea", "analyst");
-      break;
-    case "performance":
-      agents.push("architect", "dev");
-      break;
-    case "bestPractices":
-      agents.push("dev", "tech-writer");
-      break;
-    default:
-      agents.push("dev", "architect");
-  }
-
-  if (severity === "high" && !agents.includes("pm")) {
-    agents.push("pm");
-  }
-
-  return agents.slice(0, 4);
-}
 
 export function selectAgentsForReview(findings: FindingCounts): AgentRecommendation[] {
   const recommendations: AgentRecommendation[] = [];

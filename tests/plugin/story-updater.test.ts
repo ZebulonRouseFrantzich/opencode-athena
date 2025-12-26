@@ -274,4 +274,176 @@ Some notes`);
       }
     });
   });
+
+  describe("content structure validation", () => {
+    it("should add acceptance criteria in correct format after existing criteria", async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`# Story 2.3
+
+## Acceptance Criteria
+- [ ] Existing criterion 1
+- [ ] Existing criterion 2
+
+## Technical Notes
+Some notes`);
+      mockWriteFile.mockResolvedValue(undefined);
+
+      const round = createMockRound({
+        findingId: "story-2-3-high-1",
+        findingTitle: "Fix authentication vulnerability",
+        findingCategory: "security",
+        decision: "accept",
+      });
+      const state = createMockState([round]);
+
+      const { applyDecisions } = await import("../../src/plugin/utils/story-updater.js");
+      await applyDecisions("/test/project", state);
+
+      expect(mockWriteFile).toHaveBeenCalled();
+      const writtenContent = mockWriteFile.mock.calls[0][1] as string;
+
+      expect(writtenContent).toMatch(/## Acceptance Criteria\n- \[ \] Existing criterion 1/);
+      expect(writtenContent).toContain("### From Party Review");
+      expect(writtenContent).toContain("- [ ] [Security]: Fix authentication vulnerability");
+      
+      const partyReviewIndex = writtenContent.indexOf("### From Party Review");
+      const technicalNotesIndex = writtenContent.indexOf("## Technical Notes");
+      expect(partyReviewIndex).toBeGreaterThan(-1);
+      expect(technicalNotesIndex).toBeGreaterThan(-1);
+      expect(partyReviewIndex).toBeLessThan(technicalNotesIndex);
+    });
+
+    it("should properly format implementation notes with all required fields", async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`# Story 2.3
+
+## Acceptance Criteria
+- [ ] Existing criterion`);
+      mockWriteFile.mockResolvedValue(undefined);
+
+      const round = createMockRound({
+        findingId: "story-2-3-high-1",
+        findingTitle: "Validate input parameters",
+        findingCategory: "logic",
+        findingSeverity: "high",
+        decision: "defer",
+        decisionReason: "Will address in next sprint",
+        deferredTo: "2.5",
+      });
+      const state = createMockState([round]);
+
+      const { applyDecisions } = await import("../../src/plugin/utils/story-updater.js");
+      await applyDecisions("/test/project", state);
+
+      expect(mockWriteFile).toHaveBeenCalled();
+      const writtenContent = mockWriteFile.mock.calls[0][1] as string;
+
+      expect(writtenContent).toMatch(/## Implementation Notes\n\n### Validate input parameters \(\d{4}-\d{2}-\d{2}\)/);
+      expect(writtenContent).toContain("- **Category**: logic");
+      expect(writtenContent).toContain("- **Severity**: high");
+      expect(writtenContent).toContain("- **Decision**: defer");
+      expect(writtenContent).toContain("- **Reason**: Will address in next sprint");
+      expect(writtenContent).toContain("- **Deferred to**: Story 2.5");
+    });
+
+    it("should handle empty acceptance criteria section gracefully", async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`# Story 2.3
+
+## Acceptance Criteria
+
+## Technical Notes
+Some notes`);
+      mockWriteFile.mockResolvedValue(undefined);
+
+      const round = createMockRound({
+        findingId: "story-2-3-high-1",
+        decision: "accept",
+      });
+      const state = createMockState([round]);
+
+      const { applyDecisions } = await import("../../src/plugin/utils/story-updater.js");
+      await applyDecisions("/test/project", state);
+
+      expect(mockWriteFile).toHaveBeenCalled();
+      const writtenContent = mockWriteFile.mock.calls[0][1] as string;
+
+      expect(writtenContent).toContain("### From Party Review");
+      expect(writtenContent).toContain("- [ ] [Security]:");
+    });
+
+    it("should append to existing implementation notes without duplicating header", async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`# Story 2.3
+
+## Acceptance Criteria
+- [ ] Existing criterion
+
+## Implementation Notes
+
+### Existing note (2025-01-01)
+Some existing note content`);
+      mockWriteFile.mockResolvedValue(undefined);
+
+      const round = createMockRound({
+        findingId: "story-2-3-high-1",
+        findingTitle: "Add caching layer",
+        decision: "accept",
+      });
+      const state = createMockState([round]);
+
+      const { applyDecisions } = await import("../../src/plugin/utils/story-updater.js");
+      await applyDecisions("/test/project", state);
+
+      expect(mockWriteFile).toHaveBeenCalled();
+      const writtenContent = mockWriteFile.mock.calls[0][1] as string;
+
+      const headerMatches = writtenContent.match(/## Implementation Notes/g);
+      expect(headerMatches).toHaveLength(1);
+
+      expect(writtenContent).toContain("### Existing note");
+      expect(writtenContent).toContain("### Add caching layer");
+    });
+
+    it("should handle multiple category prefixes correctly", async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`# Story 2.3
+
+## Acceptance Criteria
+- [ ] Existing criterion`);
+      mockWriteFile.mockResolvedValue(undefined);
+
+      const rounds = [
+        createMockRound({
+          findingId: "story-2-3-high-1",
+          findingTitle: "Security issue",
+          findingCategory: "security",
+          decision: "accept",
+        }),
+        createMockRound({
+          findingId: "story-2-3-high-2",
+          findingTitle: "Performance issue",
+          findingCategory: "performance",
+          decision: "accept",
+        }),
+        createMockRound({
+          findingId: "story-2-3-medium-1",
+          findingTitle: "Code quality issue",
+          findingCategory: "bestPractices",
+          decision: "accept",
+        }),
+      ];
+      const state = createMockState(rounds);
+
+      const { applyDecisions } = await import("../../src/plugin/utils/story-updater.js");
+      await applyDecisions("/test/project", state);
+
+      expect(mockWriteFile).toHaveBeenCalled();
+      const writtenContent = mockWriteFile.mock.calls[0][1] as string;
+
+      expect(writtenContent).toContain("- [ ] [Security]: Security issue");
+      expect(writtenContent).toContain("- [ ] [Performance]: Performance issue");
+      expect(writtenContent).toContain("- [ ] [Quality]: Code quality issue");
+    });
+  });
 });

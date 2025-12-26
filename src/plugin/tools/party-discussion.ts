@@ -50,6 +50,16 @@ function cleanupStaleSessions(): void {
     activeSessions.delete(id);
   }
 
+  const capacityThreshold = Math.ceil(MAX_SESSIONS * 0.8);
+  if (activeSessions.size >= capacityThreshold && activeSessions.size < MAX_SESSIONS) {
+    log.warn("Party discussion session capacity warning", {
+      currentSessions: activeSessions.size,
+      maxSessions: MAX_SESSIONS,
+      utilizationPercent: Math.round((activeSessions.size / MAX_SESSIONS) * 100),
+      message: "Approaching session limit. Oldest sessions will be evicted when limit is reached.",
+    });
+  }
+
   if (activeSessions.size > MAX_SESSIONS) {
     const sortedSessions = Array.from(activeSessions.entries()).sort(
       (a, b) => a[1].lastAccessedAt - b[1].lastAccessedAt
@@ -656,7 +666,7 @@ async function executePartyDiscussion(
       }
 
       const nextItem = state.agenda[state.currentItemIndex];
-      const phase2Stub: Phase2Result = {
+      const emptyPhase2Result: Phase2Result = {
         success: true,
         identifier: state.identifier,
         agentAnalyses: [],
@@ -665,7 +675,7 @@ async function executePartyDiscussion(
         aggregatedPriorities: [],
       };
 
-      const responses = await generateAgentResponses(nextItem, personas, phase2Stub);
+      const responses = await generateAgentResponses(nextItem, personas, emptyPhase2Result);
 
       return {
         success: true,

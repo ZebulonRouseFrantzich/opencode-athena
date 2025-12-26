@@ -52,6 +52,15 @@ function parsePrinciples(principlesText: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Parse a BMAD agent YAML file into a persona object.
+ *
+ * YAML-to-TypeScript field mappings:
+ * - agent.persona.role → persona.perspective
+ * - agent.persona.communication_style → persona.communicationStyle
+ *
+ * Falls back to built-in personas for missing or invalid fields.
+ */
 async function parseAgentYaml(
   filePath: string
 ): Promise<{ type: BmadAgentType; persona: BmadAgentFullPersona } | null> {
