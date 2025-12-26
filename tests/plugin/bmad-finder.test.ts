@@ -30,11 +30,14 @@ vi.mock("fdir", () => ({
 }));
 
 import { existsSync } from "node:fs";
-import { readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
+import { parse as parseYaml } from "yaml";
 import { getBmadPaths } from "../../src/plugin/utils/bmad-finder.js";
 
 const mockExistsSync = vi.mocked(existsSync);
 const mockReaddir = vi.mocked(readdir);
+const mockReadFile = vi.mocked(readFile);
+const mockParseYaml = vi.mocked(parseYaml);
 
 describe("bmad-finder", () => {
   beforeEach(() => {
@@ -592,6 +595,178 @@ describe("bmad-finder", () => {
       expect(paths.architecture).toContain("/architecture.md");
       expect(paths.epics).toContain("/epics.md");
       expect(paths.sprintStatus).toContain("/sprint-status.yaml");
+    });
+  });
+
+  describe("BMAD placeholder expansion", () => {
+    it("should expand {project-root}/ prefix in sprint_artifacts", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/docs")) return true;
+        if (pathStr.includes("/sprint-artifacts")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockImplementation((async (path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.endsWith("/sprint-artifacts") && !pathStr.includes("/stories")) {
+          return ["story-4-1.md", "story-4-2.md"] as any;
+        }
+        return [] as any;
+      }) as any);
+
+      mockReadFile.mockImplementation((async (path: any) => {
+        if (path.toString().includes("config.yaml")) {
+          return "sprint_artifacts: '{project-root}/docs/sprint-artifacts'" as any;
+        }
+        return "" as any;
+      }) as any);
+
+      mockParseYaml.mockReturnValue({
+        sprint_artifacts: "{project-root}/docs/sprint-artifacts",
+      });
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.implementationDir).toBe(`${projectRoot}/docs/sprint-artifacts`);
+      expect(paths.storiesDir).toBe(`${projectRoot}/docs/sprint-artifacts`);
+    });
+
+    it("should expand {project-root}/ prefix in planning_artifacts", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/docs")) return true;
+        if (pathStr.includes("/planning")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockResolvedValue([] as any);
+
+      mockReadFile.mockImplementation((async (path: any) => {
+        if (path.toString().includes("config.yaml")) {
+          return "planning_artifacts: '{project-root}/docs/planning'" as any;
+        }
+        return "" as any;
+      }) as any);
+
+      mockParseYaml.mockReturnValue({
+        planning_artifacts: "{project-root}/docs/planning",
+      });
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.planningDir).toBe(`${projectRoot}/docs/planning`);
+    });
+
+    it("should handle paths without {project-root} placeholder", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/docs")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockResolvedValue([] as any);
+
+      mockReadFile.mockImplementation((async (path: any) => {
+        if (path.toString().includes("config.yaml")) {
+          return "sprint_artifacts: 'docs/sprint-artifacts'" as any;
+        }
+        return "" as any;
+      }) as any);
+
+      mockParseYaml.mockReturnValue({
+        sprint_artifacts: "docs/sprint-artifacts",
+      });
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.implementationDir).toBe(`${projectRoot}/docs/sprint-artifacts`);
+    });
+  });
+
+  describe("legacy fallback story detection", () => {
+    it("should find stories in docs/sprint-artifacts when not in implementation-artifacts", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/docs")) return true;
+        if (pathStr.includes("/implementation-artifacts")) return true;
+        if (pathStr.includes("/sprint-artifacts")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockImplementation((async (path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.endsWith("/sprint-artifacts") && !pathStr.includes("/implementation")) {
+          return ["4-1-fastify-setup.md", "4-2-hmac-auth.md"] as any;
+        }
+        return [] as any;
+      }) as any);
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.storiesDir).toBe(`${projectRoot}/docs/sprint-artifacts`);
+    });
+
+    it("should find stories in legacy docs/stories path", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/docs")) return true;
+        if (pathStr.includes("/stories") && !pathStr.includes("/implementation")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockImplementation((async (path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/docs/stories")) {
+          return ["story-1-1.md", "story-1-2.md"] as any;
+        }
+        return [] as any;
+      }) as any);
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.storiesDir).toBe(`${projectRoot}/docs/stories`);
+    });
+
+    it("should use nested structure when stories exist there", async () => {
+      const projectRoot = "/test/project";
+      
+      vi.clearAllMocks();
+      mockExistsSync.mockReturnValue(false);
+      mockReaddir.mockResolvedValue([]);
+
+      const allowedPaths = new Set([
+        `${projectRoot}/docs`,
+        `${projectRoot}/.bmad`,
+        `${projectRoot}/docs/implementation-artifacts`,
+        `${projectRoot}/docs/implementation-artifacts/stories`,
+      ]);
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        return allowedPaths.has(path.toString());
+      }) as any);
+
+      mockReaddir.mockImplementation((async (path: any) => {
+        const pathStr = path.toString();
+        if (pathStr === `${projectRoot}/docs/implementation-artifacts/stories`) {
+          return ["story-2-1.md", "story-2-2.md"] as any;
+        }
+        return [] as any;
+      }) as any);
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.storiesDir).toBe(`${projectRoot}/docs/implementation-artifacts/stories`);
     });
   });
 });

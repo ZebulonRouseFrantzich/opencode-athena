@@ -106,6 +106,26 @@ async function readBmadConfig(bmadDir: string): Promise<BmadConfig | null> {
 }
 
 /**
+ * Expand BMAD METHOD v6 placeholders in config paths.
+ *
+ * Strips {project-root}/ prefix to create relative paths that can be
+ * joined with projectRoot. This handles the standard BMAD v6 placeholder
+ * that is preserved during installation for runtime resolution.
+ *
+ * @param path - Path that may contain {project-root} placeholder
+ * @returns Relative path with placeholder stripped, or undefined if input is undefined
+ *
+ * @example
+ * expandBmadPlaceholder("{project-root}/docs/sprint-artifacts") // → "docs/sprint-artifacts"
+ * expandBmadPlaceholder("docs/sprint-artifacts") // → "docs/sprint-artifacts"
+ * expandBmadPlaceholder(undefined) // → undefined
+ */
+function expandBmadPlaceholder(path: string | undefined): string | undefined {
+  if (!path) return undefined;
+  return path.replace(/^\{project-root\}\/?/, "");
+}
+
+/**
  * Check if a directory contains story files.
  * Looks for files matching story naming patterns: 1-1.md, 2-3.md, story-2-3.md, etc.
  */
@@ -124,21 +144,28 @@ async function hasStoryFiles(dir: string): Promise<boolean> {
 
 /**
  * Detect stories directory by checking nested vs flat structure.
- * Tries nested path first (BMAD v6 standard), then flat structure.
+ * Tries nested path first (BMAD v6 standard), then flat structure, then legacy paths.
  */
-async function detectStoriesDir(baseDir: string): Promise<string> {
-  // 1. Check nested structure first (BMAD v6 standard: docs/implementation-artifacts/stories/)
+async function detectStoriesDir(baseDir: string, projectRoot: string): Promise<string> {
   const nestedPath = join(baseDir, "stories");
   if (await hasStoryFiles(nestedPath)) {
     return nestedPath;
   }
 
-  // 2. Fallback to flat structure (docs/sprint-artifacts/*.md)
   if (await hasStoryFiles(baseDir)) {
     return baseDir;
   }
 
-  // 3. Default to nested (for new projects or when no stories exist yet)
+  const legacySprintArtifacts = join(projectRoot, LEGACY_PATHS.sprintArtifacts);
+  if (await hasStoryFiles(legacySprintArtifacts)) {
+    return legacySprintArtifacts;
+  }
+
+  const legacyStoriesDir = join(projectRoot, LEGACY_PATHS.storiesDir);
+  if (await hasStoryFiles(legacyStoriesDir)) {
+    return legacyStoriesDir;
+  }
+
   return nestedPath;
 }
 
@@ -207,21 +234,24 @@ export async function getBmadPaths(
     config = await readBmadConfig(bmadDir);
   }
 
-  const planningDir =
-    config?.planning_artifacts || join(projectRoot, BMAD_V6_DEFAULTS.planningArtifacts);
+  const planningDir = config?.planning_artifacts
+    ? join(projectRoot, expandBmadPlaceholder(config.planning_artifacts)!)
+    : join(projectRoot, BMAD_V6_DEFAULTS.planningArtifacts);
 
-  const implementationDir =
-    config?.implementation_artifacts ||
-    config?.sprint_artifacts ||
-    join(projectRoot, BMAD_V6_DEFAULTS.implementationArtifacts);
+  const implementationDir = config?.implementation_artifacts
+    ? join(projectRoot, expandBmadPlaceholder(config.implementation_artifacts)!)
+    : config?.sprint_artifacts
+      ? join(projectRoot, expandBmadPlaceholder(config.sprint_artifacts)!)
+      : join(projectRoot, BMAD_V6_DEFAULTS.implementationArtifacts);
 
   const storiesDir = athenaConfig?.bmad?.paths?.stories
     ? join(projectRoot, athenaConfig.bmad.paths.stories)
-    : await detectStoriesDir(implementationDir);
+    : await detectStoriesDir(implementationDir, projectRoot);
 
   const sprintStatusSearchPaths = [
-    config?.implementation_artifacts || BMAD_V6_DEFAULTS.implementationArtifacts,
-    config?.sprint_artifacts || "docs/sprint-artifacts",
+    expandBmadPlaceholder(config?.implementation_artifacts) ||
+      BMAD_V6_DEFAULTS.implementationArtifacts,
+    expandBmadPlaceholder(config?.sprint_artifacts) || "docs/sprint-artifacts",
     LEGACY_PATHS.sprintArtifacts,
     LEGACY_PATHS.docsDir,
   ];
@@ -230,7 +260,7 @@ export async function getBmadPaths(
     : searchForFileWithVariants(projectRoot, "sprint-status.yaml", sprintStatusSearchPaths);
 
   const architectureSearchPaths = [
-    config?.planning_artifacts || BMAD_V6_DEFAULTS.planningArtifacts,
+    expandBmadPlaceholder(config?.planning_artifacts) || BMAD_V6_DEFAULTS.planningArtifacts,
     LEGACY_PATHS.docsDir,
   ];
   const architecture = athenaConfig?.bmad?.paths?.architecture
@@ -238,7 +268,7 @@ export async function getBmadPaths(
     : searchForFileWithVariants(projectRoot, "architecture.md", architectureSearchPaths);
 
   const prdSearchPaths = [
-    config?.planning_artifacts || BMAD_V6_DEFAULTS.planningArtifacts,
+    expandBmadPlaceholder(config?.planning_artifacts) || BMAD_V6_DEFAULTS.planningArtifacts,
     LEGACY_PATHS.docsDir,
   ];
   const prd = athenaConfig?.bmad?.paths?.prd
@@ -246,7 +276,7 @@ export async function getBmadPaths(
     : searchForFileWithVariants(projectRoot, "PRD.md", prdSearchPaths);
 
   const epicsSearchPaths = [
-    config?.planning_artifacts || BMAD_V6_DEFAULTS.planningArtifacts,
+    expandBmadPlaceholder(config?.planning_artifacts) || BMAD_V6_DEFAULTS.planningArtifacts,
     LEGACY_PATHS.docsDir,
   ];
   const epics = athenaConfig?.bmad?.paths?.epics
