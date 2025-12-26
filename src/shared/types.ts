@@ -735,18 +735,16 @@ export interface Phase1ContextError {
 }
 
 /**
- * Phase 1 result: Complete result after Oracle analysis with agent recommendations
- * Fields are optional to allow graceful handling of partial data from tool chains
+ * Phase 1 summary: Minimal result returned to agent after Oracle analysis.
+ * Large data (oracleAnalysis, storiesContent) is saved to file, not passed between tools.
  */
-export interface Phase1Result {
+export interface Phase1Summary {
   success: boolean;
   scope: ReviewScope;
   identifier: string;
   error?: string;
   suggestion?: string;
-  reviewDocPath?: string;
-  storiesContent?: Array<{ id: string; title?: string; content: string | null }>;
-  architectureContent?: string;
+  reviewFolderPath?: string;
   findings?: {
     total: number;
     high: number;
@@ -755,9 +753,23 @@ export interface Phase1Result {
     byCategory: Record<FindingCategory, number>;
   };
   recommendedAgents?: AgentRecommendation[];
-  oracleAnalysis?: string;
   summary?: string;
 }
+
+/**
+ * Phase 1 full data: Complete data saved to analysis.json file.
+ * Includes large fields that should not be passed between tool calls.
+ */
+export interface Phase1FullData extends Phase1Summary {
+  storiesContent?: Array<{ id: string; title?: string; content: string | null }>;
+  architectureContent?: string;
+  oracleAnalysis?: string;
+}
+
+/**
+ * @deprecated Use Phase1Summary for tool returns, Phase1FullData for file storage
+ */
+export type Phase1Result = Phase1FullData;
 
 /**
  * Phase 2 result: Aggregated agent analyses

@@ -28,10 +28,12 @@ If `success` is false, show the error and exit.
 
 ### Step 2: Present Summary and Get User Choice
 
+Phase 1 returns a summary with `reviewFolderPath` pointing to the review folder. Store this path - all subsequent phases use it.
+
 Display Phase 1 results:
 - Finding counts by severity (high, medium, low)
 - Finding counts by category (security, logic, best practices, performance)
-- Review document path
+- Review folder path (contains review.md and analysis.json)
 - Recommended BMAD agents
 
 Ask the user:
@@ -44,15 +46,15 @@ Ask the user:
 
 ### Step 3: Handle User Choice
 
-**If [V]**: Read and display the review document, then return to Step 2.
+**If [V]**: Read and display `{reviewFolderPath}/review.md`, then return to Step 2.
 
-**If [E]**: Exit with message "Review document saved to {path}".
+**If [E]**: Exit with message "Review saved to {reviewFolderPath}".
 
-**If [Q]**: Call `athena_party_discussion` with only Phase 1 results (quick mode):
+**If [Q]**: Call `athena_party_discussion` to start quick mode discussion:
 ```json
 {
   "action": "start",
-  "phase1Result": "{JSON.stringify(phase1Result)}"
+  "reviewFolderPath": "{phase1Result.reviewFolderPath}"
 }
 ```
 Skip to Step 5 (interactive discussion).
@@ -61,14 +63,14 @@ Skip to Step 5 (interactive discussion).
 
 ### Step 4: Phase 2 - Parallel Agent Consultation
 
-Call `athena_story_review_consult` with Phase 1 results:
+Call `athena_story_review_consult` with the review folder path:
 ```json
 {
-  "phase1Result": "{JSON.stringify(phase1Result)}"
+  "reviewFolderPath": "{phase1Result.reviewFolderPath}"
 }
 ```
 
-The tool spawns all recommended agents in parallel, waits for completion, synthesizes responses, and returns consensus/debate points.
+The tool loads Phase 1 data from analysis.json, spawns all recommended agents in parallel, waits for completion, synthesizes responses, saves Phase 2 results to phase2.json, and returns consensus/debate points.
 
 Display Phase 2 summary (agents consulted, consensus points, debate points).
 
@@ -76,22 +78,15 @@ Display Phase 2 summary (agents consulted, consensus points, debate points).
 
 Call `athena_party_discussion` to start interactive discussion:
 
-**Full mode** (with Phase 2):
+**Full mode** (after Phase 2 - phase2.json exists in folder):
 ```json
 {
   "action": "start",
-  "phase1Result": "{JSON.stringify(phase1Result)}",
-  "phase2Result": "{JSON.stringify(phase2Result)}"
+  "reviewFolderPath": "{phase1Result.reviewFolderPath}"
 }
 ```
 
-**Quick mode** (Phase 1 only - already called in Step 3):
-```json
-{
-  "action": "start",
-  "phase1Result": "{JSON.stringify(phase1Result)}"
-}
-```
+**Quick mode** (Phase 1 only - already called in Step 3)
 
 For each agenda item:
 1. Present the finding with agent perspectives

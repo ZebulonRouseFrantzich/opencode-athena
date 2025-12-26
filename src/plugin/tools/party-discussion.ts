@@ -1,4 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
 import type {
@@ -12,7 +15,7 @@ import type {
   FindingSeverity,
   PartyDiscussionResult,
   PartyDiscussionState,
-  Phase1Result,
+  Phase1FullData,
   Phase2Result,
   ReviewDecision,
 } from "../../shared/types.js";
@@ -72,7 +75,7 @@ function setSession(state: PartyDiscussionState): void {
   });
 }
 
-function buildAgenda(phase1: Phase1Result, phase2?: Phase2Result): DiscussionAgendaItem[] {
+function buildAgenda(phase1: Phase1FullData, phase2?: Phase2Result): DiscussionAgendaItem[] {
   const agenda: DiscussionAgendaItem[] = [];
 
   const highSeverityFindings = extractHighSeverityFindings(phase1);
@@ -124,7 +127,7 @@ interface FindingInfo {
   category: FindingCategory;
 }
 
-function extractHighSeverityFindings(phase1: Phase1Result): FindingInfo[] {
+function extractHighSeverityFindings(phase1: Phase1FullData): FindingInfo[] {
   const highCount = phase1.findings?.high ?? 0;
 
   // Handle missing oracleAnalysis gracefully
@@ -202,7 +205,7 @@ function getAgentPositionsForFinding(
   return positions;
 }
 
-function initializeSession(phase1: Phase1Result, phase2?: Phase2Result): PartyDiscussionState {
+function initializeSession(phase1: Phase1FullData, phase2?: Phase2Result): PartyDiscussionState {
   const sessionId = randomUUID();
   const agenda = buildAgenda(phase1, phase2);
 
@@ -445,11 +448,11 @@ export function createPartyDiscussionTool(ctx: PluginInput, config: AthenaConfig
 This tool manages an informed discussion where BMAD agents debate findings from Phase 1 (Oracle analysis) and optionally Phase 2 (parallel agent analysis).
 
 Modes:
-- Quick mode: Provide only phase1Result for rapid review of Oracle findings
-- Full mode: Provide both phase1Result and phase2Result for in-depth discussion with agent perspectives
+- Quick mode: Only analysis.json exists in review folder (Oracle findings only)
+- Full mode: Both analysis.json and phase2.json exist (includes agent perspectives)
 
 Actions:
-- start: Initialize discussion with Phase 1 results (Phase 2 optional)
+- start: Initialize discussion from review folder (loads analysis.json and optionally phase2.json)
 - continue: Get next agenda item and agent responses
 - decide: Record user decision for a finding (accept/defer/reject)
 - skip: Skip current finding without decision
@@ -465,14 +468,10 @@ The tool maintains session state across calls, enabling multi-turn discussion.`,
         .string()
         .optional()
         .describe("Session ID (required for continue/decide/skip/end)"),
-      phase1Result: tool.schema
+      reviewFolderPath: tool.schema
         .string()
         .optional()
-        .describe("Phase 1 result JSON (required for start)"),
-      phase2Result: tool.schema
-        .string()
-        .optional()
-        .describe("Phase 2 result JSON (optional - omit for quick mode)"),
+        .describe("Path to review folder from athena_story_review_analyze (required for start)"),
       findingId: tool.schema.string().optional().describe("Finding ID (required for decide)"),
       decision: tool.schema
         .enum(["accept", "defer", "reject"])
@@ -495,8 +494,7 @@ The tool maintains session state across calls, enabling multi-turn discussion.`,
 interface ToolArgs {
   action: "start" | "continue" | "decide" | "skip" | "end";
   sessionId?: string;
-  phase1Result?: string;
-  phase2Result?: string;
+  reviewFolderPath?: string;
   findingId?: string;
   decision?: "accept" | "defer" | "reject";
   reason?: string;
@@ -513,34 +511,54 @@ async function executePartyDiscussion(
 
   switch (args.action) {
     case "start": {
-      if (!args.phase1Result) {
-        log.warn("start called without phase1Result");
+      if (!args.reviewFolderPath) {
+        log.warn("start called without reviewFolderPath");
         return {
           success: false,
           sessionId: "",
           state: {} as PartyDiscussionState,
           hasMoreItems: false,
-          error: "phase1Result is required for start action",
+          error: "reviewFolderPath is required for start action",
+          suggestion: "Pass the reviewFolderPath from athena_story_review_analyze result",
         };
       }
 
-      let phase1: Phase1Result;
+      const analysisPath = join(args.reviewFolderPath, "analysis.json");
+      const phase2Path = join(args.reviewFolderPath, "phase2.json");
+
+      if (!existsSync(analysisPath)) {
+        return {
+          success: false,
+          sessionId: "",
+          state: {} as PartyDiscussionState,
+          hasMoreItems: false,
+          error: `Analysis file not found: ${analysisPath}`,
+          suggestion: "Run athena_story_review_analyze first to generate the review folder",
+        };
+      }
+
+      let phase1: Phase1FullData;
       let phase2: Phase2Result | undefined;
       try {
-        phase1 = JSON.parse(args.phase1Result);
-        phase2 = args.phase2Result ? JSON.parse(args.phase2Result) : undefined;
+        const analysisContent = await readFile(analysisPath, "utf-8");
+        phase1 = JSON.parse(analysisContent);
+
+        if (existsSync(phase2Path)) {
+          const phase2Content = await readFile(phase2Path, "utf-8");
+          phase2 = JSON.parse(phase2Content);
+        }
       } catch (e) {
-        log.error("Failed to parse phase1/phase2 JSON", {
+        log.error("Failed to load review files", {
           error: e instanceof Error ? e.message : String(e),
-          phase1Length: args.phase1Result?.length,
+          reviewFolderPath: args.reviewFolderPath,
         });
         return {
           success: false,
           sessionId: "",
           state: {} as PartyDiscussionState,
           hasMoreItems: false,
-          error: `Invalid JSON in phase1Result or phase2Result: ${e instanceof Error ? e.message : String(e)}`,
-          suggestion: "Ensure you pass the raw JSON string from athena_story_review_analyze",
+          error: `Failed to load review files: ${e instanceof Error ? e.message : String(e)}`,
+          suggestion: "Ensure the review folder contains valid analysis.json",
         };
       }
 
@@ -550,14 +568,14 @@ async function executePartyDiscussion(
           sessionId: "",
           state: {} as PartyDiscussionState,
           hasMoreItems: false,
-          error: "phase1Result missing required 'findings' field",
-          suggestion: "Pass the complete result from athena_story_review_analyze, not a subset",
+          error: "analysis.json missing required 'findings' field",
+          suggestion: "Ensure athena_story_review_analyze completed successfully",
         };
       }
 
       if (!phase1.oracleAnalysis && phase1.findings.high > 0) {
         console.warn(
-          "[Athena] phase1Result missing oracleAnalysis field - using placeholder findings for",
+          "[Athena] analysis.json missing oracleAnalysis field - using placeholder findings for",
           phase1.identifier
         );
       }

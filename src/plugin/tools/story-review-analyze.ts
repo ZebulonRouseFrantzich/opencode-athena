@@ -3,7 +3,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
-import type { AthenaConfig, Phase1Result, ReviewScope } from "../../shared/types.js";
+import type {
+  AthenaConfig,
+  Phase1FullData,
+  Phase1Summary,
+  ReviewScope,
+} from "../../shared/types.js";
 import {
   type AgentRecommendation,
   type FindingCounts,
@@ -57,7 +62,7 @@ async function executePhase1Analysis(
   config: AthenaConfig,
   identifier: string,
   forceAdvancedModel?: boolean
-): Promise<Phase1Result> {
+): Promise<Phase1Summary> {
   const paths = await getBmadPaths(ctx.directory, config);
   if (!paths.bmadDir) {
     return {
@@ -107,17 +112,19 @@ async function executePhase1Analysis(
   const parsed = parseOracleResponse(oracleResponse.content || "");
   const findings = countFindings(parsed);
   const recommendedAgents = selectAgentsForReview(findings);
+  const summary = buildSummary(findings, recommendedAgents);
 
-  const reviewDocPath = await saveReviewDocument(
+  const reviewFolderPath = await saveReviewFolder(
     reviewsDir,
     scope,
     identifier,
     storiesContent,
     parsed,
-    oracleResponse.content || ""
+    oracleResponse.content || "",
+    findings,
+    recommendedAgents,
+    summary
   );
-
-  const summary = buildSummary(findings, recommendedAgents);
 
   return {
     success: true,
@@ -125,9 +132,7 @@ async function executePhase1Analysis(
     identifier,
     findings,
     recommendedAgents,
-    reviewDocPath,
-    oracleAnalysis: oracleResponse.content,
-    storiesContent,
+    reviewFolderPath,
     summary,
   };
 }
@@ -317,22 +322,27 @@ function parseModelConfig(modelString: string): { providerID: string; modelID: s
   return { providerID: providerID || "openai", modelID: modelID || modelString };
 }
 
-async function saveReviewDocument(
+async function saveReviewFolder(
   reviewsDir: string,
   scope: ReviewScope,
   identifier: string,
   stories: Array<{ id: string; content: string | null }>,
   parsed: ParsedOracleResponse,
-  oracleAnalysis: string
+  oracleAnalysis: string,
+  findings: FindingCounts,
+  recommendedAgents: AgentRecommendation[],
+  summaryText: string
 ): Promise<string> {
   const date = new Date().toISOString().split("T")[0];
-  const filename = `party-review-${scope}-${identifier.replace(".", "-")}-${date}.md`;
-  const filePath = join(reviewsDir, filename);
+  const folderName = `party-review-${scope}-${identifier.replace(".", "-")}-${date}`;
+  const folderPath = join(reviewsDir, folderName);
+
+  await ensureDirectory(folderPath);
 
   const storyList = stories.map((s) => s.id).join(", ");
   const { summary } = parsed;
 
-  const markdown = `# 🎉 Party Review: ${scope === "epic" ? `Epic ${identifier}` : `Story ${identifier}`}
+  const markdown = `# Party Review: ${scope === "epic" ? `Epic ${identifier}` : `Story ${identifier}`}
 
 **Date**: ${date}
 **Reviewer**: Oracle (Party Mode)
@@ -367,8 +377,22 @@ ${oracleAnalysis}
 </details>
 `;
 
-  await writeFile(filePath, markdown, "utf-8");
-  return filePath;
+  const fullData: Phase1FullData = {
+    success: true,
+    scope,
+    identifier,
+    findings,
+    recommendedAgents,
+    reviewFolderPath: folderPath,
+    summary: summaryText,
+    storiesContent: stories,
+    oracleAnalysis,
+  };
+
+  await writeFile(join(folderPath, "review.md"), markdown, "utf-8");
+  await writeFile(join(folderPath, "analysis.json"), JSON.stringify(fullData, null, 2), "utf-8");
+
+  return folderPath;
 }
 
 function formatFindings(parsed: ParsedOracleResponse): string {

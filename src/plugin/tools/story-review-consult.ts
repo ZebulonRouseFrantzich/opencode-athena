@@ -1,6 +1,9 @@
+import { existsSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
-import type { AthenaConfig, BmadAgentType, Phase1Result } from "../../shared/types.js";
+import type { AthenaConfig, BmadAgentType, Phase1FullData } from "../../shared/types.js";
 import { getRecommendedAgentTypes } from "../utils/agent-selector.js";
 import { getPersona, loadPersonas } from "../utils/persona-loader.js";
 import {
@@ -13,6 +16,7 @@ import {
 export interface Phase2ConsultResult {
   success: boolean;
   identifier: string;
+  reviewFolderPath?: string;
   error?: string;
   suggestion?: string;
 
@@ -31,18 +35,20 @@ export function createStoryReviewConsultTool(
     description: `Consult BMAD expert agents for their perspectives on review findings.
 
 This tool performs Phase 2 of the party review workflow:
-1. Spawns parallel sessions for each recommended BMAD agent
-2. Each agent analyzes the findings from their expertise
-3. Waits for all agents to complete (blocking)
-4. Synthesizes responses to find consensus and debates
-5. Returns aggregated priorities and positions
+1. Loads the full analysis from the review folder (analysis.json)
+2. Spawns parallel sessions for each recommended BMAD agent
+3. Each agent reads the analysis file and provides their perspective
+4. Waits for all agents to complete (blocking)
+5. Synthesizes responses to find consensus and debates
 
 Use this after Phase 1 (athena_story_review_analyze) and before Phase 3 (athena_party_discussion).`,
 
     args: {
-      phase1Result: tool.schema
+      reviewFolderPath: tool.schema
         .string()
-        .describe("JSON string from athena_story_review_analyze result"),
+        .describe(
+          "Path to the review folder from athena_story_review_analyze (contains analysis.json)"
+        ),
       agents: tool.schema
         .array(tool.schema.string())
         .optional()
@@ -50,7 +56,12 @@ Use this after Phase 1 (athena_story_review_analyze) and before Phase 3 (athena_
     },
 
     async execute(args): Promise<string> {
-      const result = await executePhase2Consultation(ctx, config, args.phase1Result, args.agents);
+      const result = await executePhase2Consultation(
+        ctx,
+        config,
+        args.reviewFolderPath,
+        args.agents
+      );
       return JSON.stringify(result, null, 2);
     },
   });
@@ -59,18 +70,31 @@ Use this after Phase 1 (athena_story_review_analyze) and before Phase 3 (athena_
 async function executePhase2Consultation(
   ctx: PluginInput,
   config: AthenaConfig,
-  phase1Json: string,
+  reviewFolderPath: string,
   overrideAgents?: string[]
 ): Promise<Phase2ConsultResult> {
-  let phase1: Phase1Result;
-  try {
-    phase1 = JSON.parse(phase1Json);
-  } catch {
+  const analysisPath = join(reviewFolderPath, "analysis.json");
+
+  if (!existsSync(analysisPath)) {
     return {
       success: false,
       identifier: "",
-      error: "Invalid phase1Result JSON",
-      suggestion: "Pass the raw JSON string from athena_story_review_analyze",
+      error: `Analysis file not found: ${analysisPath}`,
+      suggestion: "Run athena_story_review_analyze first to generate the review folder",
+    };
+  }
+
+  let phase1: Phase1FullData;
+  try {
+    const analysisContent = await readFile(analysisPath, "utf-8");
+    phase1 = JSON.parse(analysisContent);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return {
+      success: false,
+      identifier: "",
+      error: `Failed to load analysis.json: ${message}`,
+      suggestion: "Ensure the review folder contains a valid analysis.json file",
     };
   }
 
@@ -119,22 +143,28 @@ async function executePhase2Consultation(
 
   const summary = buildConsultationSummary(synthesized, agents.length);
 
-  return {
+  const result: Phase2ConsultResult = {
     success: true,
     identifier: phase1.identifier,
+    reviewFolderPath,
     agentAnalyses: synthesized.agentAnalyses,
     consensusPoints: synthesized.consensusPoints,
     debatePoints: synthesized.debatePoints,
     aggregatedPriorities: synthesized.aggregatedPriorities,
     summary,
   };
+
+  const phase2Path = join(reviewFolderPath, "phase2.json");
+  await writeFile(phase2Path, JSON.stringify(result, null, 2), "utf-8");
+
+  return result;
 }
 
 async function spawnAgentAndWait(
   ctx: PluginInput,
   config: AthenaConfig,
   agentType: BmadAgentType,
-  phase1: Phase1Result,
+  phase1: Phase1FullData,
   personas: Map<BmadAgentType, import("../../shared/types.js").BmadAgentFullPersona>
 ): Promise<AgentAnalysis | null> {
   try {
@@ -190,13 +220,14 @@ async function spawnAgentAndWait(
 
 function buildAgentPrompt(
   persona: import("../../shared/types.js").BmadAgentFullPersona,
-  phase1: Phase1Result
+  phase1: Phase1FullData
 ): string {
   const storiesContext = phase1.storiesContent
-    ?.map(
-      (s: { id: string; content: string | null }) =>
-        `Story ${s.id}:\n${s.content?.substring(0, 500) || "(empty)"}...`
-    )
+    ?.map((s: { id: string; content: string | null }) => {
+      const preview = s.content?.substring(0, 2000) || "(empty)";
+      const truncated = s.content && s.content.length > 2000 ? "...[truncated]" : "";
+      return `Story ${s.id}:\n${preview}${truncated}`;
+    })
     .join("\n\n");
 
   return `You are ${persona.name}, the ${persona.title} from the BMAD team.
@@ -211,7 +242,7 @@ function buildAgentPrompt(
 ${storiesContext || "(No story content available)"}
 
 **Oracle's Findings**:
-${phase1.oracleAnalysis?.substring(0, 3000) || "(No analysis available)"}
+${phase1.oracleAnalysis || "(No analysis available)"}
 
 **Your Analysis Instructions**:
 1. Review each finding from your ${persona.perspective} perspective
