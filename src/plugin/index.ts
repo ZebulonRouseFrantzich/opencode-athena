@@ -9,6 +9,9 @@ import { createCompactionHook, createSessionHooks, createToolHooks } from "./hoo
 import { createTools } from "./tools/index.js";
 import { StoryTracker } from "./tracker/story-tracker.js";
 import { loadAthenaConfig } from "./utils/config-loader.js";
+import { createPluginLogger } from "./utils/plugin-logger.js";
+
+const log = createPluginLogger("plugin-init");
 
 /**
  * OpenCode Athena plugin factory.
@@ -21,6 +24,11 @@ import { loadAthenaConfig } from "./utils/config-loader.js";
  */
 export const OpenCodeAthena: Plugin = async (ctx) => {
   const { directory } = ctx;
+
+  log.info("OpenCode Athena plugin loading", {
+    directory,
+    timestamp: new Date().toISOString(),
+  });
 
   // Load Athena configuration (project-local takes priority over global)
   const config = await loadAthenaConfig(directory);

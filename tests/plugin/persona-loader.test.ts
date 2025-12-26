@@ -285,18 +285,12 @@ describe("persona-loader", () => {
 
   describe("error handling", () => {
     it("should handle file read errors gracefully", async () => {
-      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const { _testExports } = await import("../../src/plugin/utils/persona-loader.js");
       const nonexistentPath = "/nonexistent/path/dev.agent.yaml";
 
       const result = await _testExports.parseAgentYaml(nonexistentPath);
 
       expect(result).toBeNull();
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(`Failed to parse agent YAML at ${nonexistentPath}`)
-      );
-
-      consoleWarnSpy.mockRestore();
     });
 
     it("should handle malformed YAML gracefully", async () => {
@@ -310,8 +304,6 @@ describe("persona-loader", () => {
         };
       });
 
-      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
       vi.resetModules();
       const { _testExports } = await import("../../src/plugin/utils/persona-loader.js");
 
@@ -320,9 +312,7 @@ describe("persona-loader", () => {
       );
 
       expect(result).toBeNull();
-      expect(consoleWarnSpy).toHaveBeenCalled();
 
-      consoleWarnSpy.mockRestore();
       vi.doUnmock("node:fs/promises");
       vi.resetModules();
     });

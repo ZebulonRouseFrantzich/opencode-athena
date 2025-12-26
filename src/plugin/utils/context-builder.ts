@@ -7,6 +7,9 @@
 
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { createPluginLogger } from "./plugin-logger.js";
+
+const log = createPluginLogger("context-builder");
 
 /**
  * Extract relevant architecture sections based on story content
@@ -83,7 +86,7 @@ export async function extractRelevantArchitecture(
       ? sections.join("\n\n---\n\n")
       : "See full architecture document for details.";
   } catch (error) {
-    console.warn("[Athena] Failed to read architecture file:", error);
+    log.warn("Failed to read architecture file", { archPath, error });
     return "";
   }
 }
@@ -131,7 +134,7 @@ export async function extractRelevantPRD(prdPath: string, storyContent: string):
 
     return sections.join("\n\n");
   } catch (error) {
-    console.warn("[Athena] Failed to read PRD file:", error);
+    log.warn("Failed to read PRD file", { prdPath, error });
     return "";
   }
 }
