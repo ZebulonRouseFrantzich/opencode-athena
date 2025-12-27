@@ -54,6 +54,7 @@ function buildMinimalConfig(answers: InstallAnswers): AthenaConfig {
       commentChecker: features.enabledFeatures.includes("comment-checker"),
       lspTools: features.enabledFeatures.includes("lsp-tools"),
       autoGitOperations: false,
+      todoSync: true,
     },
     mcps: {
       context7: features.mcps.includes("context7"),

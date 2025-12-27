@@ -9,7 +9,12 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { CONFIG_PATHS } from "../../shared/constants.js";
-import type { TrackedStory, TrackerState, TrackerStatus } from "../../shared/types.js";
+import type {
+  OpenCodeTodo,
+  TrackedStory,
+  TrackerState,
+  TrackerStatus,
+} from "../../shared/types.js";
 import { createPluginLogger } from "../utils/plugin-logger.js";
 
 const log = createPluginLogger("story-tracker");
@@ -137,6 +142,20 @@ ${recentHistory}
    */
   getHistory(): TrackerState["history"] {
     return this.state.history;
+  }
+
+  getCurrentTodos(): OpenCodeTodo[] | null {
+    return this.state.currentTodos || null;
+  }
+
+  setCurrentTodos(todos: OpenCodeTodo[]): void {
+    this.state.currentTodos = todos;
+    this.saveState();
+  }
+
+  clearTodos(): void {
+    this.state.currentTodos = undefined;
+    this.saveState();
   }
 
   /**

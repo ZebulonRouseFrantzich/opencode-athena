@@ -138,6 +138,7 @@ export const DEFAULTS = {
     commentChecker: true,
     lspTools: true,
     autoGitOperations: false,
+    todoSync: true,
   },
 
   /** Default MCPs enabled */

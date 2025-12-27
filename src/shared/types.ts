@@ -247,6 +247,7 @@ export interface AthenaConfig {
     commentChecker: boolean;
     lspTools: boolean;
     autoGitOperations: boolean;
+    todoSync: boolean;
   };
   mcps: {
     context7: boolean;
@@ -336,6 +337,7 @@ export interface TrackerState {
     status: string;
     timestamp: string;
   }>;
+  currentTodos?: OpenCodeTodo[];
 }
 
 // ============================================================================
@@ -1233,3 +1235,72 @@ export type PartyDiscussionAction =
     }
   | { type: "skip"; sessionId: string; findingId: string }
   | { type: "end"; sessionId: string };
+
+// ============================================================================
+// BMAD ↔ Todo Sync Types
+// ============================================================================
+
+/**
+ * OpenCode todo item format (matches oh-my-opencode/OpenCode schema)
+ */
+export interface OpenCodeTodo {
+  /** Unique identifier for the todo item */
+  id: string;
+  /** Brief description of the task */
+  content: string;
+  /** Current status of the task */
+  status: TodoStatus;
+  /** Priority level of the task */
+  priority: TodoPriority;
+}
+
+/**
+ * Valid todo status values
+ */
+export type TodoStatus = "pending" | "in_progress" | "completed" | "cancelled";
+
+/**
+ * Valid todo priority values
+ */
+export type TodoPriority = "high" | "medium" | "low";
+
+/**
+ * BMAD section types that can contain checkboxes
+ */
+export type BmadSection = "ac" | "tasks" | "impl-notes";
+
+/**
+ * A parsed task from a BMAD story file
+ */
+export interface BmadTask {
+  /** Todo ID format: "{storyId}:{section}:{lineNumber}" */
+  id: string;
+  /** Story ID (e.g., "2.3") */
+  storyId: string;
+  /** Section where the checkbox was found */
+  section: BmadSection;
+  /** Index within the section (1-based) */
+  sectionIndex: number;
+  /** Line number in the file (0-based) */
+  lineNumber: number;
+  /** Task description text */
+  content: string;
+  /** Whether the checkbox is checked */
+  checked: boolean;
+  /** Detected or default priority */
+  priority: TodoPriority;
+  /** Indentation level for subtasks (number of spaces) */
+  indent: number;
+}
+
+/**
+ * Parsed todo ID components
+ */
+export interface ParsedTodoId {
+  /** Story ID (e.g., "2.3") */
+  storyId: string;
+  /** Section type */
+  section: BmadSection;
+  /** Line number hint (may have shifted) */
+  lineHint: number;
+}

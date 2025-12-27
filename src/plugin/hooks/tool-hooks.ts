@@ -1,12 +1,16 @@
 /**
  * Tool execution hooks
  *
- * Implements safety net warnings for git operations.
+ * Implements safety net warnings for git operations and BMAD todo synchronization.
  */
 
-import type { AthenaConfig } from "../../shared/types.js";
+import type { PluginInput } from "@opencode-ai/plugin";
+import type { AthenaConfig, OpenCodeTodo } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
+import { getBmadPaths } from "../utils/bmad-finder.js";
 import { createPluginLogger } from "../utils/plugin-logger.js";
+import { parseBmadTasks, bmadTasksToTodos } from "../utils/todo-sync.js";
+import { onStoryLoaded, onTodoWritten } from "./todo-hooks.js";
 
 const log = createPluginLogger("tool-hooks");
 
@@ -83,27 +87,14 @@ function containsGitWriteCommand(command: string): boolean {
   );
 }
 
-/**
- * Create tool execution hooks
- */
-export function createToolHooks(_tracker: StoryTracker, config: AthenaConfig) {
+export function createToolHooks(ctx: PluginInput, tracker: StoryTracker, config: AthenaConfig) {
   return {
-    /**
-     * Called before a tool executes
-     */
     before: async (_input: BeforeHookInput, _output: BeforeHookOutput): Promise<void> => {
       return;
     },
 
-    /**
-     * Called after a tool executes
-     */
     after: async (input: AfterHookInput, output: AfterHookOutput): Promise<void> => {
-      if (config.features.autoGitOperations) {
-        return;
-      }
-
-      if (input.tool === "bash") {
+      if (!config.features.autoGitOperations && input.tool === "bash") {
         const command = getBashCommand(output.metadata);
 
         if (containsGitWriteCommand(command)) {
@@ -118,6 +109,65 @@ export function createToolHooks(_tracker: StoryTracker, config: AthenaConfig) {
             "To enable automatic git operations, set features.autoGitOperations=true in athena.json";
         }
       }
+
+      if (input.tool === "athena_get_story" && config.features.todoSync) {
+        await handleStoryLoaded(ctx, tracker, config, output);
+      }
+
+      if (input.tool === "todowrite" && config.features.todoSync) {
+        await handleTodoWritten(ctx, tracker, config, output);
+      }
     },
   };
+}
+
+async function handleStoryLoaded(
+  _ctx: PluginInput,
+  tracker: StoryTracker,
+  config: AthenaConfig,
+  output: AfterHookOutput
+): Promise<void> {
+  try {
+    const result = JSON.parse(output.output);
+    if (!result.storyId || !result.story) return;
+
+    const mergedTodos = await onStoryLoaded(tracker, config, result.storyId, result.story);
+
+    if (mergedTodos.length > 0) {
+      const tasks = parseBmadTasks(result.story, result.storyId);
+      const todos = bmadTasksToTodos(tasks);
+
+      result.todos = {
+        hint: "Call todowrite with these todos to populate your task list. Marking todos complete updates BMAD checkboxes automatically.",
+        items: todos,
+      };
+      output.output = JSON.stringify(result, null, 2);
+
+      log.debug("Injected todo hint into athena_get_story response", {
+        storyId: result.storyId,
+        todoCount: todos.length,
+      });
+    }
+  } catch (error) {
+    log.debug("Could not parse athena_get_story output for todo sync", { error });
+  }
+}
+
+async function handleTodoWritten(
+  ctx: PluginInput,
+  tracker: StoryTracker,
+  config: AthenaConfig,
+  output: AfterHookOutput
+): Promise<void> {
+  try {
+    const result = JSON.parse(output.output);
+    if (!result || !Array.isArray(result)) return;
+
+    const todos = result as OpenCodeTodo[];
+    const paths = await getBmadPaths(ctx.directory, config);
+
+    await onTodoWritten(tracker, config, { storiesDir: paths.storiesDir }, todos);
+  } catch (error) {
+    log.debug("Could not parse todowrite output for BMAD sync", { error });
+  }
 }
