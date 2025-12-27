@@ -118,7 +118,7 @@ describe("migrations", () => {
       expect(paths.epics).toBe(null);
     });
 
-    it("adds todoSync and todoAlwaysPrefix when migrating from 0.8.0 to 0.9.0", () => {
+    it("adds todoSync when migrating from 0.8.0 to 0.9.0", () => {
       const oldAthena = {
         version: "0.8.0",
         bmad: {
@@ -131,17 +131,15 @@ describe("migrations", () => {
 
       const features = result.athenaConfig.features as Record<string, unknown>;
       expect(features.todoSync).toBe(true);
-      expect(features.todoAlwaysPrefix).toBe(true);
     });
 
-    it("preserves existing todoSync and todoAlwaysPrefix values during migration", () => {
+    it("preserves existing todoSync value during migration", () => {
       const athenaWithTodoFlags = {
         version: "0.8.0",
         bmad: { paths: {} },
         features: {
           autoGitOperations: false,
           todoSync: false,
-          todoAlwaysPrefix: false,
         },
       };
 
@@ -149,7 +147,6 @@ describe("migrations", () => {
 
       const features = result.athenaConfig.features as Record<string, unknown>;
       expect(features.todoSync).toBe(false);
-      expect(features.todoAlwaysPrefix).toBe(false);
     });
 
     it("tracks which migrations were applied", () => {
@@ -217,7 +214,6 @@ describe("migrations", () => {
       const features = result.athenaConfig.features as Record<string, unknown>;
       expect(features.autoGitOperations).toBeDefined();
       expect(features.todoSync).toBe(true);
-      expect(features.todoAlwaysPrefix).toBe(true);
 
       const bmad = result.athenaConfig.bmad as Record<string, unknown>;
       const paths = bmad.paths as Record<string, unknown>;
@@ -239,7 +235,7 @@ describe("migrations", () => {
       expect(result.migrationsApplied[0]).toContain("0.5.0 → 0.6.0");
       expect(result.migrationsApplied[1]).toContain("0.6.0 → 0.7.0");
       expect(result.migrationsApplied[2]).toContain("0.7.0 → 0.8.0");
-      expect(result.migrationsApplied[3]).toContain("0.8.0 → 0.8.1");
+      expect(result.migrationsApplied[3]).toContain("0.8.0 → 0.9.0");
     });
   });
 });

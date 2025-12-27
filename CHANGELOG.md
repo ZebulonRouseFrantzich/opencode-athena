@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Compaction-safe: todos include story context for post-compaction recovery
   - Merge strategy: user todos preserved, BMAD todos synced per-story
   - Priority detection from BMAD content (Critical/High → high, etc.)
-  - New config flags: `features.todoSync` (default: true), `features.todoAlwaysPrefix` (default: true)
+  - New config flag: `features.todoSync` (default: true)
   - New files: `src/plugin/utils/todo-sync.ts`, `src/plugin/hooks/todo-hooks.ts`
   - Integration with `athena_get_story` and `todowrite` hooks
 

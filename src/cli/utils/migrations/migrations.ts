@@ -60,16 +60,13 @@ export const MIGRATIONS: Migration[] = [
   },
   {
     fromVersion: "0.8.0",
-    toVersion: "0.8.1",
-    description: "Add BMAD todo sync feature flags: todoSync, todoAlwaysPrefix",
+    toVersion: "0.9.0",
+    description: "Add BMAD todo sync feature flag: todoSync",
     migrateAthena: (config) => {
       const features = (config.features as Record<string, unknown>) || {};
 
       if (features.todoSync === undefined) {
         features.todoSync = true;
-      }
-      if (features.todoAlwaysPrefix === undefined) {
-        features.todoAlwaysPrefix = true;
       }
 
       return { ...config, features };

@@ -55,7 +55,6 @@ function buildMinimalConfig(answers: InstallAnswers): AthenaConfig {
       lspTools: features.enabledFeatures.includes("lsp-tools"),
       autoGitOperations: false,
       todoSync: true,
-      todoAlwaysPrefix: true,
     },
     mcps: {
       context7: features.mcps.includes("context7"),

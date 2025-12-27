@@ -1,3 +1,4 @@
+import type { AthenaConfig } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
 import { isBmadTodo } from "../utils/todo-sync.js";
 
@@ -9,7 +10,9 @@ interface CompactionOutput {
   context: string[];
 }
 
-export function createCompactionHook(tracker: StoryTracker) {
+export function createCompactionHook(tracker: StoryTracker, config: AthenaConfig) {
+  const storiesPath = config.bmad?.paths?.stories ?? "docs/stories";
+
   return async (_input: CompactionInput, output: CompactionOutput): Promise<void> => {
     const storyContext = await tracker.getCurrentStoryContext();
     const todos = tracker.getCurrentTodos();
@@ -23,7 +26,7 @@ export function createCompactionHook(tracker: StoryTracker) {
       parts.push(storyContext);
       if (currentStory) {
         const storyFileName = `story-${currentStory.id.replace(".", "-")}.md`;
-        parts.push(`**File:** docs/stories/${storyFileName}`);
+        parts.push(`**File:** ${storiesPath}/${storyFileName}`);
       }
       parts.push("");
     }
@@ -49,7 +52,7 @@ export function createCompactionHook(tracker: StoryTracker) {
           const storyFileName = `story-${currentStory.id.replace(".", "-")}.md`;
           parts.push("**To look up task context:**");
           parts.push("```");
-          parts.push(`Read docs/stories/${storyFileName}`);
+          parts.push(`Read ${storiesPath}/${storyFileName}`);
           parts.push("```");
           parts.push("");
         }

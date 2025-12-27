@@ -130,14 +130,9 @@ async function handleStoryLoaded(
     const result = JSON.parse(output.output);
     if (!result.storyId || !result.story) return;
 
-    const { mergedTodos, newBmadTodos } = await onStoryLoaded(
-      tracker,
-      config,
-      result.storyId,
-      result.story
-    );
+    const { newBmadTodos } = await onStoryLoaded(tracker, config, result.storyId, result.story);
 
-    if (mergedTodos.length > 0) {
+    if (newBmadTodos.length > 0) {
       result.todos = {
         hint: "Call todowrite with these todos to populate your task list. Marking todos complete updates BMAD checkboxes automatically.",
         items: newBmadTodos,

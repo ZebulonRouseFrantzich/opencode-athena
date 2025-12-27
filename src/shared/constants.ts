@@ -139,7 +139,6 @@ export const DEFAULTS = {
     lspTools: true,
     autoGitOperations: false,
     todoSync: true,
-    todoAlwaysPrefix: true,
   },
 
   /** Default MCPs enabled */

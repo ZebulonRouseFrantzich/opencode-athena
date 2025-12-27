@@ -81,7 +81,6 @@ export const FeaturesSchema = z.object({
   lspTools: z.boolean(),
   autoGitOperations: z.boolean().default(false),
   todoSync: z.boolean().default(true),
-  todoAlwaysPrefix: z.boolean().default(true),
 });
 
 /**

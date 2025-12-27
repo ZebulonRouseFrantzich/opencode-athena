@@ -144,7 +144,6 @@ export function featuresToFlags(enabledFeatures: string[]): Record<string, boole
     lspTools: enabledFeatures.includes("lsp-tools"),
     autoGitOperations: enabledFeatures.includes("auto-git-operations"),
     todoSync: true,
-    todoAlwaysPrefix: true,
   };
 }
 
