@@ -248,6 +248,7 @@ export interface AthenaConfig {
     lspTools: boolean;
     autoGitOperations: boolean;
     todoSync: boolean;
+    todoAlwaysPrefix: boolean;
   };
   mcps: {
     context7: boolean;

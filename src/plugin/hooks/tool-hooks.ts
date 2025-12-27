@@ -9,7 +9,6 @@ import type { AthenaConfig, OpenCodeTodo } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
 import { getBmadPaths } from "../utils/bmad-finder.js";
 import { createPluginLogger } from "../utils/plugin-logger.js";
-import { parseBmadTasks, bmadTasksToTodos } from "../utils/todo-sync.js";
 import { onStoryLoaded, onTodoWritten } from "./todo-hooks.js";
 
 const log = createPluginLogger("tool-hooks");
@@ -131,21 +130,23 @@ async function handleStoryLoaded(
     const result = JSON.parse(output.output);
     if (!result.storyId || !result.story) return;
 
-    const mergedTodos = await onStoryLoaded(tracker, config, result.storyId, result.story);
+    const { mergedTodos, newBmadTodos } = await onStoryLoaded(
+      tracker,
+      config,
+      result.storyId,
+      result.story
+    );
 
     if (mergedTodos.length > 0) {
-      const tasks = parseBmadTasks(result.story, result.storyId);
-      const todos = bmadTasksToTodos(tasks);
-
       result.todos = {
         hint: "Call todowrite with these todos to populate your task list. Marking todos complete updates BMAD checkboxes automatically.",
-        items: todos,
+        items: newBmadTodos,
       };
       output.output = JSON.stringify(result, null, 2);
 
       log.debug("Injected todo hint into athena_get_story response", {
         storyId: result.storyId,
-        todoCount: todos.length,
+        todoCount: newBmadTodos.length,
       });
     }
   } catch (error) {
@@ -161,9 +162,16 @@ async function handleTodoWritten(
 ): Promise<void> {
   try {
     const result = JSON.parse(output.output);
-    if (!result || !Array.isArray(result)) return;
+    if (!result) return;
 
-    const todos = result as OpenCodeTodo[];
+    // Handle both { todos: [...] } object shape and raw array shape
+    const todos: OpenCodeTodo[] | undefined = Array.isArray(result)
+      ? result
+      : Array.isArray(result.todos)
+        ? result.todos
+        : undefined;
+
+    if (!todos) return;
     const paths = await getBmadPaths(ctx.directory, config);
 
     await onTodoWritten(tracker, config, { storiesDir: paths.storiesDir }, todos);

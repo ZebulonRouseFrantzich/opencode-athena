@@ -1,17 +1,17 @@
 import type { AthenaConfig } from "../../shared/types.js";
 import type { OpenCodeTodo } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
-import {
-  parseBmadTasks,
-  bmadTasksToTodos,
-  parseTodoId,
-  isBmadTodo,
-  findCheckboxLine,
-  updateBmadCheckbox,
-  mergeTodos,
-} from "../utils/todo-sync.js";
-import { findStoryFile } from "../utils/story-loader.js";
 import { createPluginLogger } from "../utils/plugin-logger.js";
+import { findStoryFile } from "../utils/story-loader.js";
+import {
+  bmadTasksToTodos,
+  findCheckboxLine,
+  isBmadTodo,
+  mergeTodos,
+  parseBmadTasks,
+  parseTodoId,
+  updateBmadCheckbox,
+} from "../utils/todo-sync.js";
 
 const log = createPluginLogger("todo-hooks");
 
@@ -19,14 +19,19 @@ export interface TodoSyncPaths {
   storiesDir: string;
 }
 
+export interface StoryLoadedResult {
+  mergedTodos: OpenCodeTodo[];
+  newBmadTodos: OpenCodeTodo[];
+}
+
 export async function onStoryLoaded(
   tracker: StoryTracker,
   config: AthenaConfig,
   storyId: string,
   storyContent: string
-): Promise<OpenCodeTodo[]> {
+): Promise<StoryLoadedResult> {
   if (!config.features.todoSync) {
-    return [];
+    return { mergedTodos: [], newBmadTodos: [] };
   }
 
   try {
@@ -36,7 +41,7 @@ export async function onStoryLoaded(
     const existingTodos = tracker.getCurrentTodos() || [];
     const mergedTodos = mergeTodos(existingTodos, newBmadTodos, storyId);
 
-    tracker.setCurrentTodos(mergedTodos);
+    await tracker.setCurrentTodos(mergedTodos);
 
     log.info("Synced BMAD tasks to todos", {
       storyId,
@@ -44,10 +49,10 @@ export async function onStoryLoaded(
       totalTodos: mergedTodos.length,
     });
 
-    return mergedTodos;
+    return { mergedTodos, newBmadTodos };
   } catch (error) {
     log.warn("Failed to sync BMAD tasks", { storyId, error });
-    return [];
+    return { mergedTodos: [], newBmadTodos: [] };
   }
 }
 
@@ -107,5 +112,5 @@ export async function onTodoWritten(
     }
   }
 
-  tracker.setCurrentTodos(todos);
+  await tracker.setCurrentTodos(todos);
 }

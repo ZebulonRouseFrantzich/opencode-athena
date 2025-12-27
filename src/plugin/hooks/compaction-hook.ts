@@ -13,6 +13,7 @@ export function createCompactionHook(tracker: StoryTracker) {
   return async (_input: CompactionInput, output: CompactionOutput): Promise<void> => {
     const storyContext = await tracker.getCurrentStoryContext();
     const todos = tracker.getCurrentTodos();
+    const currentStory = tracker.getCurrentStory();
 
     const parts: string[] = [];
 
@@ -20,6 +21,10 @@ export function createCompactionHook(tracker: StoryTracker) {
       parts.push("## OpenCode Athena - Current BMAD Story Context");
       parts.push("");
       parts.push(storyContext);
+      if (currentStory) {
+        const storyFileName = `story-${currentStory.id.replace(".", "-")}.md`;
+        parts.push(`**File:** docs/stories/${storyFileName}`);
+      }
       parts.push("");
     }
 
@@ -40,6 +45,14 @@ export function createCompactionHook(tracker: StoryTracker) {
         parts.push("- Marking a todo complete updates the BMAD file automatically");
         parts.push("- For task details, read the story file");
         parts.push("");
+        if (currentStory) {
+          const storyFileName = `story-${currentStory.id.replace(".", "-")}.md`;
+          parts.push("**To look up task context:**");
+          parts.push("```");
+          parts.push(`Read docs/stories/${storyFileName}`);
+          parts.push("```");
+          parts.push("");
+        }
       }
     }
 

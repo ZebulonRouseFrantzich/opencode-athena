@@ -143,6 +143,8 @@ export function featuresToFlags(enabledFeatures: string[]): Record<string, boole
     commentChecker: enabledFeatures.includes("comment-checker"),
     lspTools: enabledFeatures.includes("lsp-tools"),
     autoGitOperations: enabledFeatures.includes("auto-git-operations"),
+    todoSync: true,
+    todoAlwaysPrefix: true,
   };
 }
 

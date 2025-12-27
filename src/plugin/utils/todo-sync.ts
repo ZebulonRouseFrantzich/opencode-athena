@@ -97,6 +97,16 @@ function detectPriority(content: string, section: BmadSection): TodoPriority {
     return "low";
   }
 
+  if (lower.includes("must")) {
+    return "high";
+  }
+  if (lower.includes("should")) {
+    return "medium";
+  }
+  if (lower.includes("could")) {
+    return "low";
+  }
+
   switch (section) {
     case "ac":
       return "high";
@@ -263,6 +273,7 @@ export function mergeTodos(
   const otherStoryTodos = existingTodos.filter((t) => {
     if (!isBmadTodo(t)) return false;
     const todoStoryId = extractStoryIdFromContent(t.content);
+    if (!todoStoryId) return false;
     return todoStoryId !== loadingStoryId && t.status !== "completed";
   });
 

@@ -148,14 +148,14 @@ ${recentHistory}
     return this.state.currentTodos || null;
   }
 
-  setCurrentTodos(todos: OpenCodeTodo[]): void {
+  async setCurrentTodos(todos: OpenCodeTodo[]): Promise<void> {
     this.state.currentTodos = todos;
-    this.saveState();
+    await this.saveState();
   }
 
-  clearTodos(): void {
+  async clearTodos(): Promise<void> {
     this.state.currentTodos = undefined;
-    this.saveState();
+    await this.saveState();
   }
 
   /**
