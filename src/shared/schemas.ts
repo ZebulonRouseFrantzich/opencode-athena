@@ -175,14 +175,11 @@ export const GetStoryArgsSchema = z.object({
     ),
 });
 
-/**
- * Schema for athena_update_status arguments
- */
 export const UpdateStatusArgsSchema = z.object({
-  storyId: z.string().describe("The story ID (e.g., '2.3')"),
+  storyId: z.string().describe("The story ID (e.g., '2.3' or '2-3')"),
   status: z
-    .enum(["in_progress", "completed", "blocked", "needs_review"])
-    .describe("The new status for the story"),
+    .enum(["in-progress", "review", "done", "blocked"])
+    .describe("The new status for the story (BMAD v6 hyphenated format)"),
   notes: z
     .string()
     .optional()
@@ -190,7 +187,7 @@ export const UpdateStatusArgsSchema = z.object({
   completionSummary: z
     .string()
     .optional()
-    .describe("Summary of what was implemented (required for 'completed' status)"),
+    .describe("Summary of what was implemented (required for 'done' status)"),
 });
 
 /**
@@ -223,12 +220,58 @@ export const ConfigArgsSchema = z.object({
 });
 
 // ============================================================================
-// Sprint Status Schema
+// BMAD v6 Sprint Status Schemas (Flat Map Structure)
 // ============================================================================
 
-/**
- * Story status enum for sprint tracking
- */
+export const BmadStoryStatusEnum = z.enum([
+  "backlog",
+  "ready-for-dev",
+  "in-progress",
+  "review",
+  "done",
+  "blocked",
+]);
+
+export const BmadEpicStatusEnum = z.enum(["backlog", "in-progress", "done"]);
+
+export const BmadRetroStatusEnum = z.enum(["optional", "done"]);
+
+export const BmadDevelopmentStatusEnum = z.enum([
+  "backlog",
+  "ready-for-dev",
+  "in-progress",
+  "review",
+  "done",
+  "blocked",
+  "optional",
+]);
+
+export const BmadSprintStatusSchema = z.object({
+  generated: z.string().optional(),
+  project: z.string().optional(),
+  project_key: z.string().optional(),
+  tracking_system: z.string().optional(),
+  story_location: z.string().optional(),
+  current_story: z.string().nullable().optional(),
+  last_modified: z.string().optional(),
+  development_status: z.record(z.string(), BmadDevelopmentStatusEnum),
+});
+
+export const BmadUpdateStatusArgsSchema = z.object({
+  storyId: z.string().describe("The story ID (e.g., '2.3' or '2-3')"),
+  status: BmadStoryStatusEnum.describe("The new status for the story"),
+  notes: z.string().optional().describe("Notes about the status change (required for 'blocked')"),
+  completionSummary: z
+    .string()
+    .optional()
+    .describe("Summary of implementation (required for 'done')"),
+});
+
+// ============================================================================
+// Legacy Sprint Status Schema (Deprecated - Array-based)
+// ============================================================================
+
+/** @deprecated Use BmadStoryStatusEnum */
 export const StoryStatusEnum = z.enum([
   "pending",
   "in_progress",
@@ -237,21 +280,18 @@ export const StoryStatusEnum = z.enum([
   "needs_review",
 ]);
 
-/**
- * Tracker status enum (includes transitional states)
- */
+/** @deprecated Use BmadStoryStatusEnum with "loading" handled separately */
 export const TrackerStatusEnum = z.enum([
-  "pending",
-  "in_progress",
-  "completed",
+  "backlog",
+  "ready-for-dev",
+  "in-progress",
+  "review",
+  "done",
   "blocked",
-  "needs_review",
   "loading",
 ]);
 
-/**
- * Schema for sprint-status.yaml content
- */
+/** @deprecated Use BmadSprintStatusSchema */
 export const SprintStatusSchema = z.object({
   sprint_number: z.number().int().optional(),
   current_epic: z.string().optional(),
@@ -284,4 +324,8 @@ export type FeaturesConfig = z.infer<typeof FeaturesSchema>;
 export type McpsConfig = z.infer<typeof McpsSchema>;
 export type ModelsConfig = z.infer<typeof ModelsSchema>;
 export type AthenaConfigValidated = z.infer<typeof AthenaConfigSchema>;
+export type BmadSprintStatusValidated = z.infer<typeof BmadSprintStatusSchema>;
+export type BmadStoryStatusValidated = z.infer<typeof BmadStoryStatusEnum>;
+export type BmadDevelopmentStatusValidated = z.infer<typeof BmadDevelopmentStatusEnum>;
+/** @deprecated Use BmadSprintStatusValidated */
 export type SprintStatusValidated = z.infer<typeof SprintStatusSchema>;

@@ -81,7 +81,7 @@ export class StoryTracker {
   async updateStoryStatus(storyId: string, status: TrackerStatus): Promise<void> {
     if (this.state.currentStory?.id === storyId) {
       this.state.currentStory.status = status;
-      if (status === "completed") {
+      if (status === "done") {
         this.state.currentStory.completedAt = new Date().toISOString();
       }
     }

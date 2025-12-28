@@ -1,25 +1,47 @@
-/**
- * athena_update_status tool
- *
- * Updates the BMAD sprint status for a story.
- */
-
-import { existsSync } from "node:fs";
 import { type ToolDefinition, tool } from "@opencode-ai/plugin";
 import type { PluginInput } from "@opencode-ai/plugin";
-import type { AthenaConfig, StoryStatus, UpdateStatusResult } from "../../shared/types.js";
+import type { AthenaConfig, BmadStoryStatus } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
 import { getBmadPaths } from "../utils/bmad-finder.js";
 import { sendNotification } from "../utils/notifications.js";
 import { createPluginLogger } from "../utils/plugin-logger.js";
-import { normalizeStoryId, stripAtPrefix } from "../utils/story-loader.js";
-import { readSprintStatus, writeSprintStatus } from "../utils/yaml-handler.js";
+import { getStoryTitle, updateStoryFileStatus } from "../utils/story-file-updater.js";
+import { findStoryFile, normalizeStoryId, stripAtPrefix } from "../utils/story-loader.js";
+import {
+  calculateSprintProgress,
+  findNextReadyStory,
+  parseStoryKey,
+  readBmadSprintStatus,
+  storyIdToDotFormat,
+  updateEpicStatusIfNeeded,
+  updateStoryStatus as updateSprintStoryStatus,
+} from "../utils/yaml-handler.js";
 
 const log = createPluginLogger("update-status");
 
-/**
- * Create the athena_update_status tool
- */
+export interface UpdateStatusResult {
+  success?: boolean;
+  storyId?: string;
+  newStatus?: BmadStoryStatus;
+  previousStatus?: string;
+  updatedAt?: string;
+  storyFileUpdated?: boolean;
+  epicStatusUpdated?: boolean;
+  epicNewStatus?: string;
+  sprintProgress?: {
+    total: number;
+    done: number;
+    inProgress: number;
+    readyForDev: number;
+    backlog: number;
+    blocked: number;
+    review: number;
+    percentComplete: number;
+  };
+  nextStory?: string | null;
+  error?: string;
+}
+
 export function createUpdateStatusTool(
   ctx: PluginInput,
   tracker: StoryTracker,
@@ -29,32 +51,30 @@ export function createUpdateStatusTool(
     description: `Update the BMAD sprint status for a story.
 
 Call this tool when:
-- Starting a story (status: "in_progress")
-- Completing a story (status: "completed") - requires completionSummary
+- Starting a story (status: "in-progress")
+- Completing a story (status: "done") - requires completionSummary
 - Blocking on an issue (status: "blocked") - requires notes explaining blocker
-- Requesting review (status: "needs_review")
+- Requesting review (status: "review")
 
-The sprint-status.yaml file will be automatically updated.`,
+Both sprint-status.yaml and the story file's Status field will be updated.`,
 
     args: {
-      storyId: tool.schema
-        .string()
-        .describe("Story ID (e.g., '2.3') or file path (e.g., 'docs/stories/story-2-3.md')"),
+      storyId: tool.schema.string().describe("Story ID (e.g., '2.3' or '2-3') or file path"),
       status: tool.schema
-        .enum(["in_progress", "completed", "blocked", "needs_review"])
-        .describe("The new status for the story"),
+        .enum(["in-progress", "review", "done", "blocked"])
+        .describe("The new status (BMAD v6 hyphenated format)"),
       notes: tool.schema
         .string()
         .optional()
-        .describe("Notes about the status change (required for 'blocked' status)"),
+        .describe("Notes about the status change (required for 'blocked')"),
       completionSummary: tool.schema
         .string()
         .optional()
-        .describe("Summary of what was implemented (required for 'completed' status)"),
+        .describe("Summary of what was implemented (required for 'done')"),
     },
 
     async execute(args): Promise<string> {
-      const result = await updateStoryStatus(ctx, tracker, config, args);
+      const result = await handleUpdateStatus(ctx, tracker, config, args);
       return JSON.stringify(result, null, 2);
     },
   });
@@ -62,42 +82,38 @@ The sprint-status.yaml file will be automatically updated.`,
 
 interface UpdateStatusArgs {
   storyId: string;
-  status: "in_progress" | "completed" | "blocked" | "needs_review";
+  status: "in-progress" | "review" | "done" | "blocked";
   notes?: string;
   completionSummary?: string;
 }
 
-/**
- * Update story status implementation
- */
-async function updateStoryStatus(
+async function handleUpdateStatus(
   ctx: PluginInput,
   tracker: StoryTracker,
   config: AthenaConfig,
   args: UpdateStatusArgs
 ): Promise<UpdateStatusResult> {
   const { status, notes, completionSummary } = args;
-  const storyId = normalizeStoryId(stripAtPrefix(args.storyId));
+  const rawStoryId = stripAtPrefix(args.storyId);
+  const normalizedId = normalizeStoryId(rawStoryId);
 
   log.debug("Updating story status", {
-    storyId,
+    storyId: normalizedId,
     status,
     hasNotes: !!notes,
     hasSummary: !!completionSummary,
   });
 
-  // Validation
-  if (status === "completed" && !completionSummary) {
-    log.warn("Validation failed: completionSummary required for completed status", { storyId });
-    return {
-      error: "completionSummary is required when marking a story completed",
-    };
+  if (status === "done" && !completionSummary) {
+    log.warn("Validation failed: completionSummary required for done status", {
+      storyId: normalizedId,
+    });
+    return { error: "completionSummary is required when marking a story done" };
   }
+
   if (status === "blocked" && !notes) {
-    log.warn("Validation failed: notes required for blocked status", { storyId });
-    return {
-      error: "notes are required when blocking a story (explain the blocker)",
-    };
+    log.warn("Validation failed: notes required for blocked status", { storyId: normalizedId });
+    return { error: "notes are required when blocking a story (explain the blocker)" };
   }
 
   const paths = await getBmadPaths(ctx.directory, config);
@@ -106,139 +122,103 @@ async function updateStoryStatus(
     return { error: "No BMAD directory found" };
   }
 
-  if (!existsSync(paths.sprintStatus)) {
-    log.error("Sprint status file not found", { sprintStatusPath: paths.sprintStatus });
+  if (!paths.sprintStatus) {
+    log.error("Sprint status file not found");
     return { error: "No sprint-status.yaml found" };
   }
 
-  log.debug("Reading sprint status", { sprintStatusPath: paths.sprintStatus });
-  const sprint = await readSprintStatus(paths.sprintStatus);
-  if (!sprint) {
-    log.error("Failed to read sprint status file", { sprintStatusPath: paths.sprintStatus });
+  const sprintStatus = await readBmadSprintStatus(paths.sprintStatus);
+  if (!sprintStatus) {
+    log.error("Failed to read sprint status file", { path: paths.sprintStatus });
     return { error: "Failed to read sprint-status.yaml" };
   }
 
+  let storyTitle: string | undefined;
+  const storyFile = await findStoryFile(paths.storiesDir, normalizedId);
+  if (storyFile) {
+    storyTitle = (await getStoryTitle(storyFile.path)) ?? undefined;
+  }
+
+  const updateResult = await updateSprintStoryStatus(
+    paths.sprintStatus,
+    normalizedId,
+    status,
+    storyTitle
+  );
+
+  if (!updateResult.success) {
+    log.error("Failed to update sprint status", { storyId: normalizedId });
+    return { error: "Failed to update sprint-status.yaml" };
+  }
+
+  let storyFileUpdated = false;
+  if (storyFile) {
+    const fileUpdateResult = await updateStoryFileStatus(storyFile.path, status);
+    storyFileUpdated = fileUpdateResult.success;
+    if (!fileUpdateResult.success) {
+      log.warn("Failed to update story file status", {
+        path: storyFile.path,
+        error: fileUpdateResult.error,
+      });
+    }
+  }
+
+  const parsed = parseStoryKey(updateResult.key);
+  let epicStatusUpdated = false;
+  let epicNewStatus: string | undefined;
+
+  if (parsed) {
+    const epicUpdate = await updateEpicStatusIfNeeded(paths.sprintStatus, parsed.epicNum);
+    if (epicUpdate.updated) {
+      epicStatusUpdated = true;
+      epicNewStatus = epicUpdate.newStatus;
+      log.info("Auto-updated epic status", {
+        epicNum: parsed.epicNum,
+        newStatus: epicUpdate.newStatus,
+      });
+    }
+  }
+
   const now = new Date().toISOString();
+  await tracker.updateStoryStatus(normalizedId, status);
 
-  // Remove story from all status arrays
-  log.debug("Removing story from all status arrays", { storyId });
-  removeFromAllArrays(sprint, storyId);
-
-  // Add to appropriate array based on new status (with deduplication)
-  log.debug("Adding story to new status array", { storyId, status });
-  switch (status) {
-    case "in_progress":
-      addToArrayIfNotPresent(sprint.in_progress_stories, storyId);
-      sprint.current_story = storyId;
-      break;
-
-    case "completed":
-      addToArrayIfNotPresent(sprint.completed_stories, storyId);
-      if (sprint.current_story === storyId) {
-        sprint.current_story = null;
-      }
-      break;
-
-    case "blocked":
-      addToArrayIfNotPresent(sprint.blocked_stories, storyId);
-      if (sprint.current_story === storyId) {
-        sprint.current_story = null;
-      }
-      break;
-
-    case "needs_review":
-      addToArrayIfNotPresent(sprint.in_progress_stories, storyId);
-      sprint.stories_needing_review = sprint.stories_needing_review || [];
-      addToArrayIfNotPresent(sprint.stories_needing_review, storyId);
-      break;
+  if (config.features?.notifications && status === "done") {
+    log.debug("Sending completion notification", { storyId: normalizedId });
+    await sendNotification(
+      `Story ${storyIdToDotFormat(normalizedId)} completed!`,
+      "OpenCode Athena",
+      ctx.$
+    );
   }
 
-  // Write updated sprint status
-  log.debug("Writing updated sprint status", { sprintStatusPath: paths.sprintStatus });
-  await writeSprintStatus(paths.sprintStatus, sprint);
+  const updatedStatus = await readBmadSprintStatus(paths.sprintStatus);
+  const progress = updatedStatus ? calculateSprintProgress(updatedStatus) : null;
 
-  // Update tracker
-  log.debug("Updating story tracker", { storyId, status });
-  await tracker.updateStoryStatus(storyId, status as StoryStatus);
-
-  // Send notification if enabled and story completed
-  if (config.features?.notifications && status === "completed") {
-    log.debug("Sending completion notification", { storyId });
-    await sendNotification(`Story ${storyId} completed!`, "OpenCode Athena", ctx.$);
+  let nextStory: string | null = null;
+  if (status === "done" && updatedStatus) {
+    const next = findNextReadyStory(updatedStatus);
+    nextStory = next ? storyIdToDotFormat(next.parsed.normalizedId) : null;
   }
-
-  // Calculate sprint progress
-  const totalStories =
-    sprint.completed_stories.length +
-    sprint.pending_stories.length +
-    sprint.in_progress_stories.length +
-    sprint.blocked_stories.length;
-
-  const percentComplete =
-    totalStories > 0 ? Math.round((sprint.completed_stories.length / totalStories) * 100) : 0;
 
   log.info("Story status updated successfully", {
-    storyId,
+    storyId: normalizedId,
     status,
-    sprintProgress: {
-      completed: sprint.completed_stories.length,
-      inProgress: sprint.in_progress_stories.length,
-      pending: sprint.pending_stories.length,
-      blocked: sprint.blocked_stories.length,
-      total: totalStories,
-      percentComplete,
-    },
+    previousStatus: updateResult.previousStatus,
+    storyFileUpdated,
+    epicStatusUpdated,
+    progress,
   });
 
   return {
     success: true,
-    storyId,
-    newStatus: status as StoryStatus,
+    storyId: storyIdToDotFormat(normalizedId),
+    newStatus: status,
+    previousStatus: updateResult.previousStatus,
     updatedAt: now,
-    sprintProgress: {
-      completed: sprint.completed_stories.length,
-      inProgress: sprint.in_progress_stories.length,
-      pending: sprint.pending_stories.length,
-      blocked: sprint.blocked_stories.length,
-      total: totalStories,
-      percentComplete,
-    },
-    nextStory: status === "completed" ? sprint.pending_stories[0] || null : null,
+    storyFileUpdated,
+    epicStatusUpdated,
+    epicNewStatus,
+    sprintProgress: progress ?? undefined,
+    nextStory,
   };
-}
-
-/**
- * Remove a story from all status arrays and deduplicate
- */
-function removeFromAllArrays(
-  sprint: {
-    completed_stories: string[];
-    pending_stories: string[];
-    in_progress_stories: string[];
-    blocked_stories: string[];
-    stories_needing_review?: string[];
-  },
-  storyId: string
-): void {
-  // Remove the story and deduplicate arrays to prevent duplicates
-  sprint.completed_stories = [...new Set(sprint.completed_stories.filter((s) => s !== storyId))];
-  sprint.pending_stories = [...new Set(sprint.pending_stories.filter((s) => s !== storyId))];
-  sprint.in_progress_stories = [
-    ...new Set(sprint.in_progress_stories.filter((s) => s !== storyId)),
-  ];
-  sprint.blocked_stories = [...new Set(sprint.blocked_stories.filter((s) => s !== storyId))];
-  if (sprint.stories_needing_review) {
-    sprint.stories_needing_review = [
-      ...new Set(sprint.stories_needing_review.filter((s) => s !== storyId)),
-    ];
-  }
-}
-
-/**
- * Add a story to an array if not already present
- */
-function addToArrayIfNotPresent(array: string[], storyId: string): void {
-  if (!array.includes(storyId)) {
-    array.push(storyId);
-  }
 }

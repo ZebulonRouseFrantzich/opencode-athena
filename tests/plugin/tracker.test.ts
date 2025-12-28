@@ -53,12 +53,12 @@ describe("StoryTracker", () => {
         currentStory: {
           id: "2.3",
           content: "Test story",
-          status: "in_progress",
+          status: "in-progress",
           startedAt: "2024-01-01T00:00:00.000Z",
         },
         sessionId: "old-session",
         projectDir: projectDir,
-        history: [{ storyId: "2.3", status: "in_progress", timestamp: "2024-01-01T00:00:00.000Z" }],
+        history: [{ storyId: "2.3", status: "in-progress", timestamp: "2024-01-01T00:00:00.000Z" }],
       };
 
       mockExistsSync.mockReturnValue(true);
@@ -68,14 +68,14 @@ describe("StoryTracker", () => {
       await tracker.initialize();
 
       expect(tracker.getCurrentStory()?.id).toBe("2.3");
-      expect(tracker.getCurrentStory()?.status).toBe("in_progress");
+      expect(tracker.getCurrentStory()?.status).toBe("in-progress");
       // Session ID should be regenerated
       expect(tracker.getSessionId()).not.toBe("old-session");
     });
 
     it("should not restore state if project directory differs", async () => {
       const savedState = {
-        currentStory: { id: "2.3", content: "Test", status: "in_progress", startedAt: "2024-01-01" },
+        currentStory: { id: "2.3", content: "Test", status: "in-progress", startedAt: "2024-01-01" },
         sessionId: "old-session",
         projectDir: "/different/project",
         history: [],
@@ -98,13 +98,13 @@ describe("StoryTracker", () => {
 
       await tracker.setCurrentStory("2.3", {
         content: "Test story content",
-        status: "in_progress",
+        status: "in-progress",
         startedAt: "2024-01-01T00:00:00.000Z",
       });
 
       const story = tracker.getCurrentStory();
       expect(story?.id).toBe("2.3");
-      expect(story?.status).toBe("in_progress");
+      expect(story?.status).toBe("in-progress");
 
       const history = tracker.getHistory();
       expect(history.length).toBe(1);
@@ -117,7 +117,7 @@ describe("StoryTracker", () => {
 
       await tracker.setCurrentStory("2.3", {
         content: "Test",
-        status: "in_progress",
+        status: "in-progress",
         startedAt: "2024-01-01",
       });
 
@@ -132,14 +132,14 @@ describe("StoryTracker", () => {
 
       await tracker.setCurrentStory("2.3", {
         content: "Test",
-        status: "in_progress",
+        status: "in-progress",
         startedAt: "2024-01-01",
       });
 
-      await tracker.updateStoryStatus("2.3", "completed");
+      await tracker.updateStoryStatus("2.3", "done");
 
       const story = tracker.getCurrentStory();
-      expect(story?.status).toBe("completed");
+      expect(story?.status).toBe("done");
       expect(story?.completedAt).toBeDefined();
     });
 
@@ -149,15 +149,15 @@ describe("StoryTracker", () => {
 
       await tracker.setCurrentStory("2.3", {
         content: "Test",
-        status: "in_progress",
+        status: "in-progress",
         startedAt: "2024-01-01",
       });
 
-      await tracker.updateStoryStatus("2.3", "completed");
+      await tracker.updateStoryStatus("2.3", "done");
 
       const history = tracker.getHistory();
       expect(history.length).toBe(2);
-      expect(history[1].status).toBe("completed");
+      expect(history[1].status).toBe("done");
     });
   });
 
@@ -176,13 +176,13 @@ describe("StoryTracker", () => {
 
       await tracker.setCurrentStory("2.3", {
         content: "Test story",
-        status: "in_progress",
+        status: "in-progress",
         startedAt: "2024-01-01T00:00:00.000Z",
       });
 
       const context = await tracker.getCurrentStoryContext();
       expect(context).toContain("Current Story: 2.3");
-      expect(context).toContain("Status: in_progress");
+      expect(context).toContain("Status: in-progress");
     });
   });
 
@@ -193,7 +193,7 @@ describe("StoryTracker", () => {
 
       await tracker.setCurrentStory("2.3", {
         content: "Test",
-        status: "in_progress",
+        status: "in-progress",
         startedAt: "2024-01-01",
       });
 

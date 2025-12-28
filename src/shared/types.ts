@@ -280,15 +280,144 @@ export interface Prerequisites {
 // Plugin Types
 // ============================================================================
 
+// ============================================================================
+// BMAD v6 Status Types (Flat Map Structure)
+// ============================================================================
+
 /**
- * Story status in sprint tracking
+ * BMAD v6 story status values (hyphenated)
+ * Flow: backlog → ready-for-dev → in-progress → review → done
+ * "blocked" is an Athena extension for tracking external dependencies
+ */
+export type BmadStoryStatus =
+  | "backlog"
+  | "ready-for-dev"
+  | "in-progress"
+  | "review"
+  | "done"
+  | "blocked"; // Athena extension
+
+/**
+ * BMAD v6 epic status values
+ * Flow: backlog → in-progress → done
+ */
+export type BmadEpicStatus = "backlog" | "in-progress" | "done";
+
+/**
+ * BMAD v6 retrospective status values
+ */
+export type BmadRetroStatus = "optional" | "done";
+
+/**
+ * All possible status values in development_status map
+ */
+export type BmadDevelopmentStatus = BmadStoryStatus | BmadEpicStatus | BmadRetroStatus;
+
+/**
+ * BMAD v6 sprint status structure (flat map format)
+ *
+ * Example:
+ * ```yaml
+ * generated: 2025-12-28T10:30:00Z
+ * project: My Project
+ * current_story: 2-3  # Athena extension
+ *
+ * development_status:
+ *   epic-1: in-progress
+ *   1-1-user-auth: done
+ *   1-2-api-setup: ready-for-dev
+ *   epic-1-retrospective: optional
+ * ```
+ */
+export interface BmadSprintStatus {
+  /** ISO timestamp when file was generated */
+  generated?: string;
+  /** Project name */
+  project?: string;
+  /** Project key for tracking system integration */
+  project_key?: string;
+  /** Tracking system type (e.g., "file-system") */
+  tracking_system?: string;
+  /** Path to story files */
+  story_location?: string;
+
+  // Athena extensions
+  /** Currently active story (Athena extension for explicit tracking) */
+  current_story?: string | null;
+  /** Last modified timestamp (Athena extension) */
+  last_modified?: string;
+
+  /**
+   * Flat map of all development items and their statuses.
+   * Keys can be:
+   * - Epic: "epic-{num}" (e.g., "epic-1")
+   * - Story: "{epic}-{story}" or "{epic}-{story}-{title}" (e.g., "2-3" or "2-3-user-auth")
+   * - Retrospective: "epic-{num}-retrospective" (e.g., "epic-1-retrospective")
+   */
+  development_status: Record<string, BmadDevelopmentStatus>;
+}
+
+/**
+ * Parsed story key information
+ */
+export interface ParsedStoryKey {
+  /** Epic number (e.g., "2") */
+  epicNum: string;
+  /** Story number (e.g., "3") */
+  storyNum: string;
+  /** Title slug if present (e.g., "user-authentication") */
+  titleSlug?: string;
+  /** Full original key (e.g., "2-3-user-authentication") */
+  fullKey: string;
+  /** Normalized ID without title (e.g., "2-3") */
+  normalizedId: string;
+}
+
+/**
+ * Parsed epic key information
+ */
+export interface ParsedEpicKey {
+  /** Epic number (e.g., "1") */
+  epicNum: string;
+  /** Full original key (e.g., "epic-1") */
+  fullKey: string;
+}
+
+/**
+ * Parsed retrospective key information
+ */
+export interface ParsedRetroKey {
+  /** Epic number (e.g., "1") */
+  epicNum: string;
+  /** Full original key (e.g., "epic-1-retrospective") */
+  fullKey: string;
+}
+
+/**
+ * Type of key in development_status map
+ */
+export type DevelopmentKeyType = "story" | "epic" | "retrospective" | "unknown";
+
+/**
+ * Result of parsing a development_status key
+ */
+export type ParsedDevelopmentKey =
+  | { type: "story"; parsed: ParsedStoryKey }
+  | { type: "epic"; parsed: ParsedEpicKey }
+  | { type: "retrospective"; parsed: ParsedRetroKey }
+  | { type: "unknown"; key: string };
+
+// ============================================================================
+// Legacy Types (for backward compatibility - deprecated)
+// ============================================================================
+
+/**
+ * @deprecated Use BmadStoryStatus instead. This type uses underscore format
+ * which doesn't match BMAD v6's hyphenated format.
  */
 export type StoryStatus = "pending" | "in_progress" | "completed" | "blocked" | "needs_review";
 
-/**
- * Internal tracker status (includes transitional states)
- */
-export type TrackerStatus = StoryStatus | "loading";
+export type TrackerStatus = BmadStoryStatus | "loading";
 
 /**
  * Tracked story state
@@ -302,7 +431,8 @@ export interface TrackedStory {
 }
 
 /**
- * Sprint status structure (from sprint-status.yaml)
+ * @deprecated Use BmadSprintStatus instead. This interface uses array-based
+ * structure which doesn't match BMAD v6's flat map format.
  */
 export interface SprintStatus {
   sprint_number?: number;

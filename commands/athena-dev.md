@@ -33,7 +33,7 @@ I've completed the implementation. Would you like me to:
 ```
 athena_update_status({
   storyId: "X.Y",
-  status: "completed",
+  status: "done",
   completionSummary: "What was implemented..."
 })
 ```
@@ -342,7 +342,7 @@ When implementation is verified and ready, update the status:
 ```
 athena_update_status({
   storyId: "<story ID>",
-  status: "completed",
+  status: "done",
   completionSummary: "Implemented {feature}. {What was built}. {Tests status}. {Any notes}."
 })
 ```
@@ -365,7 +365,7 @@ If the story isn't complete but you need to save progress:
 ```
 athena_update_status({
   storyId: "<story ID>",
-  status: "in_progress",
+  status: "in-progress",
   notes: "Progress: {what's done}. Remaining: {what's left}."
 })
 ```

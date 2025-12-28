@@ -61,7 +61,7 @@ async function handleSessionIdle(
 ): Promise<void> {
   const currentStory = tracker.getCurrentStory();
 
-  if (currentStory && currentStory.status === "in_progress") {
+  if (currentStory && currentStory.status === "in-progress") {
     // Story is in progress but session went idle
     if (config.features?.notifications) {
       await sendNotification(

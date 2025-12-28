@@ -6,7 +6,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
-import { AthenaConfigSchema, SprintStatusSchema } from "../../shared/schemas.js";
+import { AthenaConfigSchema, BmadSprintStatusSchema } from "../../shared/schemas.js";
 import type { AthenaConfig } from "../../shared/types.js";
 
 /**
@@ -51,7 +51,7 @@ export function validateSprintStatus(path: string): ValidationResult {
   try {
     const content = readFileSync(path, "utf-8");
     const data = parseYaml(content);
-    const parseResult = SprintStatusSchema.safeParse(data);
+    const parseResult = BmadSprintStatusSchema.safeParse(data);
 
     if (!parseResult.success) {
       result.valid = false;

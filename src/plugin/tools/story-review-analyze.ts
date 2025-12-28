@@ -25,6 +25,7 @@ import {
   resolveStoryIdentifier,
   stripAtPrefix,
 } from "../utils/story-loader.js";
+import { updateStoryStatus } from "../utils/yaml-handler.js";
 
 export function createStoryReviewAnalyzeTool(
   ctx: PluginInput,
@@ -129,6 +130,14 @@ async function executePhase1Analysis(
     recommendedAgents,
     summary
   );
+
+  if (scope === "story") {
+    await updateStoryStatus(paths.sprintStatus, identifier, "ready-for-dev");
+  } else {
+    for (const story of storiesContent) {
+      await updateStoryStatus(paths.sprintStatus, story.id, "ready-for-dev");
+    }
+  }
 
   return {
     success: true,

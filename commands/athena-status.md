@@ -61,7 +61,7 @@ When you begin implementing a story:
 ```
 athena_update_status({
   storyId: "2.4",
-  status: "in_progress"
+  status: "in-progress"
 })
 ```
 
@@ -77,7 +77,7 @@ When implementation is done and verified:
 ```
 athena_update_status({
   storyId: "2.4",
-  status: "completed",
+  status: "done",
   completionSummary: "Implemented OAuth2 login flow with Google and GitHub providers. Added token refresh mechanism. All tests passing."
 })
 ```
@@ -126,7 +126,7 @@ When ready for code review or QA:
 ```
 athena_update_status({
   storyId: "2.4",
-  status: "needs_review"
+  status: "review"
 })
 ```
 
@@ -149,21 +149,21 @@ athena_update_status({
 ┌──────────────────────────────────────────────────────────────┐
 │  2. START IMPLEMENTATION                                      │
 │     /athena-dev → Load story, plan, implement                │
-│     Status: pending → in_progress                            │
+│     Status: backlog → in-progress                            │
 └──────────────────────────────────────────────────────────────┘
                             │
                             ▼
 ┌──────────────────────────────────────────────────────────────┐
 │  3. QUALITY GATE (Optional but Recommended)                   │
 │     /athena-review → Oracle code review + adversarial review │
-│     Status: in_progress → needs_review → completed/in_progress│
+│     Status: in-progress → review → done/in-progress          │
 └──────────────────────────────────────────────────────────────┘
                             │
                             ▼
 ┌──────────────────────────────────────────────────────────────┐
 │  4. COMPLETE & NEXT                                           │
 │     /athena-status → Verify completion, see next story       │
-│     Status: in_progress → completed                          │
+│     Status: in-progress → done                               │
 └──────────────────────────────────────────────────────────────┘
                             │
                             ▼
@@ -186,31 +186,32 @@ athena_update_status({
 ### Valid Status Flow
 
 ```
-pending ──────┬─────────────────────────────────────────┐
+backlog ──────┬─────────────────────────────────────────┐
               │                                          │
               ▼                                          │
-         in_progress ◄──────────────────────────┐       │
+         in-progress ◄──────────────────────────┐       │
               │                                  │       │
               ├──────► blocked ─────────────────┘       │
               │            │                            │
               │            └────────────────────────────┘
               │                 (when unblocked)
               │
-              ├──────► needs_review ────────────┐
+              ├──────► review ──────────────────┐
               │                                  │
               │                                  ▼
-              └──────────────────────────► completed
+              └──────────────────────────────► done
 ```
 
 ### Status Definitions
 
 | Status | Meaning | Next Actions |
 |--------|---------|--------------|
-| **pending** | Not yet started | Start with `/athena-dev` |
-| **in_progress** | Actively being worked on | Continue implementation |
+| **backlog** | Not yet started | Start with `/athena-dev` |
+| **ready-for-dev** | Reviewed and ready for implementation | Start with `/athena-dev` |
+| **in-progress** | Actively being worked on | Continue implementation |
 | **blocked** | Waiting for external dependency | Resolve blocker, then resume |
-| **needs_review** | Ready for review | Run `/athena-review` |
-| **completed** | Done and verified | Move to next story |
+| **review** | Ready for review | Run `/athena-review` |
+| **done** | Done and verified | Move to next story |
 
 ## Handling Special Cases
 
@@ -222,8 +223,8 @@ If you return to a story after a break:
 # Check current state
 athena_get_story()
 
-# If status is in_progress, continue
-# If status is pending, start fresh with /athena-dev
+# If status is in-progress, continue
+# If status is backlog or ready-for-dev, start fresh with /athena-dev
 ```
 
 ### Story Dependencies
@@ -245,7 +246,7 @@ When a blocker is resolved:
 ```
 athena_update_status({
   storyId: "2.4",
-  status: "in_progress",
+  status: "in-progress",
   notes: "Blocker resolved. Received API credentials from DevOps. Resuming implementation."
 })
 ```
@@ -257,7 +258,7 @@ If issues are found after marking complete:
 ```
 athena_update_status({
   storyId: "2.4",
-  status: "in_progress",
+  status: "in-progress",
   notes: "Reopened: Found edge case not covered. Need to add handling for empty input."
 })
 ```
@@ -274,7 +275,7 @@ When reviewing sprint status, watch for:
 
 ### Warning Signs
 - ⚠️ Multiple stories blocked
-- ⚠️ Story in_progress for too long
+- ⚠️ Story in-progress for too long
 - ⚠️ No progress for extended time
 - ⚠️ Blockers not getting resolved
 
@@ -283,7 +284,7 @@ When reviewing sprint status, watch for:
 | Warning | Action |
 |---------|--------|
 | Multiple blocked stories | Escalate blockers, prioritize resolution |
-| Story stuck in_progress | Break into smaller tasks, ask for help |
+| Story stuck in-progress | Break into smaller tasks, ask for help |
 | No progress | Check for hidden blockers, reassess scope |
 | Blockers aging | Follow up with responsible parties |
 
