@@ -76,6 +76,7 @@ const defaultConfig: AthenaConfig = {
     commentChecker: true,
     lspTools: true,
     autoGitOperations: false,
+    todoSync: true,
   },
   mcps: {
     context7: true,
@@ -346,7 +347,11 @@ describe("findStoriesInEpic", () => {
 });
 
 describe("loadStoryFile", () => {
-  let loadStoryFile: (storiesDir: string, storyId: string) => Promise<string | null>;
+  let loadStoryFile: (
+    storiesDir: string,
+    storyId: string,
+    projectRoot?: string
+  ) => Promise<{ content: string; storyId: string } | null>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -369,7 +374,10 @@ describe("loadStoryFile", () => {
 
     const result = await loadStoryFile("/test/stories", "2.3");
 
-    expect(result).toBe("# Story 2.3\n\nContent here");
+    expect(result).toEqual({
+      content: "# Story 2.3\n\nContent here",
+      storyId: "2.3",
+    });
     expect(mockReadFile).toHaveBeenCalledWith(
       expect.stringContaining("story-2-3.md"),
       "utf-8"

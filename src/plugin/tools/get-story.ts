@@ -9,7 +9,7 @@ import {
   generateImplementationInstructions,
 } from "../utils/context-builder.js";
 import { createPluginLogger } from "../utils/plugin-logger.js";
-import { loadStoryContent } from "../utils/story-loader.js";
+import { resolveStoryIdentifier } from "../utils/story-loader.js";
 import { readSprintStatus } from "../utils/yaml-handler.js";
 
 const log = createPluginLogger("get-story");
@@ -38,7 +38,7 @@ Use this tool before starting story implementation to get full context.`,
         .string()
         .optional()
         .describe(
-          "Specific story ID (e.g., '2.3'). If omitted, loads the next pending story from sprint-status.yaml."
+          "Story ID (e.g., '2.3') or file path (e.g., 'docs/stories/story-2-3.md'). If omitted, loads the next pending story."
         ),
     },
 
@@ -103,15 +103,17 @@ async function getStoryContext(
 
   log.debug("Loading story file", { storyId, storiesDir: paths.storiesDir });
 
-  // Load story file
-  const storyContent = await loadStoryFile(paths.storiesDir, storyId);
-  if (!storyContent) {
+  const storyResult = await loadStoryFile(paths.storiesDir, storyId, ctx.directory);
+  if (!storyResult) {
     log.error("Story file not found", { storyId, storiesDir: paths.storiesDir });
     return {
       error: `Story file not found for ${storyId}`,
       suggestion: "Run 'create-story' workflow with BMAD's SM agent.",
     };
   }
+
+  const resolvedStoryId = storyResult.storyId;
+  const storyContent = storyResult.content;
 
   // Load architecture context
   log.debug("Extracting relevant architecture sections", {
@@ -125,15 +127,15 @@ async function getStoryContext(
 
   // Update tracker with "loading" transitional state
   // The story will be promoted to "in_progress" when athena_update_status is called
-  log.debug("Updating story tracker", { storyId, status: "loading" });
-  await tracker.setCurrentStory(storyId, {
+  log.debug("Updating story tracker", { storyId: resolvedStoryId, status: "loading" });
+  await tracker.setCurrentStory(resolvedStoryId, {
     content: storyContent,
     status: "loading",
     startedAt: new Date().toISOString(),
   });
 
   log.info("Story context loaded successfully", {
-    storyId,
+    storyId: resolvedStoryId,
     hasArchitecture: !!archContent,
     hasPRD: !!prdContent,
     sprintProgress: {
@@ -144,7 +146,7 @@ async function getStoryContext(
   });
 
   return {
-    storyId,
+    storyId: resolvedStoryId,
     story: storyContent,
     architecture: archContent || "No architecture document found.",
     prd: prdContent || "No PRD document found.",
@@ -154,7 +156,7 @@ async function getStoryContext(
       pendingStories: sprint.pending_stories.length,
       blockedStories: sprint.blocked_stories.length,
     },
-    instructions: generateImplementationInstructions(storyId),
+    instructions: generateImplementationInstructions(resolvedStoryId),
   };
 }
 
@@ -180,7 +182,12 @@ function findNextPendingStory(sprint: SprintStatus): string | null {
   return null;
 }
 
-async function loadStoryFile(storiesDir: string, storyId: string): Promise<string | null> {
-  const result = await loadStoryContent(storiesDir, storyId);
-  return result?.content ?? null;
+async function loadStoryFile(
+  storiesDir: string,
+  storyId: string,
+  projectRoot: string
+): Promise<{ content: string; storyId: string } | null> {
+  const result = await resolveStoryIdentifier(storiesDir, storyId, projectRoot);
+  if (!result) return null;
+  return { content: result.content, storyId: result.storyId };
 }

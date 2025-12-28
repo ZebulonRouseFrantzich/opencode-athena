@@ -13,7 +13,7 @@
 
 import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join, resolve } from "node:path";
 
 /**
  * Result of finding a story file.
@@ -336,4 +336,158 @@ export function getStoryFilenamePatterns(storyId: string): string[] {
     `${epic}-${number}.md`,
     `${epic}-${number}-*.md`,
   ];
+}
+
+/**
+ * Strip @ prefix if present (OpenCode file reference syntax).
+ * OpenCode uses @path/to/file to reference files in prompts.
+ *
+ * @example
+ * stripAtPrefix("@docs/stories/story-4-1.md") // "docs/stories/story-4-1.md"
+ * stripAtPrefix("4.1") // "4.1"
+ * stripAtPrefix("story-4-1") // "story-4-1"
+ */
+export function stripAtPrefix(identifier: string): string {
+  return identifier.startsWith("@") ? identifier.slice(1) : identifier;
+}
+
+/**
+ * Check if identifier looks like a file path (vs a story ID).
+ * Does NOT check if file exists - just pattern detection.
+ *
+ * @example
+ * looksLikeFilePath("docs/stories/story-4-1.md") // true
+ * looksLikeFilePath("./story-4-1.md") // true
+ * looksLikeFilePath("/absolute/path/story.md") // true
+ * looksLikeFilePath("4.1") // false
+ * looksLikeFilePath("story-4-1") // false
+ */
+export function looksLikeFilePath(identifier: string): boolean {
+  // Contains path separator (forward or back slash)
+  const hasPathSeparator = identifier.includes("/") || identifier.includes("\\");
+
+  // Ends with .md extension
+  const hasMdExtension = identifier.endsWith(".md");
+
+  // Starts with ./ or ../ (relative path indicators)
+  const hasRelativePrefix = identifier.startsWith("./") || identifier.startsWith("../");
+
+  // Starts with / (absolute path on Unix)
+  const hasAbsolutePrefix = identifier.startsWith("/");
+
+  // It's a file path if it has path separators, or has .md extension with relative/absolute prefix
+  return hasPathSeparator || (hasMdExtension && (hasRelativePrefix || hasAbsolutePrefix));
+}
+
+/**
+ * Load story content directly from a file path.
+ * Extracts story ID from filename for tracking.
+ *
+ * @param filePath - Absolute or resolved path to the story file
+ * @returns Story content with metadata, or null if file doesn't exist
+ */
+export async function loadStoryFromPath(
+  filePath: string
+): Promise<{ content: string; path: string; filename: string; storyId: string } | null> {
+  if (!existsSync(filePath)) {
+    return null;
+  }
+
+  const filename = basename(filePath);
+  const parsed = parseStoryIdFromFilename(filename);
+
+  // Extract story ID from filename, or normalize the filename itself
+  const storyId = parsed?.id ?? normalizeStoryId(filename);
+
+  try {
+    const content = await readFile(filePath, "utf-8");
+    return { content, path: filePath, filename, storyId };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Result of resolving a story identifier.
+ */
+export interface ResolvedStory {
+  /** Story file content */
+  content: string;
+  /** Full path to the story file */
+  path: string;
+  /** Original filename */
+  filename: string;
+  /** Normalized story ID (e.g., "4.1") */
+  storyId: string;
+}
+
+/**
+ * Resolve a story identifier that might be a file path or story ID.
+ *
+ * Resolution order:
+ * 1. Strip @ prefix if present (OpenCode file reference syntax)
+ * 2. If it looks like a file path:
+ *    a. Try as absolute path
+ *    b. Try relative to projectRoot
+ * 3. Fall back to searching in storiesDir (original behavior)
+ *
+ * @param storiesDir - Directory containing story files (for fallback)
+ * @param identifier - Story ID (e.g., "4.1") or file path (e.g., "docs/stories/story-4-1.md")
+ * @param projectRoot - Project root for resolving relative paths
+ * @param logger - Optional logger for warnings
+ * @returns Resolved story or null if not found
+ *
+ * @example
+ * // File path (absolute)
+ * await resolveStoryIdentifier(storiesDir, "/home/user/project/docs/story-4-1.md", projectRoot)
+ *
+ * // File path (relative)
+ * await resolveStoryIdentifier(storiesDir, "docs/stories/story-4-1.md", projectRoot)
+ *
+ * // OpenCode @ reference
+ * await resolveStoryIdentifier(storiesDir, "@docs/stories/story-4-1.md", projectRoot)
+ *
+ * // Story ID (fallback to storiesDir search)
+ * await resolveStoryIdentifier(storiesDir, "4.1", projectRoot)
+ */
+export async function resolveStoryIdentifier(
+  storiesDir: string,
+  identifier: string,
+  projectRoot?: string,
+  logger?: { warn: (msg: string) => void }
+): Promise<ResolvedStory | null> {
+  // 1. Strip @ prefix if present
+  const cleaned = stripAtPrefix(identifier);
+
+  // 2. Check if it looks like a file path
+  if (looksLikeFilePath(cleaned)) {
+    // 2a. Try as absolute path (or path that exists as-is)
+    if (existsSync(cleaned)) {
+      const result = await loadStoryFromPath(cleaned);
+      if (result) return result;
+    }
+
+    // 2b. Try relative to project root
+    if (projectRoot) {
+      const absolutePath = resolve(projectRoot, cleaned);
+      if (existsSync(absolutePath)) {
+        const result = await loadStoryFromPath(absolutePath);
+        if (result) return result;
+      }
+    }
+
+    // File path was provided but doesn't exist - still try storiesDir as fallback
+    // This handles cases where user provides "story-4-1.md" without full path
+  }
+
+  // 3. Fall back to storiesDir search (original behavior)
+  const result = await loadStoryContent(storiesDir, cleaned, logger);
+  if (result) {
+    return {
+      ...result,
+      storyId: normalizeStoryId(cleaned),
+    };
+  }
+
+  return null;
 }

@@ -20,7 +20,11 @@ import {
   countFindings,
   parseOracleResponse,
 } from "../utils/oracle-parser.js";
-import { findStoriesForEpic, loadStoryContent, normalizeStoryId } from "../utils/story-loader.js";
+import {
+  findStoriesForEpic,
+  resolveStoryIdentifier,
+  stripAtPrefix,
+} from "../utils/story-loader.js";
 
 export function createStoryReviewAnalyzeTool(
   ctx: PluginInput,
@@ -81,7 +85,7 @@ async function executePhase1Analysis(
   const storiesContent =
     scope === "epic"
       ? await loadEpicStories(paths.storiesDir, identifier)
-      : await loadSingleStory(paths.storiesDir, identifier);
+      : await loadSingleStory(paths.storiesDir, identifier, ctx.directory);
 
   if (storiesContent.length === 0) {
     return {
@@ -168,13 +172,14 @@ async function loadEpicStories(
 
 async function loadSingleStory(
   storiesDir: string,
-  storyId: string
+  identifier: string,
+  projectRoot?: string
 ): Promise<Array<{ id: string; content: string | null }>> {
-  const result = await loadStoryContent(storiesDir, storyId);
+  const cleaned = stripAtPrefix(identifier);
+  const result = await resolveStoryIdentifier(storiesDir, cleaned, projectRoot);
   if (!result) return [];
 
-  const id = normalizeStoryId(storyId);
-  return [{ id, content: result.content }];
+  return [{ id: result.storyId, content: result.content }];
 }
 
 async function loadFile(filePath: string): Promise<string | null> {

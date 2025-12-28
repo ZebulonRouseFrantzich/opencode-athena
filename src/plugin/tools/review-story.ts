@@ -19,8 +19,9 @@ import { getBmadPaths } from "../utils/bmad-finder.js";
 import {
   findStoriesForEpic as findStoriesForEpicShared,
   getStoryFilenamePatterns,
-  loadStoryContent,
   normalizeStoryId as normalizeStoryIdShared,
+  resolveStoryIdentifier,
+  stripAtPrefix,
 } from "../utils/story-loader.js";
 
 interface BmadPaths {
@@ -162,7 +163,7 @@ async function ensureReviewsDirectory(reviewsDir: string): Promise<void> {
 }
 
 async function executeEpicReview(
-  _ctx: PluginInput,
+  ctx: PluginInput,
   config: AthenaConfig,
   paths: BmadPaths,
   identifier: string,
@@ -184,10 +185,13 @@ async function executeEpicReview(
   }
 
   const storyContents = await Promise.all(
-    stories.map(async (storyId) => ({
-      id: storyId,
-      content: await loadStoryFile(paths.storiesDir, storyId),
-    }))
+    stories.map(async (storyId) => {
+      const result = await loadStoryFile(paths.storiesDir, storyId, ctx.directory);
+      return {
+        id: result?.storyId ?? storyId,
+        content: result?.content ?? null,
+      };
+    })
   );
 
   const architectureContent = await loadArchitecture(paths.architecture);
@@ -209,26 +213,28 @@ async function executeEpicReview(
 }
 
 async function executeStoryReview(
-  _ctx: PluginInput,
+  ctx: PluginInput,
   config: AthenaConfig,
   paths: BmadPaths,
   identifier: string,
   reviewsDir: string,
   forceAdvancedModel?: boolean
 ): Promise<Phase1Context> {
-  const storyId = normalizeStoryId(identifier);
-
-  const storyContent = await loadStoryFile(paths.storiesDir, storyId);
-  if (!storyContent) {
-    const patterns = getStoryFilenamePatterns(storyId);
+  const storyResult = await loadStoryFile(paths.storiesDir, identifier, ctx.directory);
+  if (!storyResult) {
+    const normalizedId = normalizeStoryId(identifier);
+    const patterns = getStoryFilenamePatterns(normalizedId);
     return {
       success: false,
       scope: "story",
-      identifier: storyId,
-      error: `Story ${storyId} not found`,
+      identifier: normalizedId,
+      error: `Story ${normalizedId} not found`,
       suggestion: `Check that the story file exists in ${paths.storiesDir} matching: ${patterns.join(", ")}`,
     };
   }
+
+  const storyId = storyResult.storyId;
+  const storyContent = storyResult.content;
 
   const existingReviews = await findExistingReviews(reviewsDir, storyId);
   const epicReview = existingReviews.find((r) => r.type === "epic");
@@ -266,9 +272,15 @@ async function findStoriesInEpic(storiesDir: string, epicNumber: string): Promis
   return stories.map((s) => s.id);
 }
 
-async function loadStoryFile(storiesDir: string, storyId: string): Promise<string | null> {
-  const result = await loadStoryContent(storiesDir, storyId);
-  return result?.content ?? null;
+async function loadStoryFile(
+  storiesDir: string,
+  storyId: string,
+  projectRoot?: string
+): Promise<{ content: string; storyId: string } | null> {
+  const cleaned = stripAtPrefix(storyId);
+  const result = await resolveStoryIdentifier(storiesDir, cleaned, projectRoot);
+  if (!result) return null;
+  return { content: result.content, storyId: result.storyId };
 }
 
 async function loadArchitecture(architectureFile: string): Promise<string> {
