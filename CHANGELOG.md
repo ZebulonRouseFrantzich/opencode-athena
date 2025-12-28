@@ -38,6 +38,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Config version freshness check
   - GitHub Copilot authentication status check (when enabled)
 
+- **BMAD ↔ Todo Sync**
+  - Automatic synchronization between BMAD story checkboxes and oh-my-opencode's todo tool
+  - Write-through cache model: BMAD files remain source of truth
+  - Athena-themed todo format: `[{storyId}Δ{section}] {task}` (e.g., `[2.3ΔAC1] Implement login`)
+  - Content-based matching: robust to line number shifts from file edits
+  - Compaction-safe: todos include story context for post-compaction recovery
+  - Merge strategy: user todos preserved, BMAD todos synced per-story
+  - Priority detection from BMAD content (Critical/High → high, etc.)
+  - New config flag: `features.todoSync` (default: true)
+  - New files: `src/plugin/utils/todo-sync.ts`, `src/plugin/hooks/todo-hooks.ts`
+  - Integration with `athena_get_story` and `todowrite` hooks
+
 ### Changed
 
 - **Upgrade Command Consolidation**

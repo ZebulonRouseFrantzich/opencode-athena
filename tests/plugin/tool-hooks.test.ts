@@ -2,12 +2,15 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createToolHooks } from "../../src/plugin/hooks/tool-hooks.js";
 import type { AthenaConfig } from "../../src/shared/types.js";
 import type { StoryTracker } from "../../src/plugin/tracker/story-tracker.js";
+import type { PluginInput } from "@opencode-ai/plugin";
 
 describe("tool-hooks", () => {
+  let mockCtx: PluginInput;
   let mockTracker: StoryTracker;
   let config: AthenaConfig;
 
   beforeEach(() => {
+    mockCtx = { directory: "/test" } as PluginInput;
     mockTracker = {} as StoryTracker;
     config = {
       version: "1.0.0",
@@ -36,6 +39,7 @@ describe("tool-hooks", () => {
         commentChecker: true,
         lspTools: true,
         autoGitOperations: false,
+        todoSync: false,
       },
       mcps: {
         context7: true,
@@ -47,7 +51,7 @@ describe("tool-hooks", () => {
 
   describe("after hook - git operations warning", () => {
     it("should inject warning when autoGitOperations is false and git commit is detected", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "Changes committed successfully",
@@ -61,7 +65,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for git push", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "Push successful",
@@ -74,7 +78,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for gh pr create", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "PR created",
@@ -88,7 +92,7 @@ describe("tool-hooks", () => {
 
     it("should NOT inject warning when autoGitOperations is true", async () => {
       config.features.autoGitOperations = true;
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "Changes committed",
@@ -101,7 +105,7 @@ describe("tool-hooks", () => {
     });
 
     it("should NOT inject warning for read-only git commands", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "git status output",
@@ -114,7 +118,7 @@ describe("tool-hooks", () => {
     });
 
     it("should NOT inject warning for non-bash tools", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "read",
         output: "file contents",
@@ -127,7 +131,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle missing command metadata", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "output",
@@ -140,7 +144,7 @@ describe("tool-hooks", () => {
     });
 
     it("should NOT inject warning for echo with git command in string", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "echoed text",
@@ -153,7 +157,7 @@ describe("tool-hooks", () => {
     });
 
     it("should NOT inject warning for grep with git command pattern", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "grep results",
@@ -166,7 +170,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for command chaining with &&", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "tests passed, committed",
@@ -179,7 +183,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for command chaining with semicolon", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "changed dir and pushed",
@@ -192,7 +196,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for command chaining with pipe", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "piped output",
@@ -205,7 +209,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle different casing (Git Commit)", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "committed",
@@ -218,7 +222,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle uppercase (GIT PUSH)", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "pushed",
@@ -231,7 +235,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle leading whitespace", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "committed",
@@ -244,7 +248,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle trailing whitespace", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "pushed",
@@ -257,7 +261,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle newlines in command", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "committed",
@@ -270,7 +274,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle null metadata", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "output",
@@ -283,7 +287,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle undefined metadata", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "output",
@@ -296,7 +300,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle non-object metadata", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "output",
@@ -309,7 +313,7 @@ describe("tool-hooks", () => {
     });
 
     it("should handle non-string command in metadata", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "output",
@@ -322,7 +326,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for git switch -c", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "switched to new branch",
@@ -335,7 +339,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for git tag", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "tag created",
@@ -348,7 +352,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for git reset", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "reset complete",
@@ -361,7 +365,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for gh issue edit", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "issue updated",
@@ -374,7 +378,7 @@ describe("tool-hooks", () => {
     });
 
     it("should inject warning for gh release delete", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = {
         title: "bash",
         output: "release deleted",
@@ -389,7 +393,7 @@ describe("tool-hooks", () => {
 
   describe("before hook", () => {
     it("should not modify args", async () => {
-      const hooks = createToolHooks(mockTracker, config);
+      const hooks = createToolHooks(mockCtx, mockTracker, config);
       const output = { args: { test: "value" } };
 
       await hooks.before({ tool: "bash", sessionID: "test", callID: "1" }, output);

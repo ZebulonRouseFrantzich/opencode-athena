@@ -115,6 +115,34 @@ This is a **fresh implementation** - proceed with the normal workflow:
 - Verify implementation (Step 4)
 - Complete the story (Step 5)
 
+## Step 1.5: Sync Todos (Automatic)
+
+When `athena_get_story` returns, it includes a `todos` section with BMAD tasks formatted for the todo list.
+
+**Call todowrite to populate your task list:**
+
+```
+todowrite({
+  todos: [
+    // Use the todos array from athena_get_story response
+  ]
+})
+```
+
+This syncs the BMAD story checkboxes to your todo list:
+- `[2.3ΔAC1] Implement login endpoint` → Acceptance Criterion 1
+- `[2.3ΔTask3] Write integration tests` → Task 3  
+- `[2.3ΔFix2] Hardcoded JWT secret` → Implementation Notes finding
+
+**As you complete tasks:**
+- Mark todos complete via `todowrite`
+- The BMAD file checkboxes update automatically
+- Progress is preserved even after session compaction
+
+**Need more context on a task?**
+- The prefix tells you where to look: `[2.3ΔAC1]` → Story 2.3, AC section
+- Read the story file: `docs/stories/story-2-3.md`
+
 ## Step 2: Plan Your Approach
 
 Before diving into code, plan your implementation strategy:

@@ -12,6 +12,7 @@ import type { StoryTracker } from "../tracker/story-tracker.js";
 import { getBmadPaths } from "../utils/bmad-finder.js";
 import { sendNotification } from "../utils/notifications.js";
 import { createPluginLogger } from "../utils/plugin-logger.js";
+import { normalizeStoryId, stripAtPrefix } from "../utils/story-loader.js";
 import { readSprintStatus, writeSprintStatus } from "../utils/yaml-handler.js";
 
 const log = createPluginLogger("update-status");
@@ -36,7 +37,9 @@ Call this tool when:
 The sprint-status.yaml file will be automatically updated.`,
 
     args: {
-      storyId: tool.schema.string().describe("The story ID (e.g., '2.3')"),
+      storyId: tool.schema
+        .string()
+        .describe("Story ID (e.g., '2.3') or file path (e.g., 'docs/stories/story-2-3.md')"),
       status: tool.schema
         .enum(["in_progress", "completed", "blocked", "needs_review"])
         .describe("The new status for the story"),
@@ -73,7 +76,8 @@ async function updateStoryStatus(
   config: AthenaConfig,
   args: UpdateStatusArgs
 ): Promise<UpdateStatusResult> {
-  const { storyId, status, notes, completionSummary } = args;
+  const { status, notes, completionSummary } = args;
+  const storyId = normalizeStoryId(stripAtPrefix(args.storyId));
 
   log.debug("Updating story status", {
     storyId,

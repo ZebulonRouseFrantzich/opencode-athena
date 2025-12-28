@@ -8,8 +8,12 @@ import {
   getStoryFilenamePatterns,
   isStoryFile,
   loadStoryContent,
+  loadStoryFromPath,
+  looksLikeFilePath,
   normalizeStoryId,
   parseStoryIdFromFilename,
+  resolveStoryIdentifier,
+  stripAtPrefix,
 } from "../../src/plugin/utils/story-loader.js";
 
 describe("story-loader", () => {
@@ -288,6 +292,149 @@ describe("story-loader", () => {
 
     it("returns null for non-existent story", async () => {
       const result = await loadStoryContent(testDir, "99.99");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("stripAtPrefix", () => {
+    it("strips @ prefix from file references", () => {
+      expect(stripAtPrefix("@docs/stories/story-4-1.md")).toBe("docs/stories/story-4-1.md");
+      expect(stripAtPrefix("@story-4-1.md")).toBe("story-4-1.md");
+    });
+
+    it("preserves strings without @ prefix", () => {
+      expect(stripAtPrefix("4.1")).toBe("4.1");
+      expect(stripAtPrefix("story-4-1")).toBe("story-4-1");
+      expect(stripAtPrefix("docs/stories/story-4-1.md")).toBe("docs/stories/story-4-1.md");
+    });
+
+    it("only strips leading @ prefix", () => {
+      expect(stripAtPrefix("user@example.com")).toBe("user@example.com");
+      expect(stripAtPrefix("file@path")).toBe("file@path");
+    });
+  });
+
+  describe("looksLikeFilePath", () => {
+    it("returns true for paths with forward slashes", () => {
+      expect(looksLikeFilePath("docs/stories/story-4-1.md")).toBe(true);
+      expect(looksLikeFilePath("./story-4-1.md")).toBe(true);
+      expect(looksLikeFilePath("../stories/story.md")).toBe(true);
+    });
+
+    it("returns true for absolute paths", () => {
+      expect(looksLikeFilePath("/home/user/story-4-1.md")).toBe(true);
+      expect(looksLikeFilePath("/absolute/path/story.md")).toBe(true);
+    });
+
+    it("returns false for story IDs", () => {
+      expect(looksLikeFilePath("4.1")).toBe(false);
+      expect(looksLikeFilePath("story-4-1")).toBe(false);
+      expect(looksLikeFilePath("4-1")).toBe(false);
+    });
+
+    it("returns false for bare filenames without ./ prefix", () => {
+      expect(looksLikeFilePath("story-4-1.md")).toBe(false);
+    });
+  });
+
+  describe("loadStoryFromPath", () => {
+    it("loads story from direct file path", async () => {
+      const content = "# Story 4.1\n\nDirect path content.";
+      const filePath = join(testDir, "story-4-1.md");
+      writeFileSync(filePath, content);
+
+      const result = await loadStoryFromPath(filePath);
+      expect(result).not.toBeNull();
+      expect(result?.content).toBe(content);
+      expect(result?.storyId).toBe("4.1");
+      expect(result?.filename).toBe("story-4-1.md");
+    });
+
+    it("extracts story ID from filename with title", async () => {
+      const content = "# Story content";
+      const filePath = join(testDir, "story-4-2-setup-fastify.md");
+      writeFileSync(filePath, content);
+
+      const result = await loadStoryFromPath(filePath);
+      expect(result?.storyId).toBe("4.2");
+    });
+
+    it("returns null for non-existent path", async () => {
+      const result = await loadStoryFromPath("/nonexistent/path/story.md");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("resolveStoryIdentifier", () => {
+    it("resolves direct file path when it exists", async () => {
+      const content = "# Story 4.1\n\nDirect path content.";
+      const subDir = join(testDir, "custom");
+      mkdirSync(subDir, { recursive: true });
+      const filePath = join(subDir, "story-4-1.md");
+      writeFileSync(filePath, content);
+
+      const result = await resolveStoryIdentifier(testDir, filePath);
+      expect(result).not.toBeNull();
+      expect(result?.content).toBe(content);
+      expect(result?.storyId).toBe("4.1");
+    });
+
+    it("resolves relative path from project root", async () => {
+      const content = "# Story 4.1\n\nRelative path content.";
+      const subDir = join(testDir, "docs", "stories");
+      mkdirSync(subDir, { recursive: true });
+      writeFileSync(join(subDir, "story-4-1.md"), content);
+
+      const result = await resolveStoryIdentifier(
+        join(testDir, "other"),
+        "docs/stories/story-4-1.md",
+        testDir
+      );
+      expect(result).not.toBeNull();
+      expect(result?.content).toBe(content);
+      expect(result?.storyId).toBe("4.1");
+    });
+
+    it("strips @ prefix and resolves path", async () => {
+      const content = "# Story 4.1\n\nWith @ prefix.";
+      const subDir = join(testDir, "docs", "stories");
+      mkdirSync(subDir, { recursive: true });
+      writeFileSync(join(subDir, "story-4-1.md"), content);
+
+      const result = await resolveStoryIdentifier(
+        join(testDir, "other"),
+        "@docs/stories/story-4-1.md",
+        testDir
+      );
+      expect(result).not.toBeNull();
+      expect(result?.content).toBe(content);
+    });
+
+    it("falls back to storiesDir search for story IDs", async () => {
+      const content = "# Story 4.1\n\nFrom storiesDir.";
+      writeFileSync(join(testDir, "story-4-1.md"), content);
+
+      const result = await resolveStoryIdentifier(testDir, "4.1");
+      expect(result).not.toBeNull();
+      expect(result?.content).toBe(content);
+      expect(result?.storyId).toBe("4.1");
+    });
+
+    it("falls back to storiesDir when file path does not exist", async () => {
+      const content = "# Story 4.1\n\nFallback content.";
+      writeFileSync(join(testDir, "story-4-1.md"), content);
+
+      const result = await resolveStoryIdentifier(
+        testDir,
+        "nonexistent/story-4-1.md",
+        testDir
+      );
+      expect(result).not.toBeNull();
+      expect(result?.storyId).toBe("4.1");
+    });
+
+    it("returns null when story not found anywhere", async () => {
+      const result = await resolveStoryIdentifier(testDir, "99.99");
       expect(result).toBeNull();
     });
   });

@@ -58,6 +58,20 @@ export const MIGRATIONS: Migration[] = [
       return { ...config, bmad: { ...bmad, paths } };
     },
   },
+  {
+    fromVersion: "0.8.0",
+    toVersion: "0.9.0",
+    description: "Add BMAD todo sync feature flag: todoSync",
+    migrateAthena: (config) => {
+      const features = (config.features as Record<string, unknown>) || {};
+
+      if (features.todoSync === undefined) {
+        features.todoSync = true;
+      }
+
+      return { ...config, features };
+    },
+  },
 ];
 
 export interface FileMigrationResult {

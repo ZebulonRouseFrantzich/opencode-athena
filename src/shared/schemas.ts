@@ -80,6 +80,7 @@ export const FeaturesSchema = z.object({
   commentChecker: z.boolean(),
   lspTools: z.boolean(),
   autoGitOperations: z.boolean().default(false),
+  todoSync: z.boolean().default(true),
 });
 
 /**

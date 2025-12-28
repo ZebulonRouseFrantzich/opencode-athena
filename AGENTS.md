@@ -104,6 +104,34 @@ The plugin receives a `PluginContext` with:
 - Copied to `~/.config/opencode/command/` during install
 - Invoke plugin tools internally
 
+### Todo Synchronization
+
+When implementing BMAD stories, todos are automatically synced with story checkboxes:
+
+**Format:** `[{storyId}Δ{section}] {task description}`
+
+Examples:
+- `[2.3ΔAC1] Implement login endpoint` - Acceptance Criterion 1
+- `[2.3ΔTask3] Write integration tests` - Task 3
+- `[2.3ΔFix2] Fix hardcoded secret` - Implementation Notes finding
+
+**Workflow:**
+1. `athena_get_story` loads story and returns todos in response
+2. Agent calls `todowrite` to populate todo list
+3. Agent marks todos complete as work progresses
+4. Hook automatically updates BMAD file checkboxes
+5. BMAD files remain the source of truth
+
+**After compaction:**
+- Todo format includes story ID and section
+- Agent can read story file for full context
+- Hook parses todo ID to find correct BMAD file and line
+
+**Key files:**
+- `src/plugin/utils/todo-sync.ts` - Core sync logic
+- `src/plugin/hooks/todo-hooks.ts` - Hook handlers
+- `src/plugin/hooks/tool-hooks.ts` - Integration with tool execution
+
 ## Common Tasks
 
 ### Adding a New Tool
