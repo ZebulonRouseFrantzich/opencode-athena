@@ -4,6 +4,25 @@ description: Implement the current BMAD story using Sisyphus and specialized sub
 
 # Athena Dev - Story Implementation
 
+## Instructions
+
+You receive: `$ARGUMENTS`
+
+**Parse the argument and load the story:**
+
+1. **If argument is provided** (e.g., "4.5", "story-4-5", "docs/stories/story-4-5.md"):
+   - Call `athena_get_story({ storyId: "<argument>" })`
+   - The tool handles all formats: story IDs, file paths, and `@` references
+   - **Proceed immediately** with Step 1.5 after loading
+
+2. **If no argument provided**:
+   - Call `athena_get_story()` to load the next ready story
+   - **Proceed immediately** with the workflow below
+
+**Do NOT ask clarifying questions about which story to implement. Load it and start working.**
+
+---
+
 ## Git Operations Policy
 
 **⚠️ AUTOMATIC GIT OPERATIONS ARE PROHIBITED**

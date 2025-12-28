@@ -132,6 +132,30 @@ Examples:
 - `src/plugin/hooks/todo-hooks.ts` - Hook handlers
 - `src/plugin/hooks/tool-hooks.ts` - Integration with tool execution
 
+### Story Loader Utilities
+
+Story file resolution is handled by `src/plugin/utils/story-loader.ts`.
+
+**Key functions:**
+- `resolveStoryIdentifier(storiesDir, identifier, projectRoot)` - Main entry point
+  - Handles story IDs: `"4.5"`, `"4-5"`, `"story-4-5"`
+  - Handles file paths: `"docs/stories/story-4-1.md"`, `"@docs/stories/story-4-1.md"`
+  - Returns `{ content, path, filename, storyId }` or null
+- `normalizeStoryId(identifier)` - Converts any format to `"epic.number"` (e.g., `"4.1"`)
+- `parseStoryIdFromFilename(filename)` - Extracts story info from filename
+- `looksLikeFilePath(identifier)` - Detects paths vs story IDs
+- `stripAtPrefix(identifier)` - Removes `@` prefix (OpenCode file reference syntax)
+- `findStoryFile(storiesDir, storyId)` - Finds story by ID in a directory
+- `findStoriesForEpic(storiesDir, epicNumber)` - Finds all stories for an epic
+
+**Supported filename patterns:**
+- `story-{epic}-{number}.md` (BMAD standard)
+- `story-{epic}-{number}-{title}.md` (with title)
+- `{epic}-{number}.md` (minimal)
+- `{epic}-{number}-{title}.md` (with title, no prefix)
+
+Files with `story-` prefix are prioritized when multiple matches exist.
+
 ## Common Tasks
 
 ### Adding a New Tool

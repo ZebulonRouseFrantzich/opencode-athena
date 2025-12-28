@@ -86,9 +86,12 @@ async function getStoryContext(
 
   let resolvedStoryId: string;
   let storyStatus: string | undefined;
+  // Keep original input for resolveStoryIdentifier (handles both paths and IDs)
+  let storyIdentifier: string | undefined;
 
   if (requestedStoryId) {
-    resolvedStoryId = normalizeStoryId(stripAtPrefix(requestedStoryId));
+    storyIdentifier = stripAtPrefix(requestedStoryId);
+    resolvedStoryId = normalizeStoryId(storyIdentifier);
     const found = findStoryInStatus(sprint, resolvedStoryId);
     storyStatus = found?.status;
   } else {
@@ -109,14 +112,19 @@ async function getStoryContext(
       };
     }
     resolvedStoryId = nextStory.parsed.normalizedId;
+    storyIdentifier = resolvedStoryId;
     storyStatus = nextStory.status;
   }
 
-  log.debug("Loading story file", { storyId: resolvedStoryId, storiesDir: paths.storiesDir });
+  log.debug("Loading story file", {
+    storyId: resolvedStoryId,
+    storyIdentifier,
+    storiesDir: paths.storiesDir,
+  });
 
   const storyResult = await resolveStoryIdentifier(
     paths.storiesDir,
-    resolvedStoryId,
+    storyIdentifier,
     ctx.directory
   );
 
