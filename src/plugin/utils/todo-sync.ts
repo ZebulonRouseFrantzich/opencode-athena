@@ -4,9 +4,11 @@ import type {
   BmadTask,
   OpenCodeTodo,
   ParsedTodoId,
+  TodoMatchResult,
   TodoPriority,
   TodoStatus,
 } from "../../shared/types.js";
+import { TODO_MATCH_THRESHOLDS } from "../../shared/types.js";
 
 export const ATHENA_SEPARATOR = "Δ";
 
@@ -199,7 +201,7 @@ export async function findCheckboxLine(
   return null;
 }
 
-function extractTaskText(todoContent: string): string | null {
+export function extractTaskText(todoContent: string): string | null {
   const match = todoContent.match(/^\s*\[[\d.]+Δ\w+\d*\]\s*(.+)$/);
   return match ? match[1].trim() : todoContent.trim();
 }
@@ -218,7 +220,7 @@ function matchesCheckbox(line: string, searchText: string): boolean {
   return similarity > 0.7;
 }
 
-function calculateSimilarity(a: string, b: string): number {
+export function calculateSimilarity(a: string, b: string): number {
   if (a === b) return 1;
   if (a.length === 0 || b.length === 0) return 0;
 
@@ -278,4 +280,52 @@ export function mergeTodos(
   });
 
   return [...userTodos, ...otherStoryTodos, ...newBmadTodos];
+}
+
+export function findMatchingTodo(
+  todo: OpenCodeTodo,
+  previousTodos: OpenCodeTodo[]
+): TodoMatchResult {
+  const idMatch = previousTodos.find((t) => t.id === todo.id);
+  if (idMatch) {
+    return { matched: idMatch, matchType: "id", confidence: 1.0 };
+  }
+
+  const todoText = extractTaskText(todo.content);
+  if (!todoText) {
+    return { matched: null, matchType: "none", confidence: 0 };
+  }
+
+  const bmadTodos = previousTodos.filter(isBmadTodo);
+
+  for (const prev of bmadTodos) {
+    const prevText = extractTaskText(prev.content);
+    if (prevText && prevText.toLowerCase() === todoText.toLowerCase()) {
+      return { matched: prev, matchType: "exact-content", confidence: 0.95 };
+    }
+  }
+
+  let bestMatch: { todo: OpenCodeTodo; similarity: number } | null = null;
+  for (const prev of bmadTodos) {
+    const prevText = extractTaskText(prev.content);
+    if (!prevText) continue;
+
+    const similarity = calculateSimilarity(prevText.toLowerCase(), todoText.toLowerCase());
+    if (
+      similarity >= TODO_MATCH_THRESHOLDS.WARN_USER &&
+      similarity > (bestMatch?.similarity ?? 0)
+    ) {
+      bestMatch = { todo: prev, similarity };
+    }
+  }
+
+  if (bestMatch) {
+    return {
+      matched: bestMatch.todo,
+      matchType: "similar-content",
+      confidence: bestMatch.similarity,
+    };
+  }
+
+  return { matched: null, matchType: "none", confidence: 0 };
 }

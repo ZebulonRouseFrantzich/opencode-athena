@@ -11,9 +11,11 @@ import {
   findCheckboxLine,
   updateBmadCheckbox,
   mergeTodos,
+  findMatchingTodo,
   ATHENA_SEPARATOR,
 } from "../../src/plugin/utils/todo-sync.js";
 import type { OpenCodeTodo } from "../../src/shared/types.js";
+import { TODO_MATCH_THRESHOLDS } from "../../src/shared/types.js";
 
 describe("todo-sync", () => {
   describe("parseBmadTasks", () => {
@@ -575,6 +577,143 @@ Regular text here
         expect(tasks2[0].checked).toBe(false);
         expect(tasks2[1].checked).toBe(true);
         expect(tasks2[2].checked).toBe(false);
+      });
+    });
+  });
+
+  describe("findMatchingTodo", () => {
+    const createTodo = (id: string, content: string, status = "pending"): OpenCodeTodo => ({
+      id,
+      content,
+      status: status as OpenCodeTodo["status"],
+      priority: "medium",
+    });
+
+    describe("ID matching (tier 1)", () => {
+      it("matches by exact ID", () => {
+        const todo = createTodo("2.3:ac:10", "[2.3ΔAC1] Implement login");
+        const previous = [
+          createTodo("2.3:ac:10", "[2.3ΔAC1] Implement login"),
+          createTodo("2.3:ac:20", "[2.3ΔAC2] Add password hashing"),
+        ];
+
+        const result = findMatchingTodo(todo, previous);
+
+        expect(result.matchType).toBe("id");
+        expect(result.confidence).toBe(1.0);
+        expect(result.matched?.id).toBe("2.3:ac:10");
+      });
+
+      it("returns ID match even when content differs", () => {
+        const todo = createTodo("2.3:ac:10", "Modified content");
+        const previous = [createTodo("2.3:ac:10", "[2.3ΔAC1] Original content")];
+
+        const result = findMatchingTodo(todo, previous);
+
+        expect(result.matchType).toBe("id");
+        expect(result.confidence).toBe(1.0);
+      });
+    });
+
+    describe("exact content matching (tier 2)", () => {
+      it("matches by exact content when ID differs", () => {
+        const todo = createTodo("new-id", "[2.3ΔAC1] Implement login endpoint");
+        const previous = [createTodo("2.3:ac:10", "[2.3ΔAC1] Implement login endpoint")];
+
+        const result = findMatchingTodo(todo, previous);
+
+        expect(result.matchType).toBe("exact-content");
+        expect(result.confidence).toBe(0.95);
+        expect(result.matched?.id).toBe("2.3:ac:10");
+      });
+
+      it("matches content case-insensitively", () => {
+        const todo = createTodo("new-id", "[2.3ΔAC1] IMPLEMENT LOGIN ENDPOINT");
+        const previous = [createTodo("2.3:ac:10", "[2.3ΔAC1] implement login endpoint")];
+
+        const result = findMatchingTodo(todo, previous);
+
+        expect(result.matchType).toBe("exact-content");
+        expect(result.confidence).toBe(0.95);
+      });
+
+      it("only matches BMAD-formatted previous todos for content matching", () => {
+        const todo = createTodo("new-id", "Remember to update docs");
+        const previous = [createTodo("user-1", "Remember to update docs")];
+
+        const result = findMatchingTodo(todo, previous);
+
+        expect(result.matchType).toBe("none");
+        expect(result.matched).toBeNull();
+      });
+    });
+
+    describe("similar content matching (tier 3)", () => {
+      it("matches by similar content above threshold", () => {
+        const todo = createTodo("new-id", "Implement user login with email");
+        const previous = [
+          createTodo("2.3:ac:10", "[2.3ΔAC1] Implement user login with email and password"),
+        ];
+
+        const result = findMatchingTodo(todo, previous);
+
+        expect(result.matchType).toBe("similar-content");
+        expect(result.confidence).toBeGreaterThanOrEqual(TODO_MATCH_THRESHOLDS.WARN_USER);
+        expect(result.matched?.id).toBe("2.3:ac:10");
+      });
+
+      it("returns best match when multiple similar todos exist", () => {
+        const todo = createTodo("new-id", "Implement user authentication");
+        const previous = [
+          createTodo("2.3:ac:10", "[2.3ΔAC1] Implement user authentication system"),
+          createTodo("2.3:ac:20", "[2.3ΔAC2] Configure authentication providers"),
+        ];
+
+        const result = findMatchingTodo(todo, previous);
+
+        expect(result.matchType).toBe("similar-content");
+        expect(result.matched?.id).toBe("2.3:ac:10");
+      });
+
+      it("returns no match when similarity is below threshold", () => {
+        const todo = createTodo("new-id", "Completely unrelated task");
+        const previous = [createTodo("2.3:ac:10", "[2.3ΔAC1] Implement user login")];
+
+        const result = findMatchingTodo(todo, previous);
+
+        expect(result.matchType).toBe("none");
+        expect(result.matched).toBeNull();
+      });
+    });
+
+    describe("no match cases", () => {
+      it("returns none when previous todos is empty", () => {
+        const todo = createTodo("2.3:ac:10", "[2.3ΔAC1] Implement login");
+
+        const result = findMatchingTodo(todo, []);
+
+        expect(result.matchType).toBe("none");
+        expect(result.matched).toBeNull();
+        expect(result.confidence).toBe(0);
+      });
+
+      it("returns none when todo content cannot be extracted", () => {
+        const todo = createTodo("new-id", "");
+        const previous = [createTodo("2.3:ac:10", "[2.3ΔAC1] Implement login")];
+
+        const result = findMatchingTodo(todo, previous);
+
+        expect(result.matchType).toBe("none");
+      });
+    });
+
+    describe("confidence thresholds", () => {
+      it("auto-update threshold is 0.7", () => {
+        expect(TODO_MATCH_THRESHOLDS.AUTO_UPDATE).toBe(0.7);
+      });
+
+      it("warn-user threshold is 0.5", () => {
+        expect(TODO_MATCH_THRESHOLDS.WARN_USER).toBe(0.5);
       });
     });
   });

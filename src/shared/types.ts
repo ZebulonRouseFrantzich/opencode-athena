@@ -1304,3 +1304,28 @@ export interface ParsedTodoId {
   /** Line number hint (may have shifted) */
   lineHint: number;
 }
+
+/**
+ * Match type for todo matching
+ */
+export type TodoMatchType = "id" | "exact-content" | "similar-content" | "none";
+
+/**
+ * Confidence thresholds for todo matching
+ */
+export const TODO_MATCH_THRESHOLDS = {
+  AUTO_UPDATE: 0.7,
+  WARN_USER: 0.5,
+} as const;
+
+/**
+ * Result of attempting to match a todo with a previous todo
+ */
+export interface TodoMatchResult {
+  /** The matched todo, if any */
+  matched: OpenCodeTodo | null;
+  /** How the match was found */
+  matchType: TodoMatchType;
+  /** Confidence score (0-1) */
+  confidence: number;
+}
