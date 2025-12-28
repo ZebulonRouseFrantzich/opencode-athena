@@ -118,6 +118,37 @@ describe("migrations", () => {
       expect(paths.epics).toBe(null);
     });
 
+    it("adds todoSync when migrating from 0.8.0 to 0.9.0", () => {
+      const oldAthena = {
+        version: "0.8.0",
+        bmad: {
+          paths: { stories: null, sprintStatus: null, prd: null, architecture: null, epics: null },
+        },
+        features: { autoGitOperations: false },
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.8.0");
+
+      const features = result.athenaConfig.features as Record<string, unknown>;
+      expect(features.todoSync).toBe(true);
+    });
+
+    it("preserves existing todoSync value during migration", () => {
+      const athenaWithTodoFlags = {
+        version: "0.8.0",
+        bmad: { paths: {} },
+        features: {
+          autoGitOperations: false,
+          todoSync: false,
+        },
+      };
+
+      const result = migrateConfigs(athenaWithTodoFlags, {}, "0.8.0");
+
+      const features = result.athenaConfig.features as Record<string, unknown>;
+      expect(features.todoSync).toBe(false);
+    });
+
     it("tracks which migrations were applied", () => {
       const oldAthena = {
         version: "0.0.1",
@@ -178,10 +209,11 @@ describe("migrations", () => {
 
       const result = migrateConfigs(oldAthena, {}, "0.0.1");
 
-      expect(result.migrationsApplied.length).toBeGreaterThanOrEqual(4);
+      expect(result.migrationsApplied.length).toBeGreaterThanOrEqual(5);
 
       const features = result.athenaConfig.features as Record<string, unknown>;
       expect(features.autoGitOperations).toBeDefined();
+      expect(features.todoSync).toBe(true);
 
       const bmad = result.athenaConfig.bmad as Record<string, unknown>;
       const paths = bmad.paths as Record<string, unknown>;
@@ -199,10 +231,11 @@ describe("migrations", () => {
 
       const result = migrateConfigs(athena050, {}, "0.5.0");
 
-      expect(result.migrationsApplied).toHaveLength(3);
+      expect(result.migrationsApplied).toHaveLength(4);
       expect(result.migrationsApplied[0]).toContain("0.5.0 → 0.6.0");
       expect(result.migrationsApplied[1]).toContain("0.6.0 → 0.7.0");
       expect(result.migrationsApplied[2]).toContain("0.7.0 → 0.8.0");
+      expect(result.migrationsApplied[3]).toContain("0.8.0 → 0.9.0");
     });
   });
 });

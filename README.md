@@ -180,6 +180,56 @@ Agents are recommended based on finding types:
 - **Quick Review [Q]**: Accept Phase 1 findings, skip discussion. Best for low-severity issues.
 - **Full Discussion [D]**: Run Phases 2-3 with parallel agents and informed discussion. Best for complex or high-severity findings.
 
+## BMAD ↔ Todo Sync
+
+Athena automatically synchronizes BMAD story checkboxes with oh-my-opencode's todo tool:
+
+- **Automatic population**: Story tasks appear in your todo list when loading a story
+- **Two-way sync**: Marking todos complete updates BMAD file checkboxes
+- **Athena-themed format**: `[2.3ΔAC1] Task description`
+- **Compaction-safe**: Works seamlessly after session compaction
+- **Story context**: Prefix tells you where to look for full details
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    WRITE-THROUGH CACHE MODEL                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   BMAD Files (Source of Truth)        Todo Cache (Session View)         │
+│   ┌─────────────────────────┐         ┌─────────────────────────┐       │
+│   │ story-2-3.md            │         │ [2.3ΔAC1] Login      ○  │       │
+│   │ - [ ] AC1: Login        │◄────────│ [2.3ΔAC2] Logout     ✓  │       │
+│   │ - [x] AC2: Logout       │  Write  │ [2.3ΔTask1] Tests    ○  │       │
+│   │ - [ ] Task: Add tests   │  back   │                         │       │
+│   └─────────────────────────┘         └─────────────────────────┘       │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+When you call `athena_get_story`, todos are extracted from the story file's checkboxes and returned in a format ready for `todowrite`. Marking a todo complete automatically updates the corresponding checkbox in the BMAD file.
+
+### Todo Format
+
+| BMAD Section | Todo Prefix | Example |
+|--------------|-------------|---------|
+| Acceptance Criteria | `AC{n}` | `[2.3ΔAC1] Users can login` |
+| Tasks/Subtasks | `Task{n}` | `[2.3ΔTask3] Write tests` |
+| Implementation Notes | `Fix{n}` | `[2.3ΔFix2] Hardcoded secret` |
+
+### Configuration
+
+Todo sync is enabled by default. To disable:
+
+```json
+{
+  "features": {
+    "todoSync": false
+  }
+}
+```
+
 ## Configuration
 
 Configuration files are stored in `~/.config/opencode/`:

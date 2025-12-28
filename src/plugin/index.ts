@@ -42,8 +42,8 @@ export const OpenCodeAthena: Plugin = async (ctx) => {
 
   // Create hooks
   const sessionHooks = createSessionHooks(ctx, tracker, config);
-  const toolHooks = createToolHooks(tracker, config);
-  const compactionHook = createCompactionHook(tracker);
+  const toolHooks = createToolHooks(ctx, tracker, config);
+  const compactionHook = createCompactionHook(tracker, config);
 
   return {
     // Custom tools for BMAD integration
