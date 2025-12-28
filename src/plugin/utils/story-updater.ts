@@ -10,7 +10,7 @@ import type {
   PartyDiscussionState,
 } from "../../shared/types.js";
 import { getBmadPaths } from "./bmad-finder.js";
-import { findStoryFile } from "./story-loader.js";
+import { extractStoryIdFromFindingId, findStoryFile } from "./story-loader.js";
 import {
   generateStoryContent,
   generateTitleFromFindings,
@@ -31,12 +31,14 @@ interface StoryUpdate {
   error?: string;
 }
 
-function groupDecisionsByStory(rounds: DiscussionRound[]): Map<string, DiscussionRound[]> {
+function groupDecisionsByStory(
+  rounds: DiscussionRound[],
+  sessionIdentifier: string
+): Map<string, DiscussionRound[]> {
   const byStory = new Map<string, DiscussionRound[]>();
 
   for (const round of rounds) {
-    const storyMatch = round.findingId.match(/story-?(\d+[.-]\d+[a-z]?)/i);
-    const storyId = storyMatch ? storyMatch[1].replace("-", ".") : "unknown";
+    const storyId = extractStoryIdFromFindingId(round.findingId, sessionIdentifier);
 
     const existing = byStory.get(storyId) || [];
     existing.push(round);
@@ -468,7 +470,7 @@ export async function applyDecisions(
   config?: AthenaConfig
 ): Promise<ApplyDecisionsResult> {
   const paths = await getBmadPaths(projectRoot, config);
-  const byStory = groupDecisionsByStory(state.completedRounds);
+  const byStory = groupDecisionsByStory(state.completedRounds, state.identifier);
   const epicNumber = state.identifier.split(".")[0];
 
   const existingStoryIds = await getExistingStoryIds(paths.storiesDir, epicNumber);
@@ -483,8 +485,6 @@ export async function applyDecisions(
   let totalRejected = 0;
 
   for (const [storyId, rounds] of byStory) {
-    if (storyId === "unknown") continue;
-
     const storyFileResult = await findStoryFile(paths.storiesDir, storyId);
     if (!storyFileResult) {
       continue;

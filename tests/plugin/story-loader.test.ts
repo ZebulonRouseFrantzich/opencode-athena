@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  extractStoryIdFromFindingId,
   findStoriesForEpic,
   findStoryFile,
   getStoryFilenamePatterns,
@@ -436,6 +437,59 @@ describe("story-loader", () => {
     it("returns null when story not found anywhere", async () => {
       const result = await resolveStoryIdentifier(testDir, "99.99");
       expect(result).toBeNull();
+    });
+  });
+
+  describe("extractStoryIdFromFindingId", () => {
+    it("extracts from story-X-Y prefix format (legacy/test)", () => {
+      expect(extractStoryIdFromFindingId("story-2-3-high-1", "1.1")).toBe("2.3");
+      expect(extractStoryIdFromFindingId("story-4-5-SEC-1", "1.1")).toBe("4.5");
+      expect(extractStoryIdFromFindingId("story2-3-high-1", "1.1")).toBe("2.3");
+    });
+
+    it("extracts from Oracle S prefix format", () => {
+      expect(extractStoryIdFromFindingId("S2.3-SEC-1", "1.1")).toBe("2.3");
+      expect(extractStoryIdFromFindingId("S4.5-LOG-2", "1.1")).toBe("4.5");
+      expect(extractStoryIdFromFindingId("S1.10-PERF-1", "1.1")).toBe("1.10");
+    });
+
+    it("extracts from direct storyId-code format", () => {
+      expect(extractStoryIdFromFindingId("4.5-L1", "1.1")).toBe("4.5");
+      expect(extractStoryIdFromFindingId("2.3-P1", "1.1")).toBe("2.3");
+      expect(extractStoryIdFromFindingId("1.1-SEC-1", "9.9")).toBe("1.1");
+    });
+
+    it("extracts from dash-separated format", () => {
+      expect(extractStoryIdFromFindingId("2-3-high-1", "1.1")).toBe("2.3");
+      expect(extractStoryIdFromFindingId("4-5-logic-issue", "1.1")).toBe("4.5");
+    });
+
+    it("handles letter suffixes for sub-stories", () => {
+      expect(extractStoryIdFromFindingId("S2.3a-SEC-1", "1.1")).toBe("2.3a");
+      expect(extractStoryIdFromFindingId("4.5b-L1", "1.1")).toBe("4.5b");
+      expect(extractStoryIdFromFindingId("story-2-3a-high-1", "1.1")).toBe("2.3a");
+    });
+
+    it("uses fallback for IDs without story info", () => {
+      expect(extractStoryIdFromFindingId("debate-3", "4.5")).toBe("4.5");
+      expect(extractStoryIdFromFindingId("high-1", "2.3")).toBe("2.3");
+      expect(extractStoryIdFromFindingId("SEC-1", "1.1")).toBe("1.1");
+      expect(extractStoryIdFromFindingId("LOG-2", "3.3")).toBe("3.3");
+    });
+
+    it("uses fallback for malformed IDs", () => {
+      expect(extractStoryIdFromFindingId("", "4.5")).toBe("4.5");
+      expect(extractStoryIdFromFindingId("random-text", "2.3")).toBe("2.3");
+      expect(extractStoryIdFromFindingId("123", "1.1")).toBe("1.1");
+    });
+
+    it("handles case-insensitive matching for story prefix", () => {
+      expect(extractStoryIdFromFindingId("STORY-2-3-high-1", "1.1")).toBe("2.3");
+      expect(extractStoryIdFromFindingId("Story-4-5-SEC-1", "1.1")).toBe("4.5");
+    });
+
+    it("handles case-insensitive matching for Oracle format", () => {
+      expect(extractStoryIdFromFindingId("s2.3-SEC-1", "1.1")).toBe("2.3");
     });
   });
 });

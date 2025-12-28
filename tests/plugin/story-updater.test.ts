@@ -133,18 +133,88 @@ Some notes here.`);
       expect(successfulUpdates.length).toBe(0);
     });
 
-    it("should skip unknown story IDs", async () => {
+    it("should use session identifier as fallback for findings without story ID", async () => {
       const round = createMockRound({
-        findingId: "unknown-finding",
+        findingId: "debate-3",
         decision: "accept",
       });
       const state = createMockState([round]);
+
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`# Story 2.3
+
+## Acceptance Criteria
+- [ ] Existing criterion`);
+      mockWriteFile.mockResolvedValue(undefined);
 
       const { applyDecisions } = await import("../../src/plugin/utils/story-updater.js");
       const result = await applyDecisions("/test/project", state);
 
       expect(result.success).toBe(true);
-      expect(result.storiesUpdated.length).toBe(0);
+      expect(result.summary.accepted).toBe(1);
+    });
+
+    it("should handle Oracle S-prefixed finding IDs", async () => {
+      const round = createMockRound({
+        findingId: "S2.3-SEC-1",
+        decision: "accept",
+      });
+      const state = createMockState([round]);
+
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`# Story 2.3
+
+## Acceptance Criteria
+- [ ] Existing criterion`);
+      mockWriteFile.mockResolvedValue(undefined);
+
+      const { applyDecisions } = await import("../../src/plugin/utils/story-updater.js");
+      const result = await applyDecisions("/test/project", state);
+
+      expect(result.success).toBe(true);
+      expect(result.summary.accepted).toBe(1);
+    });
+
+    it("should handle direct storyId-code finding IDs", async () => {
+      const round = createMockRound({
+        findingId: "2.3-L1",
+        decision: "accept",
+      });
+      const state = createMockState([round]);
+
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`# Story 2.3
+
+## Acceptance Criteria
+- [ ] Existing criterion`);
+      mockWriteFile.mockResolvedValue(undefined);
+
+      const { applyDecisions } = await import("../../src/plugin/utils/story-updater.js");
+      const result = await applyDecisions("/test/project", state);
+
+      expect(result.success).toBe(true);
+      expect(result.summary.accepted).toBe(1);
+    });
+
+    it("should handle high-N placeholder finding IDs using session fallback", async () => {
+      const round = createMockRound({
+        findingId: "high-1",
+        decision: "accept",
+      });
+      const state = createMockState([round]);
+
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`# Story 2.3
+
+## Acceptance Criteria
+- [ ] Existing criterion`);
+      mockWriteFile.mockResolvedValue(undefined);
+
+      const { applyDecisions } = await import("../../src/plugin/utils/story-updater.js");
+      const result = await applyDecisions("/test/project", state);
+
+      expect(result.success).toBe(true);
+      expect(result.summary.accepted).toBe(1);
     });
   });
 

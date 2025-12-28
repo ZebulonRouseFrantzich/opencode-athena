@@ -322,6 +322,57 @@ export function isStoryFile(filename: string): boolean {
 }
 
 /**
+ * Extract story ID from a finding ID.
+ *
+ * Handles multiple formats from different sources:
+ * - story-{epic}-{num}-*: "story-2-3-high-1" → "2.3" (test/legacy format)
+ * - S{storyId}-*: "S2.3-SEC-1" → "2.3" (Oracle storyFindings format)
+ * - {storyId}-*: "4.5-L1" → "4.5" (direct story prefix)
+ * - {epic}-{num}-*: "2-3-high-1" → "2.3" (dash-separated)
+ *
+ * Falls back to provided default for IDs without story info:
+ * - "high-1", "debate-3", "SEC-1" → uses fallback
+ *
+ * @param findingId - The finding ID to parse
+ * @param fallback - Default story ID if not extractable (typically session identifier)
+ * @returns Normalized story ID (e.g., "4.5")
+ */
+export function extractStoryIdFromFindingId(findingId: string, fallback: string): string {
+  // Pattern 1: story-{epic}-{num}-* (legacy/test format)
+  // e.g., "story-2-3-high-1" → "2.3"
+  const storyPrefixMatch = findingId.match(/^story-?(\d+)[.-](\d+[a-z]?)/i);
+  if (storyPrefixMatch) {
+    return `${storyPrefixMatch[1]}.${storyPrefixMatch[2]}`;
+  }
+
+  // Pattern 2: S{storyId}-* (Oracle storyFindings format)
+  // e.g., "S2.3-SEC-1" → "2.3", "S4.5a-LOG-1" → "4.5a"
+  const oracleMatch = findingId.match(/^S(\d+)[.](\d+[a-z]?)-/i);
+  if (oracleMatch) {
+    return `${oracleMatch[1]}.${oracleMatch[2]}`;
+  }
+
+  // Pattern 3: {storyId}-* (direct story ID prefix with dot)
+  // e.g., "4.5-L1" → "4.5", "2.3a-P1" → "2.3a"
+  const dotMatch = findingId.match(/^(\d+)[.](\d+[a-z]?)-/);
+  if (dotMatch) {
+    return `${dotMatch[1]}.${dotMatch[2]}`;
+  }
+
+  // Pattern 4: {epic}-{num}-* (dash-separated, no "story" prefix)
+  // e.g., "2-3-high-1" → "2.3"
+  // Must have something after the second number to distinguish from story IDs
+  const dashMatch = findingId.match(/^(\d+)-(\d+[a-z]?)-[a-zA-Z]/);
+  if (dashMatch) {
+    return `${dashMatch[1]}.${dashMatch[2]}`;
+  }
+
+  // No story ID found in finding ID - use fallback
+  // This handles: "high-1", "debate-3", "SEC-1", "LOG-2", etc.
+  return normalizeStoryId(fallback);
+}
+
+/**
  * Get the expected filename patterns for a story ID.
  * Useful for error messages.
  *
