@@ -156,6 +156,58 @@ Story file resolution is handled by `src/plugin/utils/story-loader.ts`.
 
 Files with `story-` prefix are prioritized when multiple matches exist.
 
+### Story Complexity Analysis
+
+Story complexity is analyzed before implementation to prevent context compaction issues.
+
+**Key files:**
+- `src/plugin/utils/story-parser.ts` - Parses story markdown into tasks/subtasks
+- `src/plugin/utils/story-complexity.ts` - Effort estimation and threshold checking
+- `src/plugin/utils/story-decomposer.ts` - Task grouping and split generation
+- `src/plugin/tools/analyze-story.ts` - `athena_analyze_story` tool
+- `src/plugin/tools/decompose-story.ts` - `athena_decompose_story` tool
+
+**Key functions (story-parser.ts):**
+- `parseStoryTasks(content, storyId)` - Extracts tasks with subtasks, line numbers
+- `extractDevNotesForTasks(content, taskIds)` - Gets relevant dev notes for task groups
+- `generateTaskSection(tasks)` - Regenerates task markdown from parsed tasks
+
+**Key functions (story-complexity.ts):**
+- `estimateTaskEffort(task)` - Heuristic-based effort estimation per task
+- `assessStoryComplexity(parsedStory, fileSizeBytes, thresholds?)` - Full assessment
+- `formatComplexityReport(assessment)` - Human-readable complexity report
+
+**Key functions (story-decomposer.ts):**
+- `generateDecompositionSuggestions(parsedStory, taskEfforts)` - Auto-groups tasks
+- `validateSplits(tasks, splits)` - Verifies no missing/duplicate tasks
+- `generateSubStoryContent(...)` - Creates sub-story file content
+- `getSubStoryFilename(originalFilename, suffix)` - e.g., `3-2.md` → `3-2a.md`
+
+**Thresholds (research-backed):**
+- 8 tasks / 8 points = warning (suggest-decomposition)
+- 12 tasks / 13 points = critical (require-decomposition)
+- 30KB / 50KB file size = warning / critical
+
+**Effort estimation signals:**
+- Many subtasks (>5): +3 points
+- High-effort keywords (implement, create, refactor): +2 points
+- Medium-effort keywords (add, update, modify): +1 point
+- Testing/verification: +1 point
+- External integration (API, database): +1 point
+- Vague description: +2 points
+
+**Task grouping logic:**
+1. Group by concern: UI, core, integration, testing
+2. Balance groups to target ~8 points each
+3. Testing/integration tasks depend on earlier groups
+4. Preserve task order within groups
+
+**Sub-story file handling:**
+- Original archived as `story-3-2.decomposed.md`
+- Sub-stories: `3-2a.md`, `3-2b.md`, etc.
+- Sprint-status.yaml updated (original removed, sub-stories added)
+- First ready-for-dev sub-story returned as next story
+
 ## Common Tasks
 
 ### Adding a New Tool

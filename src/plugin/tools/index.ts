@@ -1,13 +1,9 @@
-/**
- * Plugin tools index
- *
- * Factory function that creates all Athena tools.
- */
-
 import type { PluginInput, ToolDefinition } from "@opencode-ai/plugin";
 import type { AthenaConfig } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
+import { createAnalyzeStoryTool } from "./analyze-story.js";
 import { createConfigTool } from "./config.js";
+import { createDecomposeStoryTool } from "./decompose-story.js";
 import { createGetContextTool } from "./get-context.js";
 import { createGetStoryTool } from "./get-story.js";
 import { createParallelTool } from "./parallel.js";
@@ -40,5 +36,7 @@ export function createTools(
     athena_story_review_analyze: createStoryReviewAnalyzeTool(ctx, config),
     athena_story_review_consult: createStoryReviewConsultTool(ctx, config),
     athena_party_discussion: createPartyDiscussionTool(ctx, config),
+    athena_analyze_story: createAnalyzeStoryTool(ctx, config),
+    athena_decompose_story: createDecomposeStoryTool(ctx, config),
   };
 }

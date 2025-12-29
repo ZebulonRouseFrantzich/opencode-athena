@@ -13,11 +13,11 @@ You receive: `$ARGUMENTS`
 1. **If argument is provided** (e.g., "4.5", "story-4-5", "docs/stories/story-4-5.md"):
    - Call `athena_get_story({ storyId: "<argument>" })`
    - The tool handles all formats: story IDs, file paths, and `@` references
-   - **Proceed immediately** with Step 1.5 after loading
+   - **Proceed immediately** with Step 0 (Complexity Check) after loading
 
 2. **If no argument provided**:
    - Call `athena_get_story()` to load the next ready story
-   - **Proceed immediately** with the workflow below
+   - **Proceed immediately** with Step 0 (Complexity Check) after loading
 
 **Do NOT ask clarifying questions about which story to implement. Load it and start working.**
 
@@ -61,29 +61,112 @@ This updates sprint-status.yaml without requiring git commits.
 
 ---
 
+## Step 0: Complexity Check (Before Implementation)
+
+**After loading the story, check if it's too large to implement comfortably.**
+
+Call **athena_analyze_story** to assess complexity:
+
+```
+athena_analyze_story({ storyId: "<story ID from Step 1>" })
+```
+
+This returns:
+- **Metrics**: Task count, subtasks, file size
+- **Effort estimates**: Points per task with signals (API calls, state mgmt, etc.)
+- **Recommendation**: `proceed`, `suggest-decomposition`, or `require-decomposition`
+- **Suggested splits**: If decomposition recommended
+
+### If recommendation is `proceed`:
+
+Continue with **Step 1.5** (Sync Todos) and normal implementation.
+
+### If recommendation is `suggest-decomposition`:
+
+Present the analysis to the user:
+
+```
+📊 STORY COMPLEXITY ANALYSIS
+
+This story has {X} tasks totaling ~{Y} story points.
+Research suggests stories >8 points often cause context compaction issues.
+
+SUGGESTED DECOMPOSITION:
+{show the suggested splits}
+
+What would you like to do?
+[D] Decompose into sub-stories (recommended)
+[P] Proceed with full story anyway
+[M] Modify the decomposition groupings
+```
+
+**If user chooses [D] (Decompose):**
+```
+athena_decompose_story({ 
+  storyId: "<story ID>",
+  useSuggestedSplits: true,
+  confirmed: true 
+})
+```
+
+Then load the first sub-story:
+```
+athena_get_story({ storyId: "<returned nextStory>" })
+```
+
+**If user chooses [P] (Proceed):**
+Continue with normal implementation, but warn:
+> ⚠️ This story may require multiple compactions. Progress will be preserved via todo sync.
+
+**If user chooses [M] (Modify):**
+Work with the user to adjust task groupings, then call:
+```
+athena_decompose_story({
+  storyId: "<story ID>",
+  splits: [
+    { suffix: "a", taskIds: ["1", "2"], title: "Custom title" },
+    { suffix: "b", taskIds: ["3", "4", "5"] }
+  ],
+  confirmed: true
+})
+```
+
+### If recommendation is `require-decomposition`:
+
+**Do NOT proceed without decomposition.** The story is too large.
+
+```
+🚫 STORY TOO LARGE
+
+This story has {X} tasks totaling ~{Y} story points.
+Stories this size consistently cause implementation problems.
+
+Decomposition is REQUIRED before implementation.
+
+{show the suggested splits}
+
+[D] Decompose into sub-stories
+[M] Modify the decomposition groupings
+```
+
+Wait for user decision before proceeding.
+
+---
+
 You are implementing a BMAD story using OpenCode Athena's full capabilities.
 
 **You are Sisyphus, the orchestrator.** You will coordinate subagents and tools to implement this story efficiently and correctly.
 
 ## Step 1: Load Story Context
 
-Call **athena_get_story** to load the current story context:
+**Note:** Story loading happens in the Instructions section above. This step documents what `athena_get_story` returns for reference.
 
-```
-athena_get_story()
-```
-
-If you need a specific story, pass the story ID:
-
-```
-athena_get_story({ storyId: "2.3" })
-```
-
-This returns:
+`athena_get_story()` returns:
 - **Story**: Requirements and acceptance criteria
 - **Architecture**: Relevant technical patterns and decisions
 - **PRD**: Relevant functional requirements
 - **Sprint progress**: Where this story fits in the overall sprint
+- **Todos**: Pre-formatted task list for `todowrite`
 
 **CRITICAL: Check for Implementation Notes from Previous Review**
 
@@ -128,13 +211,14 @@ This means `/athena-review` was run previously and findings were discussed with 
 ### If No Implementation Notes Exist:
 
 This is a **fresh implementation** - proceed with the normal workflow:
-- Understand requirements and acceptance criteria
-- Plan your approach (Step 2)
-- Implement the story (Step 3)
-- Verify implementation (Step 4)
-- Complete the story (Step 5)
+- Step 0: Check complexity (already done above)
+- Step 1.5: Sync todos from story
+- Step 2: Plan your approach
+- Step 3: Implement the story
+- Step 4: Verify implementation
+- Step 5: Complete the story
 
-## Step 1.5: Sync Todos (Automatic)
+## Step 1.5: Sync Todos
 
 When `athena_get_story` returns, it includes a `todos` section with BMAD tasks formatted for the todo list.
 
@@ -411,6 +495,10 @@ Your workflow as Sisyphus:
 
 ```
 1. Load story (athena_get_story)
+0. Check complexity (athena_analyze_story)
+   - If too large → decompose first
+   - If manageable → proceed
+1.5. Sync todos (todowrite)
 2. Plan approach:
    - @explore → Find similar code in codebase
    - @librarian → Research unfamiliar tech

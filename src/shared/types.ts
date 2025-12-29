@@ -1459,3 +1459,271 @@ export interface TodoMatchResult {
   /** Confidence score (0-1) */
   confidence: number;
 }
+
+// ============================================================================
+// Story Complexity & Decomposition Types
+// ============================================================================
+
+/**
+ * Effort level for a task (maps to Fibonacci-ish points)
+ */
+export type TaskEffortLevel = "trivial" | "small" | "medium" | "large" | "xlarge";
+
+/**
+ * Points mapping for effort levels
+ */
+export const EFFORT_POINTS: Record<TaskEffortLevel, number> = {
+  trivial: 1,
+  small: 2,
+  medium: 3,
+  large: 5,
+  xlarge: 8,
+};
+
+/**
+ * A parsed subtask from a story file
+ */
+export interface ParsedSubtask {
+  /** Subtask ID within task (e.g., "1.1", "1.2") */
+  id: string;
+  /** Subtask description */
+  description: string;
+  /** Whether the checkbox is checked */
+  completed: boolean;
+  /** Line number in file (1-based) */
+  lineNumber: number;
+}
+
+/**
+ * A parsed task from a story file
+ */
+export interface ParsedTask {
+  /** Task ID (e.g., "1", "2", "3") */
+  id: string;
+  /** Task description */
+  description: string;
+  /** Subtasks belonging to this task */
+  subtasks: ParsedSubtask[];
+  /** Whether the main task checkbox is checked */
+  completed: boolean;
+  /** Line number in file (1-based) */
+  lineNumber: number;
+}
+
+/**
+ * Effort estimate for a single task
+ */
+export interface TaskEffortEstimate {
+  /** Task ID */
+  taskId: string;
+  /** Task description */
+  description: string;
+  /** Estimated effort level */
+  effort: TaskEffortLevel;
+  /** Story points (1, 2, 3, 5, 8) */
+  points: number;
+  /** Signals that contributed to this estimate */
+  signals: string[];
+}
+
+/**
+ * Complexity thresholds for story analysis
+ */
+export interface ComplexityThresholds {
+  /** Maximum recommended tasks before warning */
+  maxTasks: number;
+  /** Critical task count - must split */
+  criticalTasks: number;
+  /** Maximum recommended story points before warning */
+  maxPoints: number;
+  /** Critical story points - must split */
+  criticalPoints: number;
+  /** Maximum recommended file size in KB */
+  maxFileSizeKB: number;
+  /** Critical file size - must split */
+  criticalFileSizeKB: number;
+}
+
+/**
+ * Default complexity thresholds (research-backed)
+ */
+export const DEFAULT_COMPLEXITY_THRESHOLDS: ComplexityThresholds = {
+  maxTasks: 8,
+  criticalTasks: 12,
+  maxPoints: 8,
+  criticalPoints: 13,
+  maxFileSizeKB: 30,
+  criticalFileSizeKB: 50,
+};
+
+/**
+ * Recommendation for story complexity
+ */
+export type ComplexityRecommendation =
+  | "proceed"
+  | "suggest-decomposition"
+  | "require-decomposition";
+
+/**
+ * Story metrics from parsing
+ */
+export interface StoryMetrics {
+  /** Number of tasks */
+  taskCount: number;
+  /** Total number of subtasks across all tasks */
+  subtaskCount: number;
+  /** Number of acceptance criteria (if separate from tasks) */
+  acceptanceCriteriaCount: number;
+  /** Story file size in KB */
+  storyFileSizeKB: number;
+  /** Story file line count */
+  lineCount: number;
+}
+
+/**
+ * Complete story complexity assessment
+ */
+export interface StoryComplexityAssessment {
+  /** Story ID */
+  storyId: string;
+  /** Story filename */
+  filename: string;
+  /** Raw metrics */
+  metrics: StoryMetrics;
+  /** Task-level effort estimates */
+  taskEfforts: TaskEffortEstimate[];
+  /** Total estimated story points */
+  totalPoints: number;
+  /** Whether any threshold is exceeded */
+  exceedsThreshold: boolean;
+  /** Specific reasons for exceeding threshold */
+  thresholdReasons: string[];
+  /** Recommendation */
+  recommendation: ComplexityRecommendation;
+  /** Estimated context compactions needed */
+  estimatedCompactions: number;
+}
+
+/**
+ * Suggested split for story decomposition
+ */
+export interface DecompositionSplit {
+  /** Suffix to append to original filename (e.g., "a", "b", "c") */
+  suffix: string;
+  /** Suggested title for the split story */
+  title: string;
+  /** Task IDs to include in this split */
+  taskIds: string[];
+  /** Estimated points for this split */
+  estimatedPoints: number;
+  /** Rationale for this grouping */
+  rationale: string;
+  /** Dependencies on other splits (by suffix) */
+  dependencies: string[];
+}
+
+/**
+ * Result from athena_analyze_story tool
+ */
+export interface AnalyzeStoryResult {
+  success: boolean;
+  /** Story ID analyzed */
+  storyId: string;
+  /** Story filename */
+  filename: string;
+  /** Full complexity assessment */
+  assessment: StoryComplexityAssessment;
+  /** Suggested decomposition splits (if recommended) */
+  suggestedSplits?: DecompositionSplit[];
+  /** Error if analysis failed */
+  error?: string;
+  /** Suggestion for resolving error */
+  suggestion?: string;
+}
+
+/**
+ * User-provided split configuration
+ */
+export interface UserSplitConfig {
+  /** Suffix to append to original filename */
+  suffix: string;
+  /** Optional title override */
+  title?: string;
+  /** Task IDs to include */
+  taskIds: string[];
+}
+
+/**
+ * Arguments for athena_decompose_story tool
+ */
+export interface DecomposeStoryArgs {
+  /** Story ID to decompose */
+  storyId: string;
+  /** Custom splits (if user modified suggestion) */
+  splits?: UserSplitConfig[];
+  /** Use the suggested splits from analysis (if no custom splits) */
+  useSuggestedSplits?: boolean;
+  /** Must be true to execute (safety check) */
+  confirmed: boolean;
+}
+
+/**
+ * Information about a created sub-story
+ */
+export interface CreatedSubStory {
+  /** Story ID (e.g., "3.2a") */
+  id: string;
+  /** Filename (e.g., "3-2a-reset-list-screen.md") */
+  filename: string;
+  /** Full file path */
+  filePath: string;
+  /** Number of tasks in this story */
+  taskCount: number;
+  /** Estimated points */
+  estimatedPoints: number;
+  /** Status in sprint-status.yaml */
+  status: "ready-for-dev" | "backlog";
+  /** Dependencies on other sub-stories */
+  dependencies: string[];
+  /** Whether a verification task was added (for unorderable deps) */
+  hasVerificationTask: boolean;
+}
+
+/**
+ * Verification result for decomposition
+ */
+export interface DecompositionVerification {
+  /** Original task count */
+  originalTaskCount: number;
+  /** Total tasks across all splits */
+  totalTasksInSplits: number;
+  /** Whether all tasks are accounted for */
+  allTasksAccountedFor: boolean;
+  /** Tasks missing from splits (should be empty) */
+  missingTasks: string[];
+  /** Tasks duplicated across splits (should be empty) */
+  duplicatedTasks: string[];
+  /** Whether dev notes were preserved */
+  devNotesPreserved: boolean;
+}
+
+/**
+ * Result from athena_decompose_story tool
+ */
+export interface DecomposeStoryResult {
+  success: boolean;
+  /** Created sub-stories */
+  createdStories: CreatedSubStory[];
+  /** Verification of completeness */
+  verification: DecompositionVerification;
+  /** Whether sprint-status.yaml was updated */
+  sprintStatusUpdated: boolean;
+  /** Whether original story was removed */
+  originalStoryRemoved: boolean;
+  /** First story to implement */
+  nextStory: string;
+  /** Error if decomposition failed */
+  error?: string;
+  /** Suggestion for resolving error */
+  suggestion?: string;
+}

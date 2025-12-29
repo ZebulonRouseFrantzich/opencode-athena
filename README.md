@@ -230,6 +230,77 @@ Todo sync is enabled by default. To disable:
 }
 ```
 
+## Story Complexity Analysis
+
+Athena automatically checks story complexity before implementation and suggests decomposition when stories are too large. This prevents context compaction issues during implementation.
+
+### How It Works
+
+When you run `/athena-dev`, Athena:
+
+1. **Analyzes the story** - Counts tasks, estimates effort points per task
+2. **Compares against thresholds** - Research-backed limits (8 tasks / 8 points warning, 12 tasks / 13 points critical)
+3. **Recommends action** - `proceed`, `suggest-decomposition`, or `require-decomposition`
+4. **Offers decomposition** - Automatically groups tasks and creates sub-stories
+
+### Effort Estimation
+
+Each task is scored based on:
+
+| Signal | Points Added |
+|--------|--------------|
+| Many subtasks (>5) | +3 |
+| High-effort keywords (implement, create, refactor) | +2 |
+| Medium-effort keywords (add, update, modify) | +1 |
+| Testing/verification required | +1 |
+| External system integration (API, database) | +1 |
+| Vague description | +2 |
+
+Points are mapped to Fibonacci scale: 1, 2, 3, 5, 8.
+
+### Decomposition
+
+When decomposition is recommended, Athena:
+
+1. **Groups tasks by concern** - UI, core logic, integration, testing
+2. **Balances groups** - Target ~8 points per sub-story
+3. **Handles dependencies** - Testing tasks depend on implementation tasks
+4. **Preserves dev notes** - Applicable sections copied to each sub-story
+
+**Filename format:**
+- Original: `3-2-reset-list-screen.md`
+- Sub-stories: `3-2a-reset-list-screen.md`, `3-2b-reset-list-screen.md`
+
+### Tools
+
+| Tool | Description |
+|------|-------------|
+| `athena_analyze_story` | Analyze story complexity and get recommendations |
+| `athena_decompose_story` | Split story into sub-stories |
+
+### Example Output
+
+```
+📊 COMPLEXITY ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tasks: 10 / 8 recommended                    ⚠️
+Points: 15 / 8 threshold                     🔴
+File size: 12KB / 30KB                       ✅
+Estimated compactions: 1
+
+🔀 SUGGESTED DECOMPOSITION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Story 3.2a: Core Implementation
+├─ Tasks: 1, 2, 3, 4
+├─ Points: ~8
+└─ Dependencies: None
+
+Story 3.2b: Testing & Verification
+├─ Tasks: 5, 6, 7
+├─ Points: ~7
+└─ Dependencies: 3.2a
+```
+
 ## Configuration
 
 Configuration files are stored in `~/.config/opencode/`:
