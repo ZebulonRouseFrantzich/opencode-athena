@@ -231,11 +231,118 @@ describe("migrations", () => {
 
       const result = migrateConfigs(athena050, {}, "0.5.0");
 
-      expect(result.migrationsApplied).toHaveLength(4);
+      expect(result.migrationsApplied).toHaveLength(5);
       expect(result.migrationsApplied[0]).toContain("0.5.0 → 0.6.0");
       expect(result.migrationsApplied[1]).toContain("0.6.0 → 0.7.0");
       expect(result.migrationsApplied[2]).toContain("0.7.0 → 0.8.0");
       expect(result.migrationsApplied[3]).toContain("0.8.0 → 0.9.0");
+      expect(result.migrationsApplied[4]).toContain("0.10.0 → 0.10.1");
+    });
+  });
+
+  describe("Google Antigravity migration (0.10.0 → 0.10.1)", () => {
+    it("adds provider.google.models when empty", () => {
+      const oldOpencode = {
+        plugin: ["opencode-athena/plugin", "oh-my-opencode", "opencode-antigravity-auth"],
+        provider: {},
+      };
+
+      const result = migrateConfigs({}, {}, "0.10.0", oldOpencode);
+
+      const provider = result.opencodeConfig.provider as Record<string, unknown>;
+      expect(provider.google).toBeDefined();
+
+      const google = provider.google as Record<string, unknown>;
+      expect(google.models).toBeDefined();
+
+      const models = google.models as Record<string, unknown>;
+      expect(models["gemini-3-pro-high"]).toBeDefined();
+      expect(models["gemini-3-pro-low"]).toBeDefined();
+      expect(models["gemini-3-flash"]).toBeDefined();
+      expect(models["claude-sonnet-4-5"]).toBeDefined();
+      expect(models["claude-sonnet-4-5-thinking"]).toBeDefined();
+      expect(models["claude-opus-4-5-thinking"]).toBeDefined();
+      expect(models["gpt-oss-120b-medium"]).toBeDefined();
+    });
+
+    it("preserves existing google models", () => {
+      const oldOpencode = {
+        plugin: ["opencode-athena/plugin", "oh-my-opencode", "opencode-antigravity-auth"],
+        provider: {
+          google: {
+            models: {
+              "custom-model": {
+                name: "Custom Model",
+                limit: { context: 100000, output: 10000 },
+              },
+            },
+          },
+        },
+      };
+
+      const result = migrateConfigs({}, {}, "0.10.0", oldOpencode);
+
+      const provider = result.opencodeConfig.provider as Record<string, unknown>;
+      const google = provider.google as Record<string, unknown>;
+      const models = google.models as Record<string, unknown>;
+
+      expect(models["custom-model"]).toBeDefined();
+      expect(Object.keys(models).length).toBe(1);
+    });
+
+    it("does not overwrite existing google.models", () => {
+      const oldOpencode = {
+        plugin: ["opencode-athena/plugin", "oh-my-opencode", "opencode-antigravity-auth"],
+        provider: {
+          google: {
+            models: {
+              "gemini-3-pro-high": {
+                name: "Custom Gemini",
+                limit: { context: 999999, output: 99999 },
+              },
+            },
+          },
+        },
+      };
+
+      const result = migrateConfigs({}, {}, "0.10.0", oldOpencode);
+
+      const provider = result.opencodeConfig.provider as Record<string, unknown>;
+      const google = provider.google as Record<string, unknown>;
+      const models = google.models as Record<string, unknown>;
+      const geminiProHigh = models["gemini-3-pro-high"] as Record<string, unknown>;
+
+      expect(geminiProHigh.name).toBe("Custom Gemini");
+      expect(geminiProHigh.limit).toEqual({ context: 999999, output: 99999 });
+    });
+
+    it("includes correct model metadata for all models", () => {
+      const oldOpencode = {
+        plugin: ["opencode-athena/plugin", "oh-my-opencode", "opencode-antigravity-auth"],
+        provider: {},
+      };
+
+      const result = migrateConfigs({}, {}, "0.10.0", oldOpencode);
+
+      const provider = result.opencodeConfig.provider as Record<string, unknown>;
+      const google = provider.google as Record<string, unknown>;
+      const models = google.models as Record<string, unknown>;
+
+      const geminiProHigh = models["gemini-3-pro-high"] as Record<string, unknown>;
+      expect(geminiProHigh.name).toBe("Gemini 3 Pro High (Antigravity)");
+      expect(geminiProHigh.limit).toEqual({ context: 1048576, output: 65535 });
+      expect(geminiProHigh.modalities).toEqual({
+        input: ["text", "image", "pdf"],
+        output: ["text"],
+      });
+
+      const claudeSonnet = models["claude-sonnet-4-5"] as Record<string, unknown>;
+      expect(claudeSonnet.name).toBe("Claude Sonnet 4.5 (Antigravity)");
+      expect(claudeSonnet.limit).toEqual({ context: 200000, output: 64000 });
+
+      const gptOss = models["gpt-oss-120b-medium"] as Record<string, unknown>;
+      expect(gptOss.name).toBe("GPT-OSS 120B Medium (Antigravity)");
+      expect(gptOss.limit).toEqual({ context: 131072, output: 32768 });
     });
   });
 });

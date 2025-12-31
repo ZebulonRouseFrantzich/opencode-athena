@@ -6,7 +6,8 @@ import type { Migration, MigrationResult } from "./types.js";
 export function migrateConfigs(
   athenaConfig: Record<string, unknown>,
   omoConfig: Record<string, unknown>,
-  fromVersion: string
+  fromVersion: string,
+  opencodeConfig: Record<string, unknown> = {}
 ): MigrationResult {
   const targetVersion = VERSION;
   const migrationsApplied: string[] = [];
@@ -15,6 +16,7 @@ export function migrateConfigs(
 
   let currentAthena = { ...athenaConfig };
   let currentOmo = { ...omoConfig };
+  let currentOpencode = { ...opencodeConfig };
 
   const normalizedFrom = semver.valid(semver.coerce(fromVersion)) || "0.0.0";
   const normalizedTarget = semver.valid(semver.coerce(targetVersion)) || VERSION;
@@ -37,6 +39,9 @@ export function migrateConfigs(
     if (migration.migrateOmo) {
       currentOmo = migration.migrateOmo(currentOmo);
     }
+    if (migration.migrateOpencode) {
+      currentOpencode = migration.migrateOpencode(currentOpencode);
+    }
 
     migrationsApplied.push(
       `${migration.fromVersion} → ${migration.toVersion}: ${migration.description}`
@@ -58,6 +63,7 @@ export function migrateConfigs(
     migrationsApplied,
     athenaConfig: currentAthena,
     omoConfig: currentOmo,
+    opencodeConfig: currentOpencode,
     hasBreakingChanges,
     breakingChangeWarnings,
   };

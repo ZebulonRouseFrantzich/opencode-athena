@@ -194,7 +194,12 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   }
 
   const migrationSpinner = ora("Applying migrations...").start();
-  const migrationResult = migrateConfigs(configs.athena || {}, configs.omo || {}, existingVersion);
+  const migrationResult = migrateConfigs(
+    configs.athena || {},
+    configs.omo || {},
+    existingVersion,
+    configs.opencode || {}
+  );
 
   if (migrationResult.migrationsApplied.length > 0) {
     migrationSpinner.succeed(`Applied ${migrationResult.migrationsApplied.length} migration(s)`);
@@ -296,11 +301,14 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     installLocation: "global",
   };
 
-  const merged = mergeConfigs({
-    existingAthena: migrationResult.athenaConfig,
-    existingOmo: migrationResult.omoConfig,
-    fullAnswers,
-  });
+  const merged = mergeConfigs(
+    {
+      existingAthena: migrationResult.athenaConfig,
+      existingOmo: migrationResult.omoConfig,
+      fullAnswers,
+    },
+    migrationResult.opencodeConfig
+  );
 
   const writeSpinner = ora("Writing configuration...").start();
   writeMergedConfigs(merged);

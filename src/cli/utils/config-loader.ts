@@ -14,6 +14,8 @@ export interface LoadedConfigs {
   athenaVersion: string | null;
   omo: Record<string, unknown> | null;
   omoValid: boolean;
+  opencode: Record<string, unknown> | null;
+  opencodeValid: boolean;
 }
 
 export function loadExistingConfigs(): LoadedConfigs {
@@ -23,6 +25,8 @@ export function loadExistingConfigs(): LoadedConfigs {
     athenaVersion: null,
     omo: null,
     omoValid: false,
+    opencode: null,
+    opencodeValid: false,
   };
 
   if (existsSync(CONFIG_PATHS.globalAthenaConfig)) {
@@ -39,6 +43,14 @@ export function loadExistingConfigs(): LoadedConfigs {
       const content = readFileSync(CONFIG_PATHS.globalOmoConfig, "utf-8");
       result.omo = JSON.parse(content);
       result.omoValid = result.omo !== null;
+    } catch {}
+  }
+
+  if (existsSync(CONFIG_PATHS.globalOpencodeConfig)) {
+    try {
+      const content = readFileSync(CONFIG_PATHS.globalOpencodeConfig, "utf-8");
+      result.opencode = JSON.parse(content);
+      result.opencodeValid = result.opencode !== null;
     } catch {}
   }
 

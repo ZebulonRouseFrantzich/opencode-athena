@@ -178,6 +178,55 @@ If you need to update `oh-my-opencode.json`:
 }
 ```
 
+## Example: Migrating opencode.json (Added in 0.10.1)
+
+If you need to update `opencode.json`:
+
+```typescript
+{
+  fromVersion: "0.10.0",
+  toVersion: "0.10.1",
+  description: "Add Google Antigravity provider model configurations",
+  migrateOpencode: (config) => {
+    const provider = (config.provider as Record<string, unknown>) || {};
+    const google = (provider.google as Record<string, unknown>) || {};
+    const models = (google.models as Record<string, unknown>) || {};
+    
+    // Only add models if none exist (avoid overwriting user customizations)
+    if (Object.keys(models).length === 0) {
+      return {
+        ...config,
+        provider: {
+          ...provider,
+          google: {
+            ...google,
+            models: {
+              "gemini-3-pro-high": {
+                name: "Gemini 3 Pro High (Antigravity)",
+                limit: { context: 1048576, output: 65535 },
+                modalities: {
+                  input: ["text", "image", "pdf"],
+                  output: ["text"],
+                },
+              },
+              // ... other models
+            },
+          },
+        },
+      };
+    }
+    
+    return config;
+  },
+}
+```
+
+**Note on opencode.json migrations:**
+- `opencode.json` is the base OpenCode configuration file (not Athena-specific)
+- Migrations run during `upgrade` and `install` flows
+- Use `migrateOpencode` when you need to modify provider configs, plugins, or other OpenCode settings
+- The migration system automatically loads, migrates, and writes `opencode.json` alongside `athena.json` and `oh-my-opencode.json`
+
 ## Migration System Internals
 
 ### How Migrations Run

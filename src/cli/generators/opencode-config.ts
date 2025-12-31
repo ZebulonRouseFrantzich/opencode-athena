@@ -110,6 +110,103 @@ export async function generateOpencodeConfig(
     };
   }
 
+  // Add Google Antigravity provider config if present
+  if (answers.subscriptions.hasGoogle && answers.subscriptions.googleAuth === "antigravity") {
+    const existingProvider = (config.provider as Record<string, unknown>) || {};
+    const existingGoogle = (existingProvider.google as Record<string, unknown>) || {};
+    const existingGoogleModels = (existingGoogle.models as Record<string, unknown>) || {};
+
+    config.provider = {
+      ...existingProvider,
+      google: {
+        ...existingGoogle,
+        models: {
+          ...existingGoogleModels,
+          // Gemini models
+          "gemini-3-pro-high": {
+            name: "Gemini 3 Pro High (Antigravity)",
+            limit: {
+              context: 1048576,
+              output: 65535,
+            },
+            modalities: {
+              input: ["text", "image", "pdf"],
+              output: ["text"],
+            },
+          },
+          "gemini-3-pro-low": {
+            name: "Gemini 3 Pro Low (Antigravity)",
+            limit: {
+              context: 1048576,
+              output: 65535,
+            },
+            modalities: {
+              input: ["text", "image", "pdf"],
+              output: ["text"],
+            },
+          },
+          "gemini-3-flash": {
+            name: "Gemini 3 Flash (Antigravity)",
+            limit: {
+              context: 1048576,
+              output: 65536,
+            },
+            modalities: {
+              input: ["text", "image", "pdf"],
+              output: ["text"],
+            },
+          },
+          // Claude models via Antigravity
+          "claude-sonnet-4-5": {
+            name: "Claude Sonnet 4.5 (Antigravity)",
+            limit: {
+              context: 200000,
+              output: 64000,
+            },
+            modalities: {
+              input: ["text", "image", "pdf"],
+              output: ["text"],
+            },
+          },
+          "claude-sonnet-4-5-thinking": {
+            name: "Claude Sonnet 4.5 Thinking (Antigravity)",
+            limit: {
+              context: 200000,
+              output: 64000,
+            },
+            modalities: {
+              input: ["text", "image", "pdf"],
+              output: ["text"],
+            },
+          },
+          "claude-opus-4-5-thinking": {
+            name: "Claude Opus 4.5 Thinking (Antigravity)",
+            limit: {
+              context: 200000,
+              output: 64000,
+            },
+            modalities: {
+              input: ["text", "image", "pdf"],
+              output: ["text"],
+            },
+          },
+          // GPT models via Antigravity
+          "gpt-oss-120b-medium": {
+            name: "GPT-OSS 120B Medium (Antigravity)",
+            limit: {
+              context: 131072,
+              output: 32768,
+            },
+            modalities: {
+              input: ["text", "image", "pdf"],
+              output: ["text"],
+            },
+          },
+        },
+      },
+    };
+  }
+
   return config;
 }
 

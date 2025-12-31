@@ -72,6 +72,109 @@ export const MIGRATIONS: Migration[] = [
       return { ...config, features };
     },
   },
+  {
+    fromVersion: "0.10.0",
+    toVersion: "0.10.1",
+    description: "Add Google Antigravity provider model configurations to opencode.json",
+    migrateOpencode: (config) => {
+      const provider = (config.provider as Record<string, unknown>) || {};
+      const google = (provider.google as Record<string, unknown>) || {};
+      const models = (google.models as Record<string, unknown>) || {};
+
+      if (Object.keys(models).length === 0) {
+        return {
+          ...config,
+          provider: {
+            ...provider,
+            google: {
+              ...google,
+              models: {
+                "gemini-3-pro-high": {
+                  name: "Gemini 3 Pro High (Antigravity)",
+                  limit: {
+                    context: 1048576,
+                    output: 65535,
+                  },
+                  modalities: {
+                    input: ["text", "image", "pdf"],
+                    output: ["text"],
+                  },
+                },
+                "gemini-3-pro-low": {
+                  name: "Gemini 3 Pro Low (Antigravity)",
+                  limit: {
+                    context: 1048576,
+                    output: 65535,
+                  },
+                  modalities: {
+                    input: ["text", "image", "pdf"],
+                    output: ["text"],
+                  },
+                },
+                "gemini-3-flash": {
+                  name: "Gemini 3 Flash (Antigravity)",
+                  limit: {
+                    context: 1048576,
+                    output: 65536,
+                  },
+                  modalities: {
+                    input: ["text", "image", "pdf"],
+                    output: ["text"],
+                  },
+                },
+                "claude-sonnet-4-5": {
+                  name: "Claude Sonnet 4.5 (Antigravity)",
+                  limit: {
+                    context: 200000,
+                    output: 64000,
+                  },
+                  modalities: {
+                    input: ["text", "image", "pdf"],
+                    output: ["text"],
+                  },
+                },
+                "claude-sonnet-4-5-thinking": {
+                  name: "Claude Sonnet 4.5 Thinking (Antigravity)",
+                  limit: {
+                    context: 200000,
+                    output: 64000,
+                  },
+                  modalities: {
+                    input: ["text", "image", "pdf"],
+                    output: ["text"],
+                  },
+                },
+                "claude-opus-4-5-thinking": {
+                  name: "Claude Opus 4.5 Thinking (Antigravity)",
+                  limit: {
+                    context: 200000,
+                    output: 64000,
+                  },
+                  modalities: {
+                    input: ["text", "image", "pdf"],
+                    output: ["text"],
+                  },
+                },
+                "gpt-oss-120b-medium": {
+                  name: "GPT-OSS 120B Medium (Antigravity)",
+                  limit: {
+                    context: 131072,
+                    output: 32768,
+                  },
+                  modalities: {
+                    input: ["text", "image", "pdf"],
+                    output: ["text"],
+                  },
+                },
+              },
+            },
+          },
+        };
+      }
+
+      return config;
+    },
+  },
 ];
 
 export interface FileMigrationResult {

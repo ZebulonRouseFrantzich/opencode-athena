@@ -14,6 +14,7 @@ export interface MergeOptions {
 export interface MergedConfigs {
   athena: Record<string, unknown>;
   omo: Record<string, unknown>;
+  opencode?: Record<string, unknown>;
 }
 
 export interface BackupResult {
@@ -49,7 +50,10 @@ export function deepMerge(
   return result;
 }
 
-export function mergeConfigs(options: MergeOptions): MergedConfigs {
+export function mergeConfigs(
+  options: MergeOptions,
+  existingOpencode?: Record<string, unknown>
+): MergedConfigs {
   const { existingAthena, fullAnswers } = options;
 
   const freshAthena = generateAthenaConfig(fullAnswers);
@@ -58,10 +62,16 @@ export function mergeConfigs(options: MergeOptions): MergedConfigs {
   const mergedAthena = deepMerge(existingAthena, freshAthena);
   mergedAthena.version = VERSION;
 
-  return {
+  const result: MergedConfigs = {
     athena: mergedAthena,
     omo: freshOmo,
   };
+
+  if (existingOpencode) {
+    result.opencode = existingOpencode;
+  }
+
+  return result;
 }
 
 export function createBackups(): BackupResult {
@@ -106,4 +116,12 @@ export function writeMergedConfigs(configs: MergedConfigs): void {
 
   writeFileSync(CONFIG_PATHS.globalAthenaConfig, JSON.stringify(configs.athena, null, 2), "utf-8");
   writeFileSync(CONFIG_PATHS.globalOmoConfig, JSON.stringify(configs.omo, null, 2), "utf-8");
+
+  if (configs.opencode) {
+    writeFileSync(
+      CONFIG_PATHS.globalOpencodeConfig,
+      JSON.stringify(configs.opencode, null, 2),
+      "utf-8"
+    );
+  }
 }

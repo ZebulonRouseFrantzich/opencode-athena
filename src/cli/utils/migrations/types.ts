@@ -4,6 +4,7 @@ export interface Migration {
   description: string;
   migrateAthena?: (config: Record<string, unknown>) => Record<string, unknown>;
   migrateOmo?: (config: Record<string, unknown>) => Record<string, unknown>;
+  migrateOpencode?: (config: Record<string, unknown>) => Record<string, unknown>;
 }
 
 export interface MigrationResult {
@@ -12,6 +13,7 @@ export interface MigrationResult {
   migrationsApplied: string[];
   athenaConfig: Record<string, unknown>;
   omoConfig: Record<string, unknown>;
+  opencodeConfig: Record<string, unknown>;
   hasBreakingChanges: boolean;
   breakingChangeWarnings: string[];
 }

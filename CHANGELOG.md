@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2025-12-30
+
+### Fixed
+
+- **Google Antigravity Provider Models**
+  - Fresh installations with Google Antigravity now correctly populate `provider.google.models` in `opencode.json`
+  - Adds 7 Antigravity-routed models: Gemini 3 Pro High, Gemini 3 Pro Low, Gemini 3 Flash, Claude Sonnet 4.5, Claude Sonnet 4.5 Thinking, Claude Opus 4.5 Thinking, GPT-OSS 120B Medium
+  - Migration (0.10.0 → 0.10.1) automatically adds models for existing Google Antigravity users
+  - Models only added when `googleAuth === "antigravity"` (not for personal or API auth methods)
+
+### Changed
+
+- **Migration System Enhancement**
+  - Extended migration system to support `opencode.json` migrations
+  - Added `migrateOpencode` function to migration interface
+  - Updated `config-merger.ts` to handle opencode.json in merge flow
+  - Updated `config-loader.ts` to load and track opencode.json state
+
 ### Added
 
 - **GitHub Copilot Support**
