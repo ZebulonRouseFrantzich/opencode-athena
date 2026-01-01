@@ -347,6 +347,44 @@ export async function install(options: InstallOptions): Promise<void> {
 
   const subscriptions = await gatherSubscriptions();
 
+  if (!options.yes) {
+    logger.section("Confirm Provider Selection");
+
+    console.log(chalk.bold("You selected:\n"));
+    console.log(
+      `  Claude:         ${subscriptions.hasClaude ? chalk.green("✓ Yes") : chalk.gray("✗ No")}`
+    );
+    if (subscriptions.hasClaude) {
+      console.log(`    Tier:         ${subscriptions.claudeTier}`);
+    }
+    console.log(
+      `  OpenAI:         ${subscriptions.hasOpenAI ? chalk.green("✓ Yes") : chalk.gray("✗ No")}`
+    );
+    console.log(
+      `  Google:         ${subscriptions.hasGoogle ? chalk.green("✓ Yes") : chalk.gray("✗ No")}`
+    );
+    if (subscriptions.hasGoogle) {
+      console.log(`    Auth Method:  ${subscriptions.googleAuth}`);
+    }
+    console.log(
+      `  GitHub Copilot: ${subscriptions.hasGitHubCopilot ? chalk.green("✓ Yes") : chalk.gray("✗ No")}`
+    );
+    if (subscriptions.hasGitHubCopilot) {
+      console.log(`    Plan:         ${subscriptions.copilotPlan}`);
+    }
+    console.log();
+
+    const confirmed = await confirm({
+      message: "Is this correct?",
+      default: true,
+    });
+
+    if (!confirmed) {
+      logger.info("Please restart installation with correct provider selections.");
+      process.exit(0);
+    }
+  }
+
   // Step 4: If preset loaded, show summary and ask if they want to customize
   let shouldCustomize = true;
 

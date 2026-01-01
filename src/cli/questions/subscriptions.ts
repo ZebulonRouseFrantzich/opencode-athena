@@ -6,6 +6,7 @@
 
 import { confirm, select } from "@inquirer/prompts";
 import type { SubscriptionAnswers } from "../../shared/types.js";
+import { debugLog } from "../utils/debug-logger.js";
 
 /**
  * Gather subscription information from user
@@ -13,8 +14,9 @@ import type { SubscriptionAnswers } from "../../shared/types.js";
 export async function gatherSubscriptions(): Promise<SubscriptionAnswers> {
   const hasClaude = await confirm({
     message: "Do you have a Claude Pro/Max subscription?",
-    default: true,
+    default: false,
   });
+  debugLog("subscription.hasClaude", hasClaude);
 
   let claudeTier: SubscriptionAnswers["claudeTier"] = "none";
   if (hasClaude) {
@@ -26,17 +28,20 @@ export async function gatherSubscriptions(): Promise<SubscriptionAnswers> {
         { name: "Pro - Standard Pro subscription", value: "pro" as const },
       ],
     });
+    debugLog("subscription.claudeTier", claudeTier);
   }
 
   const hasOpenAI = await confirm({
     message: "Do you have a ChatGPT Plus/Pro subscription?",
-    default: true,
+    default: false,
   });
+  debugLog("subscription.hasOpenAI", hasOpenAI);
 
   const hasGoogle = await confirm({
     message: "Will you use Google/Gemini models?",
-    default: true,
+    default: false,
   });
+  debugLog("subscription.hasGoogle", hasGoogle);
 
   let googleAuth: SubscriptionAnswers["googleAuth"] = "none";
   if (hasGoogle) {
@@ -57,12 +62,14 @@ export async function gatherSubscriptions(): Promise<SubscriptionAnswers> {
         },
       ],
     });
+    debugLog("subscription.googleAuth", googleAuth);
   }
 
   const hasGitHubCopilot = await confirm({
     message: "Do you have GitHub Copilot access?",
     default: false,
   });
+  debugLog("subscription.hasGitHubCopilot", hasGitHubCopilot);
 
   let copilotPlan: SubscriptionAnswers["copilotPlan"] = "none";
   if (hasGitHubCopilot) {
@@ -76,9 +83,10 @@ export async function gatherSubscriptions(): Promise<SubscriptionAnswers> {
         { name: "Free - Limited model access", value: "free" as const },
       ],
     });
+    debugLog("subscription.copilotPlan", copilotPlan);
   }
 
-  return {
+  const result = {
     hasClaude,
     claudeTier,
     hasOpenAI,
@@ -87,4 +95,7 @@ export async function gatherSubscriptions(): Promise<SubscriptionAnswers> {
     hasGitHubCopilot,
     copilotPlan,
   };
+
+  debugLog("subscriptions.final", result);
+  return result;
 }

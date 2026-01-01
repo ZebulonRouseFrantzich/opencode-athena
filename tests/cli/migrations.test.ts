@@ -231,7 +231,7 @@ describe("migrations", () => {
 
       const result = migrateConfigs(athena050, {}, "0.5.0");
 
-      expect(result.migrationsApplied).toHaveLength(5);
+      expect(result.migrationsApplied).toHaveLength(6);
       expect(result.migrationsApplied[0]).toContain("0.5.0 → 0.6.0");
       expect(result.migrationsApplied[1]).toContain("0.6.0 → 0.7.0");
       expect(result.migrationsApplied[2]).toContain("0.7.0 → 0.8.0");
@@ -343,6 +343,182 @@ describe("migrations", () => {
       const gptOss = models["gpt-oss-120b-medium"] as Record<string, unknown>;
       expect(gptOss.name).toBe("GPT-OSS 120B Medium (Antigravity)");
       expect(gptOss.limit).toEqual({ context: 131072, output: 32768 });
+    });
+  });
+
+  describe("Routing config migration (0.10.1 → 0.11.0)", () => {
+    it("adds routing config when missing", () => {
+      const oldAthena = {
+        version: "0.10.1",
+        subscriptions: {
+          claude: { enabled: true, tier: "pro" },
+          openai: { enabled: false },
+          google: { enabled: true, authMethod: "api" },
+          githubCopilot: { enabled: false, plan: "none" },
+        },
+        features: { autoGitOperations: false, todoSync: true },
+        bmad: { paths: {} },
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.10.1");
+
+      const routing = result.athenaConfig.routing as Record<string, unknown>;
+      expect(routing).toBeDefined();
+      expect(routing.providerPriority).toBeDefined();
+      expect(routing.modelFamilyPriority).toBeDefined();
+      expect(routing.agentOverrides).toBeDefined();
+      expect(routing.fallbackBehavior).toBeDefined();
+    });
+
+    it("infers provider priority from enabled subscriptions", () => {
+      const oldAthena = {
+        version: "0.10.1",
+        subscriptions: {
+          claude: { enabled: true, tier: "pro" },
+          openai: { enabled: false },
+          google: { enabled: true, authMethod: "api" },
+          githubCopilot: { enabled: true, plan: "pro" },
+        },
+        features: { autoGitOperations: false, todoSync: true },
+        bmad: { paths: {} },
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.10.1");
+
+      const routing = result.athenaConfig.routing as Record<string, unknown>;
+      const providerPriority = routing.providerPriority as string[];
+
+      expect(providerPriority).toContain("anthropic");
+      expect(providerPriority).toContain("google");
+      expect(providerPriority).toContain("github-copilot");
+      expect(providerPriority).not.toContain("openai");
+    });
+
+    it("sets default provider priority when no subscriptions enabled", () => {
+      const oldAthena = {
+        version: "0.10.1",
+        subscriptions: {
+          claude: { enabled: false, tier: "none" },
+          openai: { enabled: false },
+          google: { enabled: false, authMethod: "none" },
+          githubCopilot: { enabled: false, plan: "none" },
+        },
+        features: { autoGitOperations: false, todoSync: true },
+        bmad: { paths: {} },
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.10.1");
+
+      const routing = result.athenaConfig.routing as Record<string, unknown>;
+      const providerPriority = routing.providerPriority as string[];
+
+      expect(providerPriority).toEqual(["anthropic", "openai", "google", "github-copilot"]);
+    });
+
+    it("sets model family priority based on enabled providers", () => {
+      const oldAthena = {
+        version: "0.10.1",
+        subscriptions: {
+          claude: { enabled: true, tier: "pro" },
+          openai: { enabled: true },
+          google: { enabled: false, authMethod: "none" },
+          githubCopilot: { enabled: true, plan: "pro" },
+        },
+        features: { autoGitOperations: false, todoSync: true },
+        bmad: { paths: {} },
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.10.1");
+
+      const routing = result.athenaConfig.routing as Record<string, unknown>;
+      const familyPriority = routing.modelFamilyPriority as Record<string, string[]>;
+
+      expect(familyPriority.claude).toContain("anthropic");
+      expect(familyPriority.claude).toContain("github-copilot");
+      expect(familyPriority.gpt).toContain("openai");
+      expect(familyPriority.gpt).toContain("github-copilot");
+      expect(familyPriority.gemini).toContain("github-copilot");
+    });
+
+    it("sets oracle requiresThinking by default", () => {
+      const oldAthena = {
+        version: "0.10.1",
+        subscriptions: {
+          claude: { enabled: true, tier: "pro" },
+        },
+        features: { autoGitOperations: false, todoSync: true },
+        bmad: { paths: {} },
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.10.1");
+
+      const routing = result.athenaConfig.routing as Record<string, unknown>;
+      const agentOverrides = routing.agentOverrides as Record<string, unknown>;
+      const oracleOverride = agentOverrides.oracle as Record<string, unknown>;
+
+      expect(oracleOverride.requiresThinking).toBe(true);
+    });
+
+    it("sets safe fallback defaults", () => {
+      const oldAthena = {
+        version: "0.10.1",
+        subscriptions: {
+          claude: { enabled: true, tier: "pro" },
+        },
+        features: { autoGitOperations: false, todoSync: true },
+        bmad: { paths: {} },
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.10.1");
+
+      const routing = result.athenaConfig.routing as Record<string, unknown>;
+      const fallbackBehavior = routing.fallbackBehavior as Record<string, unknown>;
+
+      expect(fallbackBehavior.autoFallback).toBe(false);
+      expect(fallbackBehavior.retryPeriodMs).toBe(300000);
+      expect(fallbackBehavior.notifyOnRateLimit).toBe(true);
+    });
+
+    it("preserves existing routing config when present", () => {
+      const oldAthena = {
+        version: "0.10.1",
+        subscriptions: {
+          claude: { enabled: true, tier: "pro" },
+        },
+        features: { autoGitOperations: false, todoSync: true },
+        bmad: { paths: {} },
+        routing: {
+          providerPriority: ["openai", "anthropic"],
+          modelFamilyPriority: {
+            claude: ["openai"],
+            gpt: ["anthropic"],
+            gemini: ["google"],
+          },
+          agentOverrides: {
+            oracle: { requiresThinking: false, preferProvider: "openai" },
+          },
+          fallbackBehavior: {
+            autoFallback: true,
+            retryPeriodMs: 600000,
+            notifyOnRateLimit: false,
+          },
+        },
+      };
+
+      const result = migrateConfigs(oldAthena, {}, "0.10.1");
+
+      const routing = result.athenaConfig.routing as Record<string, unknown>;
+      const providerPriority = routing.providerPriority as string[];
+      const agentOverrides = routing.agentOverrides as Record<string, unknown>;
+      const oracleOverride = agentOverrides.oracle as Record<string, unknown>;
+      const fallbackBehavior = routing.fallbackBehavior as Record<string, unknown>;
+
+      expect(providerPriority).toEqual(["openai", "anthropic"]);
+      expect(oracleOverride.requiresThinking).toBe(false);
+      expect(oracleOverride.preferProvider).toBe("openai");
+      expect(fallbackBehavior.autoFallback).toBe(true);
+      expect(fallbackBehavior.retryPeriodMs).toBe(600000);
+      expect(fallbackBehavior.notifyOnRateLimit).toBe(false);
     });
   });
 });

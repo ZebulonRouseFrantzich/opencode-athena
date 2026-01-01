@@ -5,8 +5,24 @@
  */
 
 import { VERSION } from "../../shared/constants.js";
-import type { InstallAnswers } from "../../shared/types.js";
+import type { InstallAnswers, LLMProvider } from "../../shared/types.js";
 import { featuresToFlags, mcpsToFlags } from "../questions/features.js";
+
+function inferProviderPriority(answers: InstallAnswers): LLMProvider[] {
+  const { subscriptions } = answers;
+  const priority: LLMProvider[] = [];
+
+  if (subscriptions.hasClaude) priority.push("anthropic");
+  if (subscriptions.hasOpenAI) priority.push("openai");
+  if (subscriptions.hasGoogle) priority.push("google");
+  if (subscriptions.hasGitHubCopilot) priority.push("github-copilot");
+
+  if (priority.length === 0) {
+    return ["anthropic", "openai", "google", "github-copilot"];
+  }
+
+  return priority;
+}
 
 /**
  * Generate athena.json configuration
@@ -57,5 +73,27 @@ export function generateAthenaConfig(answers: InstallAnswers): Record<string, un
     },
     features: featuresToFlags(features.enabledFeatures),
     mcps: mcpsToFlags(features.mcps),
+    routing: {
+      providerPriority: inferProviderPriority(answers),
+      modelFamilyPriority: {
+        claude: inferProviderPriority(answers).filter(
+          (p) => p === "anthropic" || p === "github-copilot"
+        ),
+        gpt: inferProviderPriority(answers).filter((p) => p === "openai" || p === "github-copilot"),
+        gemini: inferProviderPriority(answers).filter(
+          (p) => p === "google" || p === "github-copilot"
+        ),
+      },
+      agentOverrides: {
+        oracle: {
+          requiresThinking: true,
+        },
+      },
+      fallbackBehavior: {
+        autoFallback: advanced.autoFallback ?? false,
+        retryPeriodMs: 300000,
+        notifyOnRateLimit: true,
+      },
+    },
   };
 }

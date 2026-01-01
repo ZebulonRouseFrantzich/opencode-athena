@@ -45,5 +45,21 @@
     "context7": true,
     "exa": true,
     "grepApp": true
+  },
+  "routing": {
+    "providerPriority": ["anthropic", "openai", "google"],
+    "modelFamilyPriority": {
+      "claude": ["anthropic"],
+      "gpt": ["openai"],
+      "gemini": ["google"]
+    },
+    "agentOverrides": {
+      "oracle": { "requiresThinking": true }
+    },
+    "fallbackBehavior": {
+      "autoFallback": false,
+      "retryPeriodMs": 300000,
+      "notifyOnRateLimit": true
+    }
   }
 }

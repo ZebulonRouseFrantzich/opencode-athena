@@ -197,9 +197,77 @@
         "exa": { "type": "boolean", "default": true },
         "grepApp": { "type": "boolean", "default": true }
       }
+    },
+    "routing": {
+      "type": "object",
+      "description": "Provider routing and fallback configuration",
+      "properties": {
+        "providerPriority": {
+          "type": "array",
+          "description": "Global provider priority order",
+          "items": {
+            "type": "string",
+            "enum": ["anthropic", "openai", "google", "github-copilot"]
+          }
+        },
+        "modelFamilyPriority": {
+          "type": "object",
+          "description": "Per-model-family provider priority",
+          "properties": {
+            "claude": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "gpt": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "gemini": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "agentOverrides": {
+          "type": "object",
+          "description": "Per-agent routing overrides",
+          "properties": {
+            "sisyphus": { "$ref": "#/definitions/agentRouting" },
+            "oracle": { "$ref": "#/definitions/agentRouting" },
+            "librarian": { "$ref": "#/definitions/agentRouting" },
+            "frontend": { "$ref": "#/definitions/agentRouting" },
+            "documentWriter": { "$ref": "#/definitions/agentRouting" },
+            "multimodalLooker": { "$ref": "#/definitions/agentRouting" }
+          }
+        },
+        "fallbackBehavior": {
+          "type": "object",
+          "description": "Rate limit handling configuration",
+          "properties": {
+            "autoFallback": {
+              "type": "boolean",
+              "description": "Automatically fallback to next provider on rate limit",
+              "default": false
+            },
+            "retryPeriodMs": {
+              "type": "number",
+              "description": "How long to wait before retrying original provider (milliseconds)",
+              "default": 60000,
+              "minimum": 0
+            },
+            "notifyOnRateLimit": {
+              "type": "boolean",
+              "description": "Show notification when rate limit is hit",
+              "default": true
+            }
+          },
+          "required": ["autoFallback", "retryPeriodMs", "notifyOnRateLimit"]
+        }
+      },
+      "required": ["providerPriority", "modelFamilyPriority", "agentOverrides", "fallbackBehavior"]
     }
   },
-  "required": ["version", "subscriptions", "models", "bmad", "features", "mcps"],
+  "required": ["version", "subscriptions", "models", "bmad", "features", "mcps", "routing"],
   "definitions": {
     "agentSettings": {
       "type": "object",
@@ -250,6 +318,21 @@
         }
       },
       "required": ["id", "name", "provider"]
+    },
+    "agentRouting": {
+      "type": "object",
+      "description": "Routing configuration for an agent",
+      "properties": {
+        "requiresThinking": {
+          "type": "boolean",
+          "description": "Filter to thinking-capable providers"
+        },
+        "preferProvider": {
+          "type": "string",
+          "enum": ["anthropic", "openai", "google", "github-copilot"],
+          "description": "Preferred provider for this agent"
+        }
+      }
     }
   }
 }

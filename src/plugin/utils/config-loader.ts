@@ -428,6 +428,24 @@ function getDefaultConfig(): AthenaConfig {
     },
     features: { ...DEFAULTS.features },
     mcps: { ...DEFAULTS.mcps },
+    routing: {
+      providerPriority: ["anthropic", "openai", "google", "github-copilot"],
+      modelFamilyPriority: {
+        claude: ["anthropic", "github-copilot"],
+        gpt: ["openai", "github-copilot"],
+        gemini: ["google", "github-copilot"],
+      },
+      agentOverrides: {
+        oracle: {
+          requiresThinking: true,
+        },
+      },
+      fallbackBehavior: {
+        autoFallback: false,
+        retryPeriodMs: 300000,
+        notifyOnRateLimit: true,
+      },
+    },
   };
 }
 
