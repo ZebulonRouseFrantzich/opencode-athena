@@ -4,7 +4,7 @@
  * Gather advanced configuration options.
  */
 
-import { checkbox, select } from "@inquirer/prompts";
+import { checkbox, confirm, select } from "@inquirer/prompts";
 import type { AdvancedAnswers } from "../../shared/types.js";
 
 /**
@@ -13,6 +13,7 @@ import type { AdvancedAnswers } from "../../shared/types.js";
 export interface AdvancedDefaults {
   parallelStoryLimit?: number;
   experimental?: string[];
+  autoFallback?: boolean;
 }
 
 /**
@@ -52,8 +53,14 @@ export async function gatherAdvanced(defaults?: AdvancedDefaults): Promise<Advan
     ],
   });
 
+  const autoFallback = await confirm({
+    message: "Enable automatic provider fallback on rate limits?",
+    default: defaults?.autoFallback ?? false,
+  });
+
   return {
     parallelStoryLimit,
     experimental,
+    autoFallback,
   };
 }

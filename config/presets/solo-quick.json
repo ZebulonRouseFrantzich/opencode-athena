@@ -39,5 +39,21 @@
     "context7": true,
     "exa": true,
     "grepApp": false
+  },
+  "routing": {
+    "providerPriority": ["anthropic"],
+    "modelFamilyPriority": {
+      "claude": ["anthropic"],
+      "gpt": ["anthropic"],
+      "gemini": ["anthropic"]
+    },
+    "agentOverrides": {
+      "oracle": { "requiresThinking": true }
+    },
+    "fallbackBehavior": {
+      "autoFallback": false,
+      "retryPeriodMs": 300000,
+      "notifyOnRateLimit": true
+    }
   }
 }

@@ -10,6 +10,16 @@ import type { AgentRole, AthenaConfig, InstallAnswers } from "../../shared/types
 function buildMinimalConfig(answers: InstallAnswers): AthenaConfig {
   const { subscriptions, models, methodology, features, advanced } = answers;
 
+  const providerPriority: ("anthropic" | "openai" | "google" | "github-copilot")[] = [];
+  if (subscriptions.hasClaude) providerPriority.push("anthropic");
+  if (subscriptions.hasOpenAI) providerPriority.push("openai");
+  if (subscriptions.hasGoogle) providerPriority.push("google");
+  if (subscriptions.hasGitHubCopilot) providerPriority.push("github-copilot");
+
+  if (providerPriority.length === 0) {
+    providerPriority.push("anthropic", "openai", "google", "github-copilot");
+  }
+
   return {
     version: "0.4.0",
     subscriptions: {
@@ -60,6 +70,24 @@ function buildMinimalConfig(answers: InstallAnswers): AthenaConfig {
       context7: features.mcps.includes("context7"),
       exa: features.mcps.includes("exa"),
       grepApp: features.mcps.includes("grep_app"),
+    },
+    routing: {
+      providerPriority,
+      modelFamilyPriority: {
+        claude: providerPriority.filter((p) => p === "anthropic" || p === "github-copilot"),
+        gpt: providerPriority.filter((p) => p === "openai" || p === "github-copilot"),
+        gemini: providerPriority.filter((p) => p === "google" || p === "github-copilot"),
+      },
+      agentOverrides: {
+        oracle: {
+          requiresThinking: true,
+        },
+      },
+      fallbackBehavior: {
+        autoFallback: false,
+        retryPeriodMs: 300000,
+        notifyOnRateLimit: true,
+      },
     },
   };
 }

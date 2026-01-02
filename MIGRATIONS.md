@@ -227,6 +227,111 @@ If you need to update `opencode.json`:
 - Use `migrateOpencode` when you need to modify provider configs, plugins, or other OpenCode settings
 - The migration system automatically loads, migrates, and writes `opencode.json` alongside `athena.json` and `oh-my-opencode.json`
 
+## Recent Migrations
+
+### 0.10.1 → 0.11.0: Provider Routing System
+
+**What changed:** Added intelligent provider routing configuration with priority-based selection, rate limit tracking, and automatic fallback support.
+
+**Why:** Enables users to configure provider fallback chains, optimize for specific model families, and handle rate limits gracefully.
+
+**Migration details:**
+```typescript
+{
+  fromVersion: "0.10.1",
+  toVersion: "0.11.0",
+  description: "Add provider routing configuration with priority-based selection",
+  migrateAthena: (config) => {
+    const routing = (config.routing as Record<string, unknown>) || {};
+    
+    // Infer provider priority from enabled subscriptions
+    const subs = config.subscriptions as Record<string, unknown>;
+    const providerPriority: string[] = [];
+    if (subs.claude?.enabled) providerPriority.push("anthropic");
+    if (subs.openai?.enabled) providerPriority.push("openai");
+    if (subs.google?.enabled) providerPriority.push("google");
+    if (subs.githubCopilot?.enabled) providerPriority.push("github-copilot");
+    
+    // Set intelligent defaults based on enabled providers
+    if (routing.providerPriority === undefined) {
+      routing.providerPriority = providerPriority.length > 0
+        ? providerPriority
+        : ["anthropic", "openai", "google", "github-copilot"];
+    }
+    
+    if (routing.modelFamilyPriority === undefined) {
+      routing.modelFamilyPriority = {
+        claude: routing.providerPriority.filter(
+          (p) => p === "anthropic" || p === "github-copilot"
+        ),
+        gpt: routing.providerPriority.filter(
+          (p) => p === "openai" || p === "github-copilot"
+        ),
+        gemini: routing.providerPriority.filter(
+          (p) => p === "google" || p === "github-copilot"
+        ),
+      };
+    }
+    
+    if (routing.agentOverrides === undefined) {
+      routing.agentOverrides = {
+        oracle: { requiresThinking: true },
+      };
+    }
+    
+    if (routing.fallbackBehavior === undefined) {
+      routing.fallbackBehavior = {
+        autoFallback: false,
+        retryPeriodMs: 300000,
+        notifyOnRateLimit: true,
+      };
+    }
+    
+    return { ...config, routing };
+  },
+}
+```
+
+**New config structure:**
+```json
+{
+  "routing": {
+    "providerPriority": ["anthropic", "openai", "google", "github-copilot"],
+    "modelFamilyPriority": {
+      "claude": ["anthropic", "github-copilot"],
+      "gpt": ["openai", "github-copilot"],
+      "gemini": ["google", "github-copilot"]
+    },
+    "agentOverrides": {
+      "oracle": { "requiresThinking": true }
+    },
+    "fallbackBehavior": {
+      "autoFallback": false,
+      "retryPeriodMs": 300000,
+      "notifyOnRateLimit": true
+    }
+  }
+}
+```
+
+**Impact:**
+- ✅ Existing configs automatically infer routing from enabled subscriptions
+- ✅ Oracle agent configured for thinking by default
+- ✅ Rate limit notifications enabled by default
+- ✅ Auto-fallback disabled for safety (user must opt-in)
+
+**Files changed:**
+- `src/shared/schemas.ts` - Added `RoutingConfigSchema`
+- `src/shared/types.ts` - Added `LLMProvider`, `AgentRouting`, `RoutingConfig` types
+- `src/cli/generators/athena-config.ts` - Generate routing defaults
+- `src/plugin/utils/route-resolver.ts` - Priority-based route resolution
+- `src/plugin/utils/rate-limit-tracker.ts` - Track provider/model limits
+- `src/plugin/utils/fallback-handler.ts` - Handle fallback + notifications
+
+**Tests:**
+- `tests/cli/migrations.test.ts` - 7 new tests for routing migration
+- `tests/plugin/route-resolver.test.ts` - 17 tests for route resolution logic
+
 ## Migration System Internals
 
 ### How Migrations Run

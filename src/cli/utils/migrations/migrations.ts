@@ -175,6 +175,45 @@ export const MIGRATIONS: Migration[] = [
       return config;
     },
   },
+  {
+    fromVersion: "0.10.1",
+    toVersion: "0.11.0",
+    description: "Add provider routing and fallback configuration",
+    migrateAthena: (config) => {
+      if (!config.routing) {
+        const subs = (config.subscriptions as Record<string, { enabled?: boolean }>) || {};
+        const priority: string[] = [];
+
+        if (subs.claude?.enabled) priority.push("anthropic");
+        if (subs.openai?.enabled) priority.push("openai");
+        if (subs.google?.enabled) priority.push("google");
+        if (subs.githubCopilot?.enabled) priority.push("github-copilot");
+
+        if (priority.length === 0) {
+          priority.push("anthropic", "openai", "google", "github-copilot");
+        }
+
+        (config as Record<string, unknown>).routing = {
+          providerPriority: priority,
+          modelFamilyPriority: {
+            claude: priority.filter((p) => p === "anthropic" || p === "github-copilot"),
+            gpt: priority.filter((p) => p === "openai" || p === "github-copilot"),
+            gemini: priority.filter((p) => p === "google" || p === "github-copilot"),
+          },
+          agentOverrides: {
+            oracle: { requiresThinking: true },
+          },
+          fallbackBehavior: {
+            autoFallback: false,
+            retryPeriodMs: 300000,
+            notifyOnRateLimit: true,
+          },
+        };
+      }
+
+      return config;
+    },
+  },
 ];
 
 export interface FileMigrationResult {

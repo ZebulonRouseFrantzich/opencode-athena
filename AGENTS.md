@@ -208,6 +208,65 @@ Story complexity is analyzed before implementation to prevent context compaction
 - Sprint-status.yaml updated (original removed, sub-stories added)
 - First ready-for-dev sub-story returned as next story
 
+### Provider Routing System
+
+Athena's routing system intelligently selects provider routes for model requests based on subscriptions, priorities, and agent requirements.
+
+**Architecture:**
+- `src/plugin/utils/route-resolver.ts` - Priority-based routing logic
+- `src/plugin/utils/rate-limit-tracker.ts` - Provider/model rate limit tracking
+- `src/plugin/utils/fallback-handler.ts` - Automatic fallback with notifications
+
+**Routing Priority (applied in order):**
+1. **Agent-specific overrides** - `routing.agentOverrides[agentRole].preferProvider`
+2. **Capability filtering** - Filters out providers that don't support required features (e.g., thinking)
+3. **Model family priority** - `routing.modelFamilyPriority.{claude|gpt|gemini}`
+4. **Global provider priority** - `routing.providerPriority`
+5. **Natural provider** - Model's default provider as fallback
+
+**Configuration structure:**
+```typescript
+routing: {
+  providerPriority: ["anthropic", "openai", "google", "github-copilot"],
+  modelFamilyPriority: {
+    claude: ["anthropic", "github-copilot"],
+    gpt: ["openai", "github-copilot"],
+    gemini: ["google", "github-copilot"]
+  },
+  agentOverrides: {
+    oracle: { 
+      requiresThinking: true,
+      preferProvider: "anthropic"
+    }
+  },
+  fallbackBehavior: {
+    autoFallback: false,
+    retryPeriodMs: 300000,
+    notifyOnRateLimit: true
+  }
+}
+```
+
+**Key features:**
+- **Provider capabilities** - GitHub Copilot doesn't support thinking/temperature
+- **Rate limit tracking** - Tracks rate limits per provider/model
+- **Automatic fallback** - Optional auto-fallback to next provider on rate limit
+- **In-TUI notifications** - User notifications when rate limits hit
+
+**Key files:**
+- `src/plugin/utils/route-resolver.ts` - Route resolution logic
+- `src/plugin/utils/rate-limit-tracker.ts` - Rate limit state management
+- `src/plugin/utils/fallback-handler.ts` - Fallback and notification handling
+- `tests/plugin/route-resolver.test.ts` - Route resolver test coverage
+
+**How it works:**
+1. Agent requests a model (e.g., "claude-sonnet-4-5" for "oracle")
+2. Route resolver checks agent overrides first
+3. If agent requires thinking, filter out non-thinking-capable providers
+4. Try providers in order based on model family priority
+5. Fall back to global provider priority if family priority fails
+6. Return final route (e.g., "anthropic/claude-sonnet-4-5")
+
 ## Common Tasks
 
 ### Adding a New Tool

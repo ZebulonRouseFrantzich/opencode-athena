@@ -11,6 +11,7 @@ import type {
   ModelChoice,
   SubscriptionAnswers,
 } from "../../shared/types.js";
+import { debugLog } from "../utils/debug-logger.js";
 
 /**
  * Default values for model questions
@@ -252,8 +253,10 @@ export function getAvailableModels(
   customModels?: CustomModelDefinition[]
 ): ModelChoice[] {
   const allModels = mergeCustomModels(AVAILABLE_MODELS, customModels);
+  debugLog("models.allModels.count", allModels.length);
+  debugLog("models.subscriptions", subscriptions);
 
-  return allModels.filter((model) => {
+  const filtered = allModels.filter((model) => {
     if (model.provider === "anthropic" && !subscriptions.hasClaude) return false;
     if (model.provider === "openai" && !subscriptions.hasOpenAI) return false;
     if (model.provider === "google" && !subscriptions.hasGoogle) return false;
@@ -269,6 +272,11 @@ export function getAvailableModels(
     }
     return true;
   });
+
+  debugLog("models.filtered.count", filtered.length);
+  debugLog("models.filtered.providers", [...new Set(filtered.map((m) => m.provider))]);
+
+  return filtered;
 }
 
 /**

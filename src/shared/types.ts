@@ -77,6 +77,7 @@ export interface FeatureAnswers {
 export interface AdvancedAnswers {
   parallelStoryLimit?: number;
   experimental?: string[];
+  autoFallback?: boolean;
 }
 
 /**
@@ -183,6 +184,33 @@ export interface GeneratedFile {
 // Configuration Types
 // ============================================================================
 
+export interface AgentRouting {
+  requiresThinking?: boolean;
+  preferProvider?: LLMProvider;
+}
+
+export interface RoutingConfig {
+  providerPriority: LLMProvider[];
+  modelFamilyPriority: {
+    claude?: LLMProvider[];
+    gpt?: LLMProvider[];
+    gemini?: LLMProvider[];
+  };
+  agentOverrides: {
+    sisyphus?: AgentRouting;
+    oracle?: AgentRouting;
+    librarian?: AgentRouting;
+    frontend?: AgentRouting;
+    documentWriter?: AgentRouting;
+    multimodalLooker?: AgentRouting;
+  };
+  fallbackBehavior: {
+    autoFallback: boolean;
+    retryPeriodMs: number;
+    notifyOnRateLimit: boolean;
+  };
+}
+
 /**
  * Athena configuration file structure
  */
@@ -254,6 +282,7 @@ export interface AthenaConfig {
     exa: boolean;
     grepApp: boolean;
   };
+  routing: RoutingConfig;
 }
 
 /**

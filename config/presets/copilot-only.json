@@ -36,5 +36,21 @@
     "context7": true,
     "exa": true,
     "grepApp": true
+  },
+  "routing": {
+    "providerPriority": ["github-copilot"],
+    "modelFamilyPriority": {
+      "claude": ["github-copilot"],
+      "gpt": ["github-copilot"],
+      "gemini": ["github-copilot"]
+    },
+    "agentOverrides": {
+      "oracle": { "requiresThinking": false }
+    },
+    "fallbackBehavior": {
+      "autoFallback": false,
+      "retryPeriodMs": 300000,
+      "notifyOnRateLimit": true
+    }
   }
 }

@@ -10,6 +10,7 @@ import { DISPLAY_NAME, TAGLINE, VERSION } from "../shared/constants.js";
 import { doctor } from "./commands/doctor.js";
 import { info } from "./commands/info.js";
 import { install } from "./commands/install.js";
+import { providers } from "./commands/providers.js";
 import { uninstall } from "./commands/uninstall.js";
 import { upgrade } from "./commands/upgrade.js";
 import { listPresets } from "./utils/preset-loader.js";
@@ -66,6 +67,14 @@ program
   .action(uninstall);
 
 program.command("info").description("Show current configuration and status").action(info);
+
+program
+  .command("providers [action]")
+  .description("Manage LLM provider subscriptions (status/add/remove/refresh/sync)")
+  .option("-v, --verbose", "Show detailed provider information", false)
+  .action(async (action) => {
+    await providers({ action });
+  });
 
 /**
  * Display available presets in a formatted way

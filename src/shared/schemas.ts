@@ -93,6 +93,44 @@ export const McpsSchema = z.object({
 });
 
 /**
+ * Schema for LLM provider
+ */
+export const LLMProviderSchema = z.enum(["anthropic", "openai", "google", "github-copilot"]);
+
+/**
+ * Schema for agent routing configuration
+ */
+export const AgentRoutingSchema = z.object({
+  requiresThinking: z.boolean().optional(),
+  preferProvider: LLMProviderSchema.optional(),
+});
+
+/**
+ * Schema for routing configuration
+ */
+export const RoutingConfigSchema = z.object({
+  providerPriority: z.array(LLMProviderSchema),
+  modelFamilyPriority: z.object({
+    claude: z.array(LLMProviderSchema).optional(),
+    gpt: z.array(LLMProviderSchema).optional(),
+    gemini: z.array(LLMProviderSchema).optional(),
+  }),
+  agentOverrides: z.object({
+    sisyphus: AgentRoutingSchema.optional(),
+    oracle: AgentRoutingSchema.optional(),
+    librarian: AgentRoutingSchema.optional(),
+    frontend: AgentRoutingSchema.optional(),
+    documentWriter: AgentRoutingSchema.optional(),
+    multimodalLooker: AgentRoutingSchema.optional(),
+  }),
+  fallbackBehavior: z.object({
+    autoFallback: z.boolean(),
+    retryPeriodMs: z.number().min(0),
+    notifyOnRateLimit: z.boolean(),
+  }),
+});
+
+/**
  * Schema for thinking level
  */
 export const ThinkingLevelSchema = z.enum(["off", "low", "medium", "high"]);
@@ -157,6 +195,7 @@ export const AthenaConfigSchema = z.object({
   bmad: BmadConfigSchema,
   features: FeaturesSchema,
   mcps: McpsSchema,
+  routing: RoutingConfigSchema,
 });
 
 // ============================================================================
@@ -323,6 +362,7 @@ export type BmadConfig = z.infer<typeof BmadConfigSchema>;
 export type FeaturesConfig = z.infer<typeof FeaturesSchema>;
 export type McpsConfig = z.infer<typeof McpsSchema>;
 export type ModelsConfig = z.infer<typeof ModelsSchema>;
+export type RoutingConfigValidated = z.infer<typeof RoutingConfigSchema>;
 export type AthenaConfigValidated = z.infer<typeof AthenaConfigSchema>;
 export type BmadSprintStatusValidated = z.infer<typeof BmadSprintStatusSchema>;
 export type BmadStoryStatusValidated = z.infer<typeof BmadStoryStatusEnum>;
