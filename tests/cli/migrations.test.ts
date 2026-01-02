@@ -231,12 +231,14 @@ describe("migrations", () => {
 
       const result = migrateConfigs(athena050, {}, "0.5.0");
 
-      expect(result.migrationsApplied).toHaveLength(6);
+      expect(result.migrationsApplied).toHaveLength(7);
       expect(result.migrationsApplied[0]).toContain("0.5.0 → 0.6.0");
       expect(result.migrationsApplied[1]).toContain("0.6.0 → 0.7.0");
       expect(result.migrationsApplied[2]).toContain("0.7.0 → 0.8.0");
       expect(result.migrationsApplied[3]).toContain("0.8.0 → 0.9.0");
       expect(result.migrationsApplied[4]).toContain("0.10.0 → 0.10.1");
+      expect(result.migrationsApplied[5]).toContain("0.10.1 → 0.11.0");
+      expect(result.migrationsApplied[6]).toContain("0.11.0 → 0.12.0");
     });
   });
 
