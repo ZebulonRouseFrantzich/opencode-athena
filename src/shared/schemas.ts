@@ -64,6 +64,11 @@ export const BmadConfigSchema = z.object({
         .nullable()
         .optional()
         .describe("Custom path to epics.md file (null = auto-detect)"),
+      outputFolder: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Custom path to BMAD output folder (null = auto-detect _bmad-output)"),
     })
     .optional(),
 });

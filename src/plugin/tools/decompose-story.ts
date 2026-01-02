@@ -110,7 +110,8 @@ async function handleDecomposeStory(
   if (!paths.storiesDir) {
     return createErrorResult(
       "No stories directory found",
-      "Ensure BMAD is set up with a stories directory."
+      paths.suggestion ||
+        "Ensure BMAD is set up with a stories directory. Athena supports both legacy (docs/) and v6-alpha (_bmad/ + _bmad-output/) structures."
     );
   }
 

@@ -37,7 +37,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -68,7 +68,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -86,7 +86,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -118,7 +118,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -139,7 +139,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -176,7 +176,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -204,7 +204,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -227,7 +227,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -249,7 +249,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -280,7 +280,7 @@ describe("compaction-hook", () => {
         startedAt: "2025-01-01",
       });
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -304,7 +304,7 @@ describe("compaction-hook", () => {
         "Current Story: 2.3\nStatus: in_progress"
       );
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -327,7 +327,7 @@ describe("compaction-hook", () => {
         startedAt: "2025-01-01",
       });
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -346,7 +346,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);
@@ -365,7 +365,7 @@ describe("compaction-hook", () => {
       vi.mocked(tracker.getCurrentStoryContext).mockResolvedValue(null);
       vi.mocked(tracker.getCurrentStory).mockReturnValue(null);
 
-      const hook = createCompactionHook(tracker, config);
+      const hook = createCompactionHook(tracker, config, "/test/project");
       const output = { context: [] as string[] };
 
       await hook({ sessionID: "test" }, output);

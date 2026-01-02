@@ -518,17 +518,34 @@ export async function resolveStoryIdentifier(
       if (result) return result;
     }
 
-    // 2b. Try relative to project root
+    // 2b. Try with .md extension if not present (absolute path)
+    if (!cleaned.endsWith(".md")) {
+      const withExt = `${cleaned}.md`;
+      if (existsSync(withExt)) {
+        const result = await loadStoryFromPath(withExt);
+        if (result) return result;
+      }
+    }
+
+    // 2c. Try relative to project root
     if (projectRoot) {
       const absolutePath = resolve(projectRoot, cleaned);
       if (existsSync(absolutePath)) {
         const result = await loadStoryFromPath(absolutePath);
         if (result) return result;
       }
+
+      // Try relative path with .md extension
+      if (!cleaned.endsWith(".md")) {
+        const absoluteWithExt = resolve(projectRoot, `${cleaned}.md`);
+        if (existsSync(absoluteWithExt)) {
+          const result = await loadStoryFromPath(absoluteWithExt);
+          if (result) return result;
+        }
+      }
     }
 
     // File path was provided but doesn't exist - still try storiesDir as fallback
-    // This handles cases where user provides "story-4-1.md" without full path
   }
 
   // 3. Fall back to storiesDir search (original behavior)

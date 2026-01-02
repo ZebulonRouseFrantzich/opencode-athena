@@ -7,7 +7,7 @@ import { createPluginLogger } from "./plugin-logger.js";
 
 const log = createPluginLogger("bmad-finder");
 
-const BMAD_DIR_NAMES = ["docs", ".bmad", "bmad"] as const;
+const BMAD_DIR_NAMES = ["_bmad", "docs", ".bmad", "bmad"] as const;
 
 const KNOWN_MANIFEST_PATHS = [
   ".bmad/_cfg/agent-manifest.csv",
@@ -60,6 +60,7 @@ interface BmadConfig {
 interface BmadPaths {
   projectRoot: string;
   bmadDir: string | null;
+  outputDir: string | null;
   planningDir: string;
   implementationDir: string;
   storiesDir: string;
@@ -67,6 +68,8 @@ interface BmadPaths {
   architecture: string;
   prd: string;
   epics: string;
+  structureVersion?: "v6-alpha" | "legacy" | "unknown";
+  suggestion?: string;
 }
 
 export async function findBmadDir(startDir: string): Promise<string | null> {
@@ -95,17 +98,31 @@ export async function findBmadDir(startDir: string): Promise<string | null> {
 }
 
 async function readBmadConfig(bmadDir: string): Promise<BmadConfig | null> {
-  const configPath = join(bmadDir, "bmm", "config.yaml");
-  if (!existsSync(configPath)) {
-    return null;
+  let config: BmadConfig = {};
+
+  const bmmConfigPath = join(bmadDir, "bmm", "config.yaml");
+  if (existsSync(bmmConfigPath)) {
+    try {
+      const content = await readFile(bmmConfigPath, "utf-8");
+      const bmmConfig = parseYaml(content) as BmadConfig;
+      config = { ...config, ...bmmConfig };
+    } catch {
+      /* continue to try core config */
+    }
   }
 
-  try {
-    const content = await readFile(configPath, "utf-8");
-    return parseYaml(content) as BmadConfig;
-  } catch {
-    return null;
+  const coreConfigPath = join(bmadDir, "core", "config.yaml");
+  if (existsSync(coreConfigPath)) {
+    try {
+      const content = await readFile(coreConfigPath, "utf-8");
+      const coreConfig = parseYaml(content) as BmadConfig;
+      config = { ...config, ...coreConfig };
+    } catch {
+      /* return whatever we have */
+    }
   }
+
+  return Object.keys(config).length > 0 ? config : null;
 }
 
 /**
@@ -215,6 +232,71 @@ function searchForFileWithVariants(
   return join(projectRoot, searchPaths[0], filename);
 }
 
+interface BmadStructureInfo {
+  version: "v6-alpha" | "legacy" | "none";
+  bmadDir: string | null;
+  outputDir: string | null;
+  configRead: boolean;
+  suggestion?: string;
+}
+
+async function detectBmadStructure(projectRoot: string): Promise<BmadStructureInfo> {
+  const bmadDir = join(projectRoot, "_bmad");
+  const hasNewBmadDir = existsSync(bmadDir);
+
+  if (hasNewBmadDir) {
+    const config = await readBmadConfig(bmadDir);
+    const outputFolder = expandBmadPlaceholder(config?.output_folder) ?? "_bmad-output";
+    const outputDir = join(projectRoot, outputFolder);
+    const hasOutputDir = existsSync(outputDir);
+
+    if (hasOutputDir) {
+      return {
+        version: "v6-alpha",
+        bmadDir,
+        outputDir,
+        configRead: config !== null,
+      };
+    }
+
+    return {
+      version: "none",
+      bmadDir,
+      outputDir: null,
+      configRead: config !== null,
+      suggestion: `Found _bmad/ directory but no ${outputFolder}/. Your BMAD setup may be incomplete. Run 'npx bmad-method@alpha install' to complete setup.`,
+    };
+  }
+
+  const docsDir = join(projectRoot, "docs");
+  const hasDocsDir = existsSync(docsDir);
+
+  if (hasDocsDir) {
+    const hasImplementation =
+      existsSync(join(docsDir, "implementation-artifacts")) ||
+      existsSync(join(docsDir, "sprint-artifacts"));
+    const hasPlanning = existsSync(join(docsDir, "project-planning-artifacts"));
+
+    if (hasImplementation || hasPlanning) {
+      return {
+        version: "legacy",
+        bmadDir: docsDir,
+        outputDir: null,
+        configRead: false,
+        suggestion: `Detected legacy BMAD folder structure (docs/). BMAD METHOD v6 alpha uses _bmad/ and _bmad-output/. To upgrade, run 'npx bmad-method@alpha install' and migrate your artifacts to the new structure.`,
+      };
+    }
+  }
+
+  return {
+    version: "none",
+    bmadDir: null,
+    outputDir: null,
+    configRead: false,
+    suggestion: `No BMAD directory found. Run 'npx bmad-method@alpha install' to set up BMAD METHOD in this project.`,
+  };
+}
+
 export async function getBmadPaths(
   startDir: string,
   athenaConfig?: {
@@ -225,6 +307,7 @@ export async function getBmadPaths(
         prd?: string | null;
         architecture?: string | null;
         epics?: string | null;
+        outputFolder?: string | null;
       };
     };
   }
@@ -237,16 +320,29 @@ export async function getBmadPaths(
     config = await readBmadConfig(bmadDir);
   }
 
+  const structure = await detectBmadStructure(projectRoot);
+
+  const outputFolder =
+    athenaConfig?.bmad?.paths?.outputFolder ??
+    expandBmadPlaceholder(config?.output_folder) ??
+    "_bmad-output";
+  const outputDir = structure.outputDir ?? join(projectRoot, outputFolder);
+
   const planningDir = join(
     projectRoot,
-    expandBmadPlaceholder(config?.planning_artifacts) ?? BMAD_V6_DEFAULTS.planningArtifacts
+    expandBmadPlaceholder(config?.planning_artifacts) ??
+      (structure.version === "v6-alpha"
+        ? join(outputFolder, "planning-artifacts")
+        : BMAD_V6_DEFAULTS.planningArtifacts)
   );
 
   const implementationDir = join(
     projectRoot,
     expandBmadPlaceholder(config?.implementation_artifacts) ??
       expandBmadPlaceholder(config?.sprint_artifacts) ??
-      BMAD_V6_DEFAULTS.implementationArtifacts
+      (structure.version === "v6-alpha"
+        ? join(outputFolder, "implementation-artifacts")
+        : BMAD_V6_DEFAULTS.implementationArtifacts)
   );
 
   const storiesDir = athenaConfig?.bmad?.paths?.stories
@@ -291,6 +387,7 @@ export async function getBmadPaths(
   return {
     projectRoot,
     bmadDir,
+    outputDir,
     planningDir,
     implementationDir,
     storiesDir,
@@ -298,6 +395,8 @@ export async function getBmadPaths(
     architecture,
     prd,
     epics,
+    structureVersion: structure.version === "none" ? "unknown" : structure.version,
+    suggestion: structure.suggestion,
   };
 }
 

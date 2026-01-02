@@ -6,8 +6,8 @@
 
 import type { PluginInput } from "@opencode-ai/plugin";
 import type { AthenaConfig, LLMProvider } from "../../shared/types.js";
-import { rateLimitTracker } from "./rate-limit-tracker.js";
 import { createPluginLogger } from "./plugin-logger.js";
+import { rateLimitTracker } from "./rate-limit-tracker.js";
 
 const log = createPluginLogger("fallback-handler");
 

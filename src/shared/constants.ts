@@ -96,23 +96,37 @@ export const PROJECT_PATHS = {
   /** Local Athena config */
   localConfig: ".opencode/athena.json",
 
-  /** BMAD directory */
-  bmadDir: "docs",
+  /** BMAD installation directory (v6 alpha) */
+  bmadDir: "_bmad",
 
-  /** BMAD docs directory (deprecated - same as bmadDir in v6) */
-  bmadDocsDir: "docs",
+  /** BMAD output directory (v6 alpha) */
+  bmadOutputDir: "_bmad-output",
 
-  /** Sprint status file */
-  sprintStatus: "docs/implementation-artifacts/sprint-status.yaml",
+  /** Legacy BMAD directory */
+  legacyBmadDir: "docs",
 
-  /** Stories directory */
-  storiesDir: "docs/implementation-artifacts/stories",
+  /** Sprint status file (v6 alpha) */
+  sprintStatus: "_bmad-output/implementation-artifacts/sprint-status.yaml",
 
-  /** Architecture document */
-  architecture: "docs/project-planning-artifacts/architecture.md",
+  /** Stories directory (v6 alpha) */
+  storiesDir: "_bmad-output/implementation-artifacts/stories",
 
-  /** PRD document */
-  prd: "docs/project-planning-artifacts/PRD.md",
+  /** Architecture document (v6 alpha) */
+  architecture: "_bmad-output/planning-artifacts/architecture.md",
+
+  /** PRD document (v6 alpha) */
+  prd: "_bmad-output/planning-artifacts/prd.md",
+
+  /** Epics document (v6 alpha) */
+  epics: "_bmad-output/planning-artifacts/epics.md",
+
+  /** Legacy paths for backward compatibility */
+  legacy: {
+    sprintStatus: "docs/implementation-artifacts/sprint-status.yaml",
+    storiesDir: "docs/implementation-artifacts/stories",
+    architecture: "docs/project-planning-artifacts/architecture.md",
+    prd: "docs/project-planning-artifacts/PRD.md",
+  },
 } as const;
 
 /**

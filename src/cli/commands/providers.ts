@@ -12,9 +12,9 @@
 import { select } from "@inquirer/prompts";
 import chalk from "chalk";
 import ora from "ora";
-import { loadExistingConfigs, extractSubscriptions } from "../utils/config-loader.js";
-import { logger } from "../utils/logger.js";
 import { detectAuthStatus } from "../utils/auth-detector.js";
+import { extractSubscriptions, loadExistingConfigs } from "../utils/config-loader.js";
+import { logger } from "../utils/logger.js";
 
 type ProviderAction = "status" | "add" | "remove" | "refresh" | "sync";
 

@@ -214,6 +214,21 @@ export const MIGRATIONS: Migration[] = [
       return config;
     },
   },
+  {
+    fromVersion: "0.11.0",
+    toVersion: "0.12.0",
+    description: "Add BMAD v6 alpha outputFolder path override",
+    migrateAthena: (config) => {
+      const bmad = (config.bmad as Record<string, unknown>) || {};
+      const paths = (bmad.paths as Record<string, unknown>) || {};
+
+      if (paths.outputFolder === undefined) {
+        paths.outputFolder = null;
+      }
+
+      return { ...config, bmad: { ...bmad, paths } };
+    },
+  },
 ];
 
 export interface FileMigrationResult {

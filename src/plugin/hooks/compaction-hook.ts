@@ -1,5 +1,6 @@
 import type { AthenaConfig } from "../../shared/types.js";
 import type { StoryTracker } from "../tracker/story-tracker.js";
+import { getBmadPaths } from "../utils/bmad-finder.js";
 import { isBmadTodo } from "../utils/todo-sync.js";
 
 interface CompactionInput {
@@ -10,10 +11,16 @@ interface CompactionOutput {
   context: string[];
 }
 
-export function createCompactionHook(tracker: StoryTracker, config: AthenaConfig) {
-  const storiesPath = config.bmad?.paths?.stories ?? "docs/stories";
-
+export function createCompactionHook(
+  tracker: StoryTracker,
+  config: AthenaConfig,
+  projectDirectory: string
+) {
   return async (_input: CompactionInput, output: CompactionOutput): Promise<void> => {
+    // Dynamically resolve BMAD paths to support both legacy and v6-alpha structures
+    const paths = await getBmadPaths(projectDirectory, config);
+    const storiesPath = paths.storiesDir || "docs/stories";
+
     const storyContext = await tracker.getCurrentStoryContext();
     const todos = tracker.getCurrentTodos();
     const currentStory = tracker.getCurrentStory();

@@ -70,7 +70,9 @@ async function getStoryContext(
     log.warn("BMAD directory not found", { directory: ctx.directory });
     return {
       error: "No BMAD directory found",
-      suggestion: "Run 'npx bmad-method@alpha install' to set up BMAD in this project.",
+      suggestion:
+        paths.suggestion ||
+        "Run 'npx bmad-method@alpha install' to set up BMAD in this project. Athena supports both legacy (docs/) and v6-alpha (_bmad/ + _bmad-output/) structures.",
     };
   }
 

@@ -131,6 +131,7 @@ describe("bmad-finder", () => {
           commentChecker: true,
           lspTools: true,
           autoGitOperations: false,
+          todoSync: true,
         },
         mcps: {
           context7: true,
@@ -296,6 +297,7 @@ describe("bmad-finder", () => {
           commentChecker: true,
           lspTools: true,
           autoGitOperations: false,
+          todoSync: true,
         },
         mcps: {
           context7: true,
@@ -344,6 +346,7 @@ describe("bmad-finder", () => {
           commentChecker: true,
           lspTools: true,
           autoGitOperations: false,
+          todoSync: true,
         },
         mcps: {
           context7: true,
@@ -392,6 +395,7 @@ describe("bmad-finder", () => {
           commentChecker: true,
           lspTools: true,
           autoGitOperations: false,
+          todoSync: true,
         },
         mcps: {
           context7: true,
@@ -440,6 +444,7 @@ describe("bmad-finder", () => {
           commentChecker: true,
           lspTools: true,
           autoGitOperations: false,
+          todoSync: true,
         },
         mcps: {
           context7: true,
@@ -492,6 +497,7 @@ describe("bmad-finder", () => {
           commentChecker: true,
           lspTools: true,
           autoGitOperations: false,
+          todoSync: true,
         },
         mcps: {
           context7: true,
@@ -569,6 +575,7 @@ describe("bmad-finder", () => {
           commentChecker: true,
           lspTools: true,
           autoGitOperations: false,
+          todoSync: true,
         },
         mcps: {
           context7: true,
@@ -767,6 +774,168 @@ describe("bmad-finder", () => {
       const paths = await getBmadPaths(projectRoot);
 
       expect(paths.storiesDir).toBe(`${projectRoot}/docs/implementation-artifacts/stories`);
+    });
+  });
+
+  describe("v6-alpha structure detection", () => {
+    it("should detect _bmad directory and mark as v6-alpha", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/_bmad")) return true;
+        if (pathStr.includes("/_bmad-output")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockResolvedValue([] as any);
+      mockReadFile.mockResolvedValue("" as any);
+      mockParseYaml.mockReturnValue({});
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.bmadDir).toBe(`${projectRoot}/_bmad`);
+      expect(paths.structureVersion).toBe("v6-alpha");
+    });
+
+    it("should prioritize _bmad over docs when both exist", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/_bmad")) return true;
+        if (pathStr.includes("/docs")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockResolvedValue([] as any);
+      mockReadFile.mockResolvedValue("" as any);
+      mockParseYaml.mockReturnValue({});
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.bmadDir).toBe(`${projectRoot}/_bmad`);
+      expect(paths.structureVersion).toBe("v6-alpha");
+    });
+
+    it("should read config from _bmad/core/config.yaml and _bmad/bmm/config.yaml", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/_bmad")) return true;
+        if (pathStr.includes("/core/config.yaml")) return true;
+        if (pathStr.includes("/bmm/config.yaml")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockResolvedValue([] as any);
+
+      mockReadFile.mockImplementation((async (path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/core/config.yaml")) {
+          return "planning_artifacts: planning" as any;
+        }
+        if (pathStr.includes("/bmm/config.yaml")) {
+          return "sprint_artifacts: implementation\noutput_folder: _bmad-output" as any;
+        }
+        return "" as any;
+      }) as any);
+
+      let callCount = 0;
+      mockParseYaml.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return { planning_artifacts: "planning" };
+        }
+        if (callCount === 2) {
+          return { sprint_artifacts: "implementation", output_folder: "_bmad-output" };
+        }
+        return {};
+      });
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.planningDir).toBe(`${projectRoot}/planning`);
+      expect(paths.implementationDir).toBe(`${projectRoot}/implementation`);
+      expect(paths.outputDir).toBe(`${projectRoot}/_bmad-output`);
+    });
+
+    it("should use output_folder for stories when specified in config", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/_bmad")) return true;
+        if (pathStr.includes("/_bmad-output")) return true;
+        if (pathStr.includes("/implementation-artifacts/stories")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockImplementation((async (path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/_bmad-output/implementation-artifacts/stories")) {
+          return ["story-4-1.md", "story-4-2.md"] as any;
+        }
+        return [] as any;
+      }) as any);
+
+      mockReadFile.mockImplementation((async (path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/bmm/config.yaml")) {
+          return "output_folder: _bmad-output" as any;
+        }
+        return "" as any;
+      }) as any);
+
+      mockParseYaml.mockReturnValue({ output_folder: "_bmad-output" });
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.outputDir).toBe(`${projectRoot}/_bmad-output`);
+      expect(paths.storiesDir).toContain("/_bmad-output/");
+    });
+
+    it("should handle output_folder with .md extension fallback", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/_bmad")) return true;
+        if (pathStr.includes("/_bmad-output")) return true;
+        return false;
+      }) as any);
+
+      mockReaddir.mockResolvedValue([] as any);
+      mockReadFile.mockResolvedValue("" as any);
+      mockParseYaml.mockReturnValue({ output_folder: "_bmad-output" });
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.outputDir).toBe(`${projectRoot}/_bmad-output`);
+      expect(paths.structureVersion).toBe("v6-alpha");
+    });
+
+    it("should provide migration suggestion for legacy structure", async () => {
+      const projectRoot = "/test/project";
+
+      mockExistsSync.mockImplementation(((path: any) => {
+        const pathStr = path.toString();
+        if (pathStr.includes("/docs")) return true;
+        if (pathStr.includes("/_bmad")) return false;
+        return false;
+      }) as any);
+
+      mockReaddir.mockResolvedValue([] as any);
+      mockReadFile.mockResolvedValue("" as any);
+      mockParseYaml.mockReturnValue({});
+
+      const paths = await getBmadPaths(projectRoot);
+
+      expect(paths.bmadDir).toBe(`${projectRoot}/docs`);
+      expect(paths.structureVersion).toBe("legacy");
+      expect(paths.suggestion).toBeDefined();
+      expect(paths.suggestion).toContain("_bmad/");
     });
   });
 });

@@ -27,6 +27,7 @@ import {
 interface BmadPaths {
   projectRoot: string;
   bmadDir: string | null;
+  outputDir: string | null;
   planningDir: string;
   implementationDir: string;
   storiesDir: string;
@@ -34,6 +35,8 @@ interface BmadPaths {
   architecture: string;
   prd: string;
   epics: string;
+  structureVersion?: "v6-alpha" | "legacy" | "unknown";
+  suggestion?: string;
 }
 
 interface OracleResponseSummary {
@@ -128,7 +131,9 @@ async function executePartyReview(
       scope: "story",
       identifier,
       error: "No BMAD directory found",
-      suggestion: "Run 'npx bmad-method@alpha install' to set up BMAD in this project.",
+      suggestion:
+        paths.suggestion ||
+        "Run 'npx bmad-method@alpha install' to set up BMAD in this project. Athena supports both legacy (docs/) and v6-alpha (_bmad/ + _bmad-output/) structures.",
     };
   }
 

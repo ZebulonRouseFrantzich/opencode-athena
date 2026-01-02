@@ -264,6 +264,7 @@ export interface AthenaConfig {
       prd?: string | null;
       architecture?: string | null;
       epics?: string | null;
+      outputFolder?: string | null;
     };
   };
   features: {

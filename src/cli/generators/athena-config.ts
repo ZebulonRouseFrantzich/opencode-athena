@@ -69,6 +69,7 @@ export function generateAthenaConfig(answers: InstallAnswers): Record<string, un
         prd: null,
         architecture: null,
         epics: null,
+        outputFolder: null,
       },
     },
     features: featuresToFlags(features.enabledFeatures),

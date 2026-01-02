@@ -119,7 +119,10 @@ async function handleUpdateStatus(
   const paths = await getBmadPaths(ctx.directory, config);
   if (!paths.bmadDir) {
     log.warn("BMAD directory not found", { directory: ctx.directory });
-    return { error: "No BMAD directory found" };
+    const suggestion =
+      paths.suggestion ||
+      "Run 'npx bmad-method@alpha install' to set up BMAD in this project. Athena supports both legacy (docs/) and v6-alpha (_bmad/ + _bmad-output/) structures.";
+    return { error: `No BMAD directory found. ${suggestion}` };
   }
 
   if (!paths.sprintStatus) {
