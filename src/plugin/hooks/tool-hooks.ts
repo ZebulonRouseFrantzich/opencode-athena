@@ -121,10 +121,10 @@ export function createToolHooks(ctx: PluginInput, tracker: StoryTracker, config:
 }
 
 async function handleStoryLoaded(
-  ctx: PluginInput,
+  _ctx: PluginInput,
   tracker: StoryTracker,
   config: AthenaConfig,
-  sessionID: string,
+  _sessionID: string,
   output: AfterHookOutput
 ): Promise<void> {
   try {
@@ -160,43 +160,6 @@ async function handleStoryLoaded(
     }
   } catch (error) {
     log.warn("Failed to process story for todo sync", { error: String(error) });
-  }
-}
-
-async function autoInjectTodos(
-  ctx: PluginInput,
-  sessionID: string,
-  todos: OpenCodeTodo[]
-): Promise<void> {
-  const client = ctx.client as unknown as Record<string, unknown> | undefined;
-  const session = client?.session as Record<string, unknown> | undefined;
-  const updateFn = session?.update as ((args: unknown) => Promise<unknown>) | undefined;
-
-  if (!updateFn) {
-    log.debug("OpenCode client session.update API not available");
-    return;
-  }
-
-  try {
-    await updateFn({
-      path: { id: sessionID },
-      body: {
-        update: {
-          sessionUpdate: "plan",
-          entries: todos.map((todo) => ({
-            priority: todo.priority || "medium",
-            status: todo.status === "cancelled" ? "completed" : todo.status,
-            content: todo.content,
-          })),
-        },
-      },
-    });
-
-    log.debug("Auto-injected BMAD todos via OpenCode API", { count: todos.length });
-  } catch (error) {
-    log.debug("Could not auto-inject todos (API call failed)", {
-      error: String(error),
-    });
   }
 }
 
