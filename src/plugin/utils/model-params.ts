@@ -38,8 +38,16 @@ interface ModelCapabilities {
 }
 
 const MODEL_CAPABILITIES: Record<string, Partial<ModelCapabilities>> = {
-  "anthropic/claude-sonnet-4-5-thinking": { supportsThinking: true, thinkingType: "anthropic" },
-  "anthropic/claude-opus-4-5-thinking": { supportsThinking: true, thinkingType: "anthropic" },
+  "anthropic/claude-sonnet-4-5-thinking": {
+    supportsThinking: true,
+    thinkingType: "anthropic",
+    supportsTemperature: false,
+  },
+  "anthropic/claude-opus-4-5-thinking": {
+    supportsThinking: true,
+    thinkingType: "anthropic",
+    supportsTemperature: false,
+  },
   "anthropic/claude-sonnet-4-5": { supportsTemperature: true },
   "anthropic/claude-opus-4-5": { supportsTemperature: true },
   "openai/gpt-5.1-high": { supportsThinking: true, thinkingType: "openai" },
@@ -190,6 +198,10 @@ export function getProviderParams(
         break;
       case "anthropic":
         result.thinking_budget = thinkingLevelToTokenBudget(thinkingLevel);
+        if (result.temperature !== undefined) {
+          const { temperature: _, ...rest } = result;
+          return rest as ProviderParams;
+        }
         break;
       case "google":
         result.thinking_level = thinkingLevel;

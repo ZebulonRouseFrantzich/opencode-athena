@@ -102,7 +102,7 @@ describe("generateOmoConfig", () => {
   });
 
   describe("temperature parameters", () => {
-    it("should include temperature for thinking models", () => {
+    it("should NOT include temperature for Anthropic thinking models", () => {
       const answers = createBaseAnswers();
       answers.models.sisyphus = "anthropic/claude-sonnet-4-5-thinking";
 
@@ -110,8 +110,7 @@ describe("generateOmoConfig", () => {
       const agents = config.agents as Record<string, unknown>;
       const sisyphus = agents.Sisyphus as Record<string, unknown>;
 
-      expect(sisyphus.temperature).toBeDefined();
-      expect(typeof sisyphus.temperature).toBe("number");
+      expect(sisyphus.temperature).toBeUndefined();
     });
 
     it("should include temperature for non-thinking Claude models", () => {

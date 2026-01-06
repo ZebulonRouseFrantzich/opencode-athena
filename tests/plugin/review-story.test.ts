@@ -83,6 +83,22 @@ const defaultConfig: AthenaConfig = {
     exa: true,
     grepApp: true,
   },
+  routing: {
+    providerPriority: ["anthropic", "openai", "google", "github-copilot"],
+    modelFamilyPriority: {
+      claude: ["anthropic", "github-copilot"],
+      gpt: ["openai", "github-copilot"],
+      gemini: ["google", "github-copilot"],
+    },
+    agentOverrides: {
+      oracle: { requiresThinking: true },
+    },
+    fallbackBehavior: {
+      autoFallback: false,
+      retryPeriodMs: 300000,
+      notifyOnRateLimit: true,
+    },
+  },
 };
 
 describe("detectReviewScope", () => {
@@ -176,7 +192,7 @@ describe("analyzeStoryComplexity", () => {
     expect(result.factors.acceptanceCriteriaCount).toBe(3);
     expect(result.factors.hasSecurityConcerns).toBe(false);
     expect(result.factors.isCrudOnly).toBe(true);
-    expect(result.recommendedModel).toBe("anthropic/claude-3-5-haiku-20241022");
+    expect(result.recommendedModel).toBe("");
   });
 
   it("should detect complex story with security concerns", async () => {
@@ -193,7 +209,7 @@ describe("analyzeStoryComplexity", () => {
 
     expect(result.isSimple).toBe(false);
     expect(result.factors.hasSecurityConcerns).toBe(true);
-    expect(result.recommendedModel).toBe("openai/gpt-5.2");
+    expect(result.recommendedModel).toBe("");
   });
 
   it("should detect complex story with data model changes", async () => {
@@ -251,11 +267,11 @@ describe("selectReviewModel", () => {
     selectReviewModel = module._testExports.selectReviewModel;
   });
 
-  it("should select haiku for simple stories", () => {
+  it("should select librarian model for simple stories", () => {
     const simpleComplexity: StoryComplexity = {
       isSimple: true,
       reason: "Simple story",
-      recommendedModel: "anthropic/claude-3-5-haiku-20241022",
+      recommendedModel: "",
       factors: {
         acceptanceCriteriaCount: 3,
         hasSecurityConcerns: false,
@@ -265,14 +281,14 @@ describe("selectReviewModel", () => {
       },
     };
     const result = selectReviewModel(defaultConfig, simpleComplexity);
-    expect(result).toBe("anthropic/claude-3-5-haiku-20241022");
+    expect(result).toBe("anthropic/claude-sonnet-4");
   });
 
   it("should select oracle model for complex stories", () => {
     const complexComplexity: StoryComplexity = {
       isSimple: false,
       reason: "Complex story",
-      recommendedModel: "openai/gpt-5.2",
+      recommendedModel: "",
       factors: {
         acceptanceCriteriaCount: 10,
         hasSecurityConcerns: true,
@@ -532,7 +548,7 @@ describe("--thorough flag functionality", () => {
     const simpleComplexity: StoryComplexity = {
       isSimple: true,
       reason: "Simple story",
-      recommendedModel: "anthropic/claude-3-5-haiku-20241022",
+      recommendedModel: "",
       factors: {
         acceptanceCriteriaCount: 3,
         hasSecurityConcerns: false,
@@ -543,7 +559,7 @@ describe("--thorough flag functionality", () => {
     };
 
     const normalModel = selectReviewModel(defaultConfig, simpleComplexity);
-    expect(normalModel).toBe("anthropic/claude-3-5-haiku-20241022");
+    expect(normalModel).toBe("anthropic/claude-sonnet-4");
 
     const forcedModel = defaultConfig.models.oracle;
     expect(forcedModel).toBe("openai/gpt-5.2");

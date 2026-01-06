@@ -35,11 +35,28 @@ const BASE_CONFIG: AthenaConfig = {
     commentChecker: true,
     lspTools: true,
     autoGitOperations: false,
+    todoSync: true,
   },
   mcps: {
     context7: true,
     exa: true,
     grepApp: true,
+  },
+  routing: {
+    providerPriority: ["anthropic", "openai", "google", "github-copilot"],
+    modelFamilyPriority: {
+      claude: ["anthropic", "github-copilot"],
+      gpt: ["openai", "github-copilot"],
+      gemini: ["google", "github-copilot"],
+    },
+    agentOverrides: {
+      oracle: { requiresThinking: true },
+    },
+    fallbackBehavior: {
+      autoFallback: false,
+      retryPeriodMs: 300000,
+      notifyOnRateLimit: true,
+    },
   },
 };
 
@@ -148,6 +165,35 @@ describe("model-params", () => {
       expect(params.thinking_budget).toBeGreaterThan(0);
     });
 
+    it("does NOT return temperature for Anthropic thinking models", () => {
+      const params = getProviderParams("anthropic/claude-sonnet-4-5-thinking", "oracle", BASE_CONFIG);
+      expect(params.temperature).toBeUndefined();
+      expect(params.thinking_budget).toBeDefined();
+    });
+
+    it("does NOT return temperature for Anthropic Opus thinking models", () => {
+      const params = getProviderParams("anthropic/claude-opus-4-5-thinking", "oracle", BASE_CONFIG);
+      expect(params.temperature).toBeUndefined();
+      expect(params.thinking_budget).toBeDefined();
+    });
+
+    it("strips temperature from custom models misconfigured with both temperature and thinking", () => {
+      const configWithCustom: AthenaConfig = {
+        ...BASE_CONFIG,
+        models: {
+          ...BASE_CONFIG.models,
+          settings: {
+            overrides: {
+              "anthropic/claude-sonnet-4-5-thinking": { temperature: 0.5, thinkingLevel: "high" },
+            },
+          },
+        },
+      };
+      const params = getProviderParams("anthropic/claude-sonnet-4-5-thinking", "oracle", configWithCustom);
+      expect(params.temperature).toBeUndefined();
+      expect(params.thinking_budget).toBeDefined();
+    });
+
     it("returns reasoning_effort for OpenAI high models", () => {
       const params = getProviderParams("openai/gpt-5.1-high", "oracle", BASE_CONFIG);
       expect(params.reasoning_effort).toBe("high");
@@ -172,6 +218,11 @@ describe("model-params", () => {
       expect(modelSupportsTemperature("openai/gpt-5.1")).toBe(false);
       expect(modelSupportsTemperature("openai/gpt-4o")).toBe(true);
       expect(modelSupportsTemperature("github-copilot/claude-sonnet-4.5")).toBe(false);
+    });
+
+    it("detects temperature NOT supported for Anthropic thinking models", () => {
+      expect(modelSupportsTemperature("anthropic/claude-sonnet-4-5-thinking")).toBe(false);
+      expect(modelSupportsTemperature("anthropic/claude-opus-4-5-thinking")).toBe(false);
     });
 
     it("detects thinking support correctly", () => {

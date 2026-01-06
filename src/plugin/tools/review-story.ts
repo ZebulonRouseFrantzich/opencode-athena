@@ -357,7 +357,7 @@ async function analyzeStoryComplexity(storyContent: string): Promise<StoryComple
     reason: isSimple
       ? `Simple story: ${acceptanceCriteriaCount} ACs, CRUD-only, no security/data concerns`
       : `Complex story: ${acceptanceCriteriaCount} ACs, security=${hasSecurityConcerns}, data=${hasDataModelChanges}, API=${hasApiChanges}`,
-    recommendedModel: isSimple ? "anthropic/claude-3-5-haiku-20241022" : "openai/gpt-5.2",
+    recommendedModel: "",
     factors: {
       acceptanceCriteriaCount,
       hasSecurityConcerns,
@@ -369,7 +369,7 @@ async function analyzeStoryComplexity(storyContent: string): Promise<StoryComple
 }
 
 function selectReviewModel(config: AthenaConfig, complexity: StoryComplexity): string {
-  return complexity.isSimple ? "anthropic/claude-3-5-haiku-20241022" : config.models.oracle;
+  return complexity.isSimple ? config.models.librarian : config.models.oracle;
 }
 
 function buildEpicReviewPrompt(
