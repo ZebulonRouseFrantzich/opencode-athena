@@ -43,7 +43,7 @@ const GIT_WRITE_COMMANDS = [
   "git commit",
   "git push",
   "git checkout -b",
-  "git branch ",
+  "git branch",
   "git switch -c",
   "git switch --create",
   "git merge",
@@ -155,8 +155,6 @@ async function handleStoryLoaded(
         newTodos: newBmadTodos.length,
         totalTracked: mergedTodos.length,
       });
-
-      await autoInjectTodos(ctx, sessionID, newBmadTodos);
     } else {
       log.debug("No BMAD todos found in story", { storyId: result.storyId });
     }

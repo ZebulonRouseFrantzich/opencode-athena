@@ -18,7 +18,9 @@ interface ModelCapabilities {
 
 const MODEL_FAMILIES: Record<string, string> = {
   "claude-sonnet-4-5": "claude-sonnet-4-5",
+  "claude-sonnet-4-5-thinking": "claude-sonnet-4-5",
   "claude-opus-4-5": "claude-opus-4-5",
+  "claude-opus-4-5-thinking": "claude-opus-4-5",
   "gpt-5.1": "gpt-5.1",
   "gpt-5.1-high": "gpt-5.1-high",
   "gpt-4o": "gpt-4o",

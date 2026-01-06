@@ -490,9 +490,49 @@ function mergeConfigs(...configs: (Partial<AthenaConfig> | null)[]): AthenaConfi
       }
     }
 
-    // Merge models
+    // Merge models (deep merge)
     if (config.models) {
-      result.models = { ...result.models, ...config.models };
+      if (config.models.sisyphus !== undefined) result.models.sisyphus = config.models.sisyphus;
+      if (config.models.oracle !== undefined) result.models.oracle = config.models.oracle;
+      if (config.models.librarian !== undefined) result.models.librarian = config.models.librarian;
+      if (config.models.frontend !== undefined) result.models.frontend = config.models.frontend;
+      if (config.models.documentWriter !== undefined)
+        result.models.documentWriter = config.models.documentWriter;
+      if (config.models.multimodalLooker !== undefined)
+        result.models.multimodalLooker = config.models.multimodalLooker;
+
+      if (config.models.settings !== undefined) {
+        result.models.settings = result.models.settings || {};
+        const resultSettings = result.models.settings;
+        const configSettings = config.models.settings;
+
+        for (const agentKey of [
+          "sisyphus",
+          "oracle",
+          "librarian",
+          "frontend",
+          "documentWriter",
+          "multimodalLooker",
+        ] as const) {
+          if (configSettings[agentKey] !== undefined) {
+            resultSettings[agentKey] = {
+              ...(resultSettings[agentKey] || {}),
+              ...configSettings[agentKey],
+            };
+          }
+        }
+
+        if (configSettings.overrides !== undefined) {
+          resultSettings.overrides = {
+            ...(resultSettings.overrides || {}),
+            ...configSettings.overrides,
+          };
+        }
+      }
+
+      if (config.models.custom !== undefined) {
+        result.models.custom = config.models.custom;
+      }
     }
 
     // Merge bmad settings
@@ -508,6 +548,34 @@ function mergeConfigs(...configs: (Partial<AthenaConfig> | null)[]): AthenaConfi
     // Merge mcps
     if (config.mcps) {
       result.mcps = { ...result.mcps, ...config.mcps };
+    }
+
+    // Merge routing (deep merge)
+    if (config.routing) {
+      if (config.routing.providerPriority !== undefined) {
+        result.routing.providerPriority = config.routing.providerPriority;
+      }
+
+      if (config.routing.modelFamilyPriority !== undefined) {
+        result.routing.modelFamilyPriority = {
+          ...result.routing.modelFamilyPriority,
+          ...config.routing.modelFamilyPriority,
+        };
+      }
+
+      if (config.routing.agentOverrides !== undefined) {
+        result.routing.agentOverrides = {
+          ...result.routing.agentOverrides,
+          ...config.routing.agentOverrides,
+        };
+      }
+
+      if (config.routing.fallbackBehavior !== undefined) {
+        result.routing.fallbackBehavior = {
+          ...result.routing.fallbackBehavior,
+          ...config.routing.fallbackBehavior,
+        };
+      }
     }
   }
 
