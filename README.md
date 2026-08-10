@@ -1,3 +1,5 @@
+
+
 # OpenCode Athena
 
 > **Strategic wisdom meets practical execution**
@@ -30,7 +32,7 @@ npx opencode-athena install
 ```
 
 The interactive installer will:
-1. Ask about your LLM subscriptions (Claude, OpenAI, Google)
+1. Ask about your LLM subscriptions (Claude, OpenAI, Google, GitHub Copilot)
 2. Configure oh-my-opencode with optimal agent models
 3. Set up authentication plugins
 4. Install bridge commands
@@ -268,8 +270,8 @@ When decomposition is recommended, Athena:
 4. **Preserves dev notes** - Applicable sections copied to each sub-story
 
 **Filename format:**
-- Original: `3-2-reset-list-screen.md`
-- Sub-stories: `3-2a-reset-list-screen.md`, `3-2b-reset-list-screen.md`
+- Original: `story-3-2.md`
+- Sub-stories: `3-2a.md`, `3-2b.md` (original archived as `story-3-2.decomposed.md`)
 
 ### Tools
 
